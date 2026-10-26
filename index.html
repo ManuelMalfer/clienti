@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#17607A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Clienti">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Clienti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<style>
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --surface-2:#EAEFEE; --ink:#1C2B2E; --muted:#5E6F72; --line:#DCE3E1;
+  --accent:#17607A; --accent-ink:#FFFFFF; --accent-soft:#E1EEF2; --danger:#B5524A;
+  --st-dacontattare:#8A969A; --st-contattato:#C98A12; --st-cliente:#3F8F4A; --st-clientemax:#1F6B3A;
+  --st-clientelutteri:#2C8C8C; --st-nonservibile:#B5524A;
+  --font:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-cond:"Barlow Semi Condensed","Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --tabbar:64px;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121A1C; --surface:#1B2528; --surface-2:#243034; --ink:#E6EDEC; --muted:#93A3A5; --line:#2C393C;
+    --accent:#5DB3CF; --accent-ink:#0E1A1D; --accent-soft:#1D3A44; --danger:#E07A70;
+    --st-dacontattare:#8A969A; --st-contattato:#E0A43A; --st-cliente:#62B26C; --st-clientemax:#3E9C5E;
+    --st-clientelutteri:#4FB3B3; --st-nonservibile:#E07A70;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+.wrap{max-width:780px;margin:0 auto;padding:0 16px}
+
+/* Login */
+#login{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px}
+.login-box{width:100%;max-width:360px}
+.login-box h1{font-family:var(--font-cond);font-weight:700;font-size:44px;line-height:1;margin:0 0 6px;letter-spacing:-.01em}
+.login-box p{color:var(--muted);margin:0 0 28px}
+.field{display:block;margin-bottom:14px}
+.field span{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.input,select.input,textarea.input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px;min-height:44px}
+textarea.input{min-height:84px;resize:vertical}
+.input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:600}
+.btn-primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-danger{color:var(--danger)}
+.btn-block{width:100%}
+.link{background:none;border:0;color:var(--accent);padding:8px 0;font-weight:500}
+.msg{font-size:14px;margin-top:12px;color:var(--danger)}
+.msg.ok{color:var(--st-cliente)}
+.setup{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:20px}
+
+/* Header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);padding:14px 0 10px;border-bottom:1px solid var(--line)}
+.top-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.top h1{font-family:var(--font-cond);font-weight:700;font-size:30px;line-height:1.1;margin:0}
+.top .count{color:var(--muted);font-size:15px}
+.search{margin-top:10px;position:relative}
+.search input{padding-left:38px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.filters{display:flex;gap:8px;margin-top:8px;overflow-x:auto;padding-bottom:2px}
+.filters select{flex:1 0 auto;min-width:120px;width:auto;padding:8px 10px;min-height:40px;font-size:15px}
+.filters .link{flex:0 0 auto;white-space:nowrap}
+
+main{padding-bottom:calc(var(--tabbar) + 90px + env(safe-area-inset-bottom,0px))}
+.view{padding-top:6px}
+
+/* Rows */
+.list{list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 2px;min-height:60px}
+.row:hover{background:var(--surface-2)}
+.dot{flex:0 0 10px;height:10px;border-radius:50%;background:var(--st-dacontattare)}
+.row-main{flex:1;min-width:0}
+.row-name{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-sub{display:block;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-side{flex:0 0 auto;font-size:13px;color:var(--muted);text-align:right}
+.flag{color:var(--st-contattato);font-weight:600}
+.flag.late{color:var(--danger)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--surface-2)}
+.st-dacontattare{--c:var(--st-dacontattare)} .st-contattato{--c:var(--st-contattato)} .st-cliente{--c:var(--st-cliente)}
+.st-clientemax{--c:var(--st-clientemax)} .st-clientelutteri{--c:var(--st-clientelutteri)} .st-nonservibile{--c:var(--st-nonservibile)}
+.dot[class*="st-"]{background:var(--c)}
+.empty{color:var(--muted);padding:40px 8px;text-align:center}
+.giro-li{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.giro-li .row{border-bottom:0}
+.giro-main{flex:1;min-width:0}
+.icon-btn{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--accent)}
+
+h2.sec{font-family:var(--font-cond);font-weight:600;font-size:21px;margin:26px 0 4px;display:flex;justify-content:space-between;align-items:baseline}
+h2.sec small{font-family:var(--font);font-weight:500;font-size:14px;color:var(--muted)}
+
+/* Giro */
+.days-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:10px 0 0}
+.days-strip button{border:0;background:none;padding:10px 0 8px;border-bottom:3px solid transparent;font-family:var(--font-cond);font-weight:600;font-size:20px;color:var(--muted)}
+.days-strip button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.days-strip button .n{display:block;font-family:var(--font);font-size:12px;font-weight:500;color:var(--muted)}
+.days-strip .today::after{content:"";display:block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin:3px auto 0}
+
+/* Riepilogo */
+.stat-row{display:grid;grid-template-columns:minmax(110px,34%) 1fr auto;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
+button.stat-row:hover{background:var(--surface-2)}
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c,var(--accent));border-radius:99px}
+.stat-row b{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px}
+.big{display:flex;gap:28px;margin:14px 0 4px;flex-wrap:wrap}
+.big div{font-size:14px;color:var(--muted)}
+.big strong{display:block;font-family:var(--font-cond);font-size:38px;line-height:1;color:var(--ink);font-weight:700}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+
+/* Tab bar */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs-inner{max-width:780px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--tabbar)}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:500;color:var(--muted)}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.tabs .num{position:absolute;margin:-26px 0 0 26px;background:var(--danger);color:#fff;font-size:11px;border-radius:99px;padding:0 5px;line-height:16px}
+.tabs button{position:relative}
+.fab{position:fixed;z-index:26;right:max(16px,calc(50% - 374px));bottom:calc(var(--tabbar) + 16px + env(safe-area-inset-bottom,0px));height:56px;padding:0 22px;border-radius:28px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:16px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(23,96,122,.35)}
+
+/* Dialogs */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);width:100%;max-width:640px;max-height:92vh;max-height:92dvh;border-radius:16px;overflow:hidden}
+dialog::backdrop{background:rgba(10,20,22,.45)}
+@media (max-width:640px){
+  dialog{max-width:none;margin:auto 0 0;border-radius:16px 16px 0 0;max-height:94dvh}
+}
+.dlg{display:flex;flex-direction:column;max-height:inherit}
+.dlg-head{display:flex;align-items:flex-start;gap:12px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+.dlg-head h2{flex:1;margin:0;font-family:var(--font-cond);font-weight:700;font-size:25px;line-height:1.15}
+.dlg-head .sub{display:block;font-family:var(--font);font-size:14px;font-weight:500;color:var(--muted);margin-top:2px}
+.dlg-body{padding:14px 18px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.dlg-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);flex-wrap:wrap}
+.close{border:0;background:var(--surface-2);width:36px;height:36px;border-radius:50%;flex:0 0 auto;font-size:20px;line-height:1;color:var(--muted)}
+
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:4px 0 14px}
+.actions a,.actions span{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;background:var(--accent-soft);color:var(--accent);text-decoration:none;font-size:13px;font-weight:600}
+.actions span{opacity:.4}
+.stato-pick{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.stato-pick select{flex:1}
+.info{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:15px}
+.info dt{color:var(--muted)}
+.info dd{margin:0;word-break:break-word}
+.richiamo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
+.richiamo label{font-weight:600;font-size:15px}
+.richiamo input{width:auto;flex:1;min-width:150px}
+.chip-btn{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:14px;font-weight:500;min-height:36px}
+.storico{list-style:none;margin:8px 0 0;padding:0}
+.storico li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+.storico time{flex:0 0 84px;color:var(--muted);font-variant-numeric:tabular-nums}
+.storico p{margin:0;flex:1;white-space:pre-wrap}
+.storico button{border:0;background:none;color:var(--muted);font-size:18px;padding:0 4px}
+.note-add{display:flex;gap:8px;margin-top:10px}
+.note-add input{flex:1}
+
+/* Form */
+form h3{font-family:var(--font-cond);font-weight:600;font-size:18px;margin:20px 0 8px;color:var(--accent)}
+form h3:first-child{margin-top:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}}
+.days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.day input{position:absolute;opacity:0;pointer-events:none}
+.day span{display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:40px;border:1px solid var(--line);border-radius:10px;font-weight:600;background:var(--surface)}
+.day input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.day input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.req::after{content:" *";color:var(--danger)}
+.hint{font-size:13px;color:var(--muted);margin:-8px 0 12px}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--tabbar) + 86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;font-size:15px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+#offline{background:var(--st-contattato);color:#1C2B2E;font-size:14px;font-weight:500;text-align:center;padding:6px 12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login" class="hidden">
+  <form class="login-box" id="loginForm" novalidate>
+    <h1>Clienti</h1>
+    <p>Accedi per vedere e aggiornare i tuoi clienti.</p>
+    <div id="setupMsg" class="setup hidden">Manca la configurazione Firebase: incolla i dati del tuo progetto in <b>firebaseConfig</b> dentro index.html.</div>
+    <label class="field"><span>Email</span><input class="input" id="loginEmail" type="email" autocomplete="username" required></label>
+    <label class="field"><span>Password</span><input class="input" id="loginPass" type="password" autocomplete="current-password" required></label>
+    <button class="btn btn-primary btn-block" type="submit" id="loginBtn">Accedi</button>
+    <button class="link" type="button" id="resetBtn">Password dimenticata?</button>
+    <div class="msg" id="loginMsg" role="alert"></div>
+  </form>
+</section>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div id="offline" class="hidden">Sei offline: le modifiche si salvano e si sincronizzano appena torna la rete.</div>
+
+  <section id="v-clienti" class="view-wrap">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Clienti</h1><span class="count" id="countLbl"></span></div>
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input class="input" id="q" type="search" placeholder="Cerca nome, località, telefono, P.IVA…" autocomplete="off" aria-label="Cerca">
+      </div>
+      <div class="filters">
+        <select class="input" id="fStato" aria-label="Filtra per stato"></select>
+        <select class="input" id="fLuogo" aria-label="Filtra per località"></select>
+        <select class="input" id="fTipo" aria-label="Filtra per tipologia"></select>
+        <button class="link hidden" id="fReset" type="button">Azzera</button>
+      </div>
+    </div></header>
+    <main class="wrap view"><ul class="list" id="list"></ul></main>
+  </section>
+
+  <section id="v-giro" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Giro</h1><span class="count" id="giroLbl"></span></div>
+      <div class="days-strip" id="daysStrip"></div>
+    </div></header>
+    <main class="wrap view" id="giroBody"></main>
+  </section>
+
+  <section id="v-richiami" class="view-wrap hidden">
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Da ricontattare</h1><span class="count" id="richLbl"></span></div></div></header>
+    <main class="wrap view" id="richBody"></main>
+  </section>
+
+  <section id="v-riepilogo" class="view-wrap hidden">
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Riepilogo</h1></div></div></header>
+    <main class="wrap view" id="riepBody"></main>
+  </section>
+
+  <button class="fab" id="fab" type="button">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo
+  </button>
+
+  <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
+    <button data-view="clienti" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
+    <button data-view="giro"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
+    <button data-view="richiami"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
+    <button data-view="riepilogo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
+  </div></nav>
+</div>
+
+<!-- SCHEDA CLIENTE -->
+<dialog id="dlgDetail" aria-labelledby="dTitle">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="dTitle"></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <div id="dBody"></div>
+      <h2 class="sec">Storico contatti</h2>
+      <form class="note-add" id="noteForm">
+        <input class="input" id="noteText" placeholder="Es. passato in visita, lasciato listino" autocomplete="off" aria-label="Nuova nota">
+        <button class="btn btn-primary" type="submit">Aggiungi</button>
+      </form>
+      <ul class="storico" id="dStorico"></ul>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-danger" type="button" id="delBtn">Elimina</button>
+      <button class="btn btn-primary" type="button" id="editBtn">Modifica</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- MODULO -->
+<dialog id="dlgForm" aria-labelledby="fTitle">
+  <form class="dlg" id="cForm" novalidate>
+    <div class="dlg-head"><h2 id="fTitle">Nuovo cliente</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <h3>Locale</h3>
+      <label class="field"><span class="req">Nome del locale</span><input class="input" name="nome" required autocomplete="off"></label>
+      <div class="grid2">
+        <label class="field"><span class="req">Località</span><input class="input" name="luogo" list="dlLuoghi" required autocomplete="off"></label>
+        <label class="field"><span>Indirizzo</span><input class="input" name="indirizzo" autocomplete="off"></label>
+        <label class="field"><span class="req">Tipologia</span><input class="input" name="tipologia" list="dlTipi" required autocomplete="off"></label>
+        <label class="field"><span>Stato</span><select class="input" name="stato" id="fStatoSel"></select></label>
+      </div>
+
+      <h3>Contatto</h3>
+      <div class="grid2">
+        <label class="field"><span>Referente</span><input class="input" name="referente" autocomplete="off"></label>
+        <label class="field"><span>Telefono</span><input class="input" name="tel" type="tel" inputmode="tel" autocomplete="off"></label>
+      </div>
+      <label class="field"><span>Email</span><input class="input" name="email" type="email" inputmode="email" autocomplete="off"></label>
+
+      <h3>Dati fiscali</h3>
+      <div class="grid2">
+        <label class="field"><span>Codice cliente</span><input class="input" name="codice" inputmode="numeric" autocomplete="off"></label>
+        <label class="field"><span>P.IVA</span><input class="input" name="piva" inputmode="numeric" maxlength="13" autocomplete="off"></label>
+      </div>
+      <label class="field"><span>Codice univoco (SDI)</span><input class="input" name="codiceUnivoco" maxlength="7" autocomplete="off" style="text-transform:uppercase"></label>
+
+      <h3>Fornitori e ordini</h3>
+      <label class="field"><span>Fornitori attuali</span><input class="input" name="fornitori" list="dlFornitori" autocomplete="off"></label>
+      <p class="hint">Più fornitori separati da virgola, es. Pregis, Marr</p>
+      <span class="field"><span>Giorni di ordine</span></span>
+      <div class="days" data-days="giorniOrdine"></div>
+      <label class="field"><span>Orario ordine</span><input class="input" name="orarioOrdine" placeholder="Es. entro le 11:00" autocomplete="off"></label>
+      <span class="field"><span>Giorni di consegna</span></span>
+      <div class="days" data-days="giorniConsegna"></div>
+      <label class="field"><span>Orario consegna</span><input class="input" name="orarioConsegna" placeholder="Es. dalle 7:30 alle 11:00" autocomplete="off"></label>
+
+      <h3>Promemoria e note</h3>
+      <label class="field"><span>Da ricontattare il</span><input class="input" name="ricontattare" type="date"></label>
+      <label class="field"><span>Note</span><textarea class="input" name="note"></textarea></label>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" type="button" id="saveNewBtn">Salva e aggiungi un altro</button>
+      <button class="btn btn-primary" type="submit">Salva</button>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="dlLuoghi"></datalist>
+<datalist id="dlTipi"></datalist>
+<datalist id="dlFornitori"></datalist>
+<input type="file" id="fileImport" accept=".xlsx,.xls,.xlsm" class="hidden">
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============================================================
+   1) INCOLLA QUI LA CONFIGURAZIONE DEL TUO PROGETTO FIREBASE
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyC3IhRpSQMYmo0rDyIPuWhkWZIMRZffSlI",
+  authDomain: "clienti-malfer.firebaseapp.com",
+  projectId: "clienti-malfer",
+  storageBucket: "clienti-malfer.firebasestorage.app",
+  messagingSenderId: "674166615017",
+  appId: "1:674166615017:web:dc8a498941c99f007af978"
+};
+
+// PARSE-START
+const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
+const DAY_SHORT = ["Lun","Mar","Mer","Gio","Ven","Sab"];
+const DAY_KEY = ["lun","mar","mer","gio","ven","sab"];
+const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["CLIENTE MAX","Cliente Max"],["CLIENTE LUTTERI","Cliente Lutteri"],["NON SERVIBILE","Non servibile"]];
+const ATTIVI = ["CLIENTE","CLIENTE MAX","CLIENTE LUTTERI"];
+const TIPI_BASE = ["Ristorante","Ristorante - Pizzeria","Pizzeria","Hotel","Bar","Catering","Casa di riposo","Casa vacanze","Centro riabilitativo","Onlus"];
+
+const deaccent = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = s => deaccent(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+const normKey = k => deaccent(k).toUpperCase().replace(/[^A-Z0-9]/g, "");
+const keyOf = c => norm(c.nome) + "|" + norm(c.indirizzo) + "|" + norm(c.luogo);
+
+function parseDays(s){
+  const toks = deaccent(s).toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  return DAYS.filter((d,i) => toks.some(t => t.startsWith(DAY_KEY[i])));
+}
+function splitList(s){ return String(s ?? "").split(/[,;\/]+/).map(x => x.trim()).filter(Boolean); }
+function parseItDate(s){
+  const m = String(s ?? "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(!m) return "";
+  let y = m[3]; if(y.length === 2) y = "20" + y;
+  return `${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+}
+function cleanStato(s){
+  const n = norm(s);
+  const hit = STATI.find(x => norm(x[0]) === n);
+  return hit ? hit[0] : "DA CONTATTARE";
+}
+function fromRow(r){
+  const m = {};
+  for(const k in r) m[normKey(k)] = r[k];
+  const v = k => { let x = m[k]; if(x == null) return ""; x = String(x).trim(); return x === "0" ? "" : x; };
+  let nome = v("CLIENTE"), codice = v("CODICECLIENTE");
+  const mm = nome.match(/\s*\((\d{5,})\)\s*$/);
+  if(mm){ if(!codice) codice = mm[1]; nome = nome.slice(0, mm.index).trim(); }
+  const storico = v("STORICO").split(" | ").map(x => {
+    const s = x.match(/^(\d{1,2}\/\d{1,2}\/\d{2,4}):\s*([\s\S]*)$/);
+    return s ? { d: parseItDate(s[1]), t: s[2].trim() } : null;
+  }).filter(Boolean);
+  return {
+    nome, codice,
+    referente: v("REFERENTE"),
+    tel: v("TEL"),
+    email: v("EMAIL"),
+    luogo: v("LUOGO"),
+    indirizzo: v("INDIRIZZO"),
+    tipologia: v("TIPOLOGIAATTIVITA"),
+    piva: v("PIVA"),
+    codiceUnivoco: v("CODICEUNIVOCO").toUpperCase(),
+    fornitori: splitList(v("FORNITORIATTUALI")),
+    giorniOrdine: parseDays(v("GIORNOORDINE")),
+    orarioOrdine: v("ORARIOORDINE"),
+    giorniConsegna: parseDays(v("GIORNODICONSEGNA")),
+    orarioConsegna: v("ORARIOCONSEGNA"),
+    stato: cleanStato(v("STATOCLIENTE")),
+    ricontattare: parseItDate(v("DARICONTATTARE")),
+    note: v("NOTE"),
+    storico
+  };
+}
+// PARSE-END
+
+/* ---------- utilità ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const localISO = (d = new Date()) => new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const addDays = n => { const d = new Date(); d.setDate(d.getDate()+n); return localISO(d); };
+const fmtDate = iso => iso ? iso.split("-").reverse().join("/") : "";
+const statoLabel = s => (STATI.find(x => x[0] === s) || [null, "Da contattare"])[1];
+const statoCls = s => "st-" + norm(s || "DA CONTATTARE");
+const nowISO = () => new Date().toISOString();
+const firstPhone = t => { const m = String(t || "").match(/\+?\d[\d\s.\-]{5,}\d/); return m ? m[0].replace(/[^\d+]/g, "") : ""; };
+const waLink = t => { let p = firstPhone(t).replace("+",""); if(!p) return ""; if(!p.startsWith("39") || p.length <= 10) p = "39" + p; return "https://wa.me/" + p; };
+const mapsLink = c => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent([c.nome, c.indirizzo, c.luogo].filter(Boolean).join(", "));
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+const fail = e => { console.error(e); toast(e.code === "permission-denied" ? "Account non autorizzato a modificare i dati." : "Errore: " + (e.message || e)); };
+
+/* ---------- Firebase ---------- */
+const configured = firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("INCOLLA");
+let auth, db;
+if(configured){
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+}
+let uid = null;
+// Ogni utente ha i propri clienti in utenti/{uid}/clienti
+const col = () => collection(db, "utenti", uid, "clienti");
+const ref = id => doc(col(), id);
+
+/* ---------- stato interfaccia ---------- */
+let clienti = [];
+let unsub = null;
+const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 0 : d - 1; })();
+const ui = { view: "clienti", q: "", stato: "", luogo: "", tipo: "", giro: todayIdx, openId: null, editId: null };
+
+/* ---------- login ---------- */
+function showLogin(){ $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
+function showApp(){ $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); }
+const authMsg = code => ({
+  "auth/invalid-credential": "Email o password non corrette.",
+  "auth/wrong-password": "Email o password non corrette.",
+  "auth/user-not-found": "Email o password non corrette.",
+  "auth/invalid-email": "Controlla l'indirizzo email.",
+  "auth/too-many-requests": "Troppi tentativi. Riprova tra qualche minuto.",
+  "auth/network-request-failed": "Nessuna connessione. Controlla la rete e riprova."
+}[code] || "Accesso non riuscito (" + code + ").");
+
+if(!configured){
+  $("#setupMsg").classList.remove("hidden");
+  showLogin();
+} else {
+  onAuthStateChanged(auth, user => {
+    if(user){ uid = user.uid; showApp(); subscribe(); }
+    else { if(unsub){ unsub(); unsub = null; } uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+  });
+}
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(!configured) return;
+  const msg = $("#loginMsg"); msg.className = "msg"; msg.textContent = "";
+  $("#loginBtn").disabled = true;
+  try { await signInWithEmailAndPassword(auth, $("#loginEmail").value.trim(), $("#loginPass").value); }
+  catch(err){ msg.textContent = authMsg(err.code); }
+  finally { $("#loginBtn").disabled = false; }
+});
+$("#resetBtn").addEventListener("click", async () => {
+  const msg = $("#loginMsg"); const email = $("#loginEmail").value.trim();
+  if(!email){ msg.className = "msg"; msg.textContent = "Scrivi prima la tua email, poi tocca Password dimenticata."; return; }
+  try { await sendPasswordResetEmail(auth, email); msg.className = "msg ok"; msg.textContent = "Ti ho inviato un'email per reimpostare la password."; }
+  catch(err){ msg.className = "msg"; msg.textContent = authMsg(err.code); }
+});
+
+function subscribe(){
+  if(unsub) return;
+  unsub = onSnapshot(col(), snap => {
+    clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, err => {
+    console.error(err);
+    $("#list").innerHTML = `<li class="empty">${err.code === "permission-denied"
+      ? "Questo account non è autorizzato a vedere i dati. Controlla le regole di Firestore."
+      : "Impossibile caricare i dati: " + esc(err.message)}</li>`;
+  });
+}
+
+/* ---------- navigazione ---------- */
+$$(".tabs button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+function go(view){
+  ui.view = view;
+  $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
+  $$(".tabs button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  window.scrollTo(0, 0);
+  renderAll();
+}
+
+/* ---------- render ---------- */
+const byId = id => clienti.find(c => c.id === id);
+const uniq = arr => [...new Set(arr.filter(Boolean))].sort((a,b) => a.localeCompare(b, "it"));
+
+function renderAll(){
+  renderOptions();
+  if(ui.view === "clienti") renderList();
+  if(ui.view === "giro") renderGiro();
+  if(ui.view === "riepilogo") renderRiepilogo();
+  renderRichiami();
+  if($("#dlgDetail").open && ui.openId) renderDetail();
+}
+
+function renderOptions(){
+  const luoghi = uniq(clienti.map(c => c.luogo));
+  const tipi = uniq([...TIPI_BASE, ...clienti.map(c => c.tipologia)]);
+  const forn = uniq(clienti.flatMap(c => c.fornitori || []));
+  $("#dlLuoghi").innerHTML = luoghi.map(x => `<option value="${esc(x)}">`).join("");
+  $("#dlTipi").innerHTML = tipi.map(x => `<option value="${esc(x)}">`).join("");
+  $("#dlFornitori").innerHTML = forn.map(x => `<option value="${esc(x)}">`).join("");
+  const count = (k, v) => clienti.filter(c => c[k] === v).length;
+  $("#fStato").innerHTML = `<option value="">Tutti gli stati</option>` + STATI.map(([v,l]) => `<option value="${v}">${l} (${count("stato", v)})</option>`).join("");
+  $("#fLuogo").innerHTML = `<option value="">Tutte le località</option>` + luoghi.map(l => `<option value="${esc(l)}">${esc(l)} (${count("luogo", l)})</option>`).join("");
+  $("#fTipo").innerHTML = `<option value="">Tutte le tipologie</option>` + uniq(clienti.map(c => c.tipologia)).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  $("#fStato").value = ui.stato; $("#fLuogo").value = ui.luogo; $("#fTipo").value = ui.tipo;
+}
+
+function filtered(){
+  const words = ui.q.split(/\s+/).map(norm).filter(Boolean);
+  return clienti.filter(c => {
+    if(ui.stato && c.stato !== ui.stato) return false;
+    if(ui.luogo && c.luogo !== ui.luogo) return false;
+    if(ui.tipo && c.tipologia !== ui.tipo) return false;
+    if(words.length){
+      const hay = norm([c.nome, c.codice, c.referente, c.luogo, c.indirizzo, c.tipologia, c.tel, c.email, c.piva, (c.fornitori||[]).join(" "), c.note].join(" "));
+      return words.every(w => hay.includes(w));
+    }
+    return true;
+  }).sort((a,b) => (a.nome||"").localeCompare(b.nome||"", "it"));
+}
+
+function richiamoTag(c){
+  if(!c.ricontattare) return "";
+  const late = c.ricontattare < localISO();
+  return `<span class="flag ${late ? "late" : ""}">Richiama ${fmtDate(c.ricontattare).slice(0,5)}</span>`;
+}
+function rowHTML(c, side = ""){
+  const sub = [c.luogo, c.indirizzo].filter(Boolean).join(", ");
+  return `<button class="row" data-open="${c.id}">
+    <span class="dot ${statoCls(c.stato)}" title="${esc(statoLabel(c.stato))}"></span>
+    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span></span>
+    <span class="row-side">${side || `${esc(statoLabel(c.stato))}<br>${richiamoTag(c)}`}</span>
+  </button>`;
+}
+
+function renderList(){
+  const rows = filtered();
+  const active = ui.q || ui.stato || ui.luogo || ui.tipo;
+  $("#fReset").classList.toggle("hidden", !active);
+  $("#countLbl").textContent = active ? `${rows.length} di ${clienti.length}` : `${clienti.length} locali`;
+  $("#list").innerHTML = rows.length ? rows.map(c => `<li>${rowHTML(c)}</li>`).join("")
+    : `<li class="empty">${clienti.length ? "Nessun locale con questi filtri." : "Nessun cliente ancora. Tocca Nuovo per aggiungere il primo, oppure importa il tuo Excel da Riepilogo."}</li>`;
+}
+
+$("#q").addEventListener("input", e => { ui.q = e.target.value; renderList(); });
+$("#fStato").addEventListener("change", e => { ui.stato = e.target.value; renderList(); });
+$("#fLuogo").addEventListener("change", e => { ui.luogo = e.target.value; renderList(); });
+$("#fTipo").addEventListener("change", e => { ui.tipo = e.target.value; renderList(); });
+$("#fReset").addEventListener("click", () => { ui.q = ui.stato = ui.luogo = ui.tipo = ""; $("#q").value = ""; renderAll(); });
+document.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]"); if(o){ openDetail(o.dataset.open); return; }
+  const l = e.target.closest("[data-luogo]"); if(l){ ui.luogo = l.dataset.luogo; ui.stato = ""; ui.tipo = ""; ui.q = ""; $("#q").value = ""; go("clienti"); return; }
+  const s = e.target.closest("[data-stato]"); if(s){ ui.stato = s.dataset.stato; ui.luogo = ""; ui.tipo = ""; ui.q = ""; $("#q").value = ""; go("clienti"); }
+});
+
+/* ---------- Giro ---------- */
+function renderGiro(){
+  $("#daysStrip").innerHTML = DAY_SHORT.map((d,i) => {
+    const n = clienti.filter(c => (c.giorniConsegna||[]).includes(DAYS[i])).length;
+    return `<button type="button" data-day="${i}" aria-pressed="${i === ui.giro}" class="${i === todayIdx ? "today" : ""}">${d}<span class="n">${n} cons.</span></button>`;
+  }).join("");
+  const day = DAYS[ui.giro];
+  const byPlace = (a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it");
+  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(day)).sort(byPlace);
+  const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day)).sort(byPlace);
+  $("#giroLbl").textContent = day;
+  const giroRow = (c, orario) => {
+    const tel = firstPhone(c.tel);
+    return `<li class="giro-li">
+      <div class="giro-main">${rowHTML(c, esc(orario || ""))}</div>
+      ${tel ? `<a class="icon-btn" href="tel:${tel}" aria-label="Chiama ${esc(c.nome)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></a>` : ""}
+    </li>`;
+  };
+  $("#giroBody").innerHTML = `
+    <h2 class="sec">Consegne <small>${cons.length}</small></h2>
+    <ul class="list">${cons.map(c => giroRow(c, c.orarioConsegna)).join("") || `<li class="empty">Nessuna consegna il ${day.toLowerCase()}.</li>`}</ul>
+    <h2 class="sec">Ordini da raccogliere <small>${ord.length}</small></h2>
+    <ul class="list">${ord.map(c => giroRow(c, c.orarioOrdine)).join("") || `<li class="empty">Nessun ordine da raccogliere il ${day.toLowerCase()}.</li>`}</ul>`;
+}
+$("#daysStrip").addEventListener("click", e => { const b = e.target.closest("[data-day]"); if(b){ ui.giro = +b.dataset.day; renderGiro(); } });
+
+/* ---------- Richiami ---------- */
+function renderRichiami(){
+  const t = localISO(), w = addDays(7);
+  const all = clienti.filter(c => c.ricontattare).sort((a,b) => a.ricontattare.localeCompare(b.ricontattare));
+  const due = all.filter(c => c.ricontattare <= t).length;
+  const num = $("#richNum"); num.textContent = due; num.classList.toggle("hidden", !due);
+  if(ui.view !== "richiami") return;
+  const groups = [
+    ["Scaduti", all.filter(c => c.ricontattare < t)],
+    ["Oggi", all.filter(c => c.ricontattare === t)],
+    ["Prossimi 7 giorni", all.filter(c => c.ricontattare > t && c.ricontattare <= w)],
+    ["Più avanti", all.filter(c => c.ricontattare > w)]
+  ].filter(g => g[1].length);
+  $("#richLbl").textContent = all.length ? `${all.length} in programma` : "";
+  $("#richBody").innerHTML = groups.length ? groups.map(([title, list]) =>
+    `<h2 class="sec">${title} <small>${list.length}</small></h2><ul class="list">${list.map(c => "<li>" + rowHTML(c, `<span class="flag ${c.ricontattare < t ? "late" : ""}">${fmtDate(c.ricontattare)}</span>`) + "</li>").join("")}</ul>`).join("")
+    : `<p class="empty">Nessun ricontatto in programma. Nella scheda di un cliente imposta "Da ricontattare il" e lo ritrovi qui.</p>`;
+}
+
+/* ---------- Riepilogo ---------- */
+function renderRiepilogo(){
+  const tot = clienti.length;
+  const attivi = clienti.filter(c => ATTIVI.includes(c.stato)).length;
+  const contattati = clienti.filter(c => c.stato === "CONTATTATO").length;
+  const statoRows = STATI.map(([v,l]) => {
+    const n = clienti.filter(c => (c.stato || "DA CONTATTARE") === v).length;
+    return `<button type="button" class="stat-row ${statoCls(v)}" data-stato="${v}"><span>${l}</span><span class="bar"><i style="width:${tot ? n/tot*100 : 0}%"></i></span><b>${n}</b></button>`;
+  }).join("");
+  const luoghi = uniq(clienti.map(c => c.luogo)).map(l => {
+    const list = clienti.filter(c => c.luogo === l);
+    return { l, n: list.length, a: list.filter(c => ATTIVI.includes(c.stato)).length };
+  }).sort((x,y) => y.a - x.a || y.n - x.n);
+  const luoghiRows = luoghi.map(x => `<button type="button" class="stat-row st-cliente" data-luogo="${esc(x.l)}"><span>${esc(x.l)}</span><span class="bar"><i style="width:${x.n ? x.a/x.n*100 : 0}%"></i></span><b>${x.a} su ${x.n}</b></button>`).join("");
+  const fc = {};
+  clienti.forEach(c => (c.fornitori||[]).forEach(f => { const k = f.trim(); fc[k] = (fc[k]||0) + 1; }));
+  const forn = Object.entries(fc).sort((a,b) => b[1]-a[1]);
+  const maxF = forn.length ? forn[0][1] : 1;
+  const fornRows = forn.map(([f,n]) => `<div class="stat-row"><span>${esc(f)}</span><span class="bar"><i style="width:${n/maxF*100}%"></i></span><b>${n}</b></div>`).join("");
+  $("#riepBody").innerHTML = `
+    <div class="big">
+      <div><strong>${attivi}</strong>clienti attivi</div>
+      <div><strong>${contattati}</strong>in trattativa</div>
+      <div><strong>${tot}</strong>locali mappati</div>
+    </div>
+    <h2 class="sec">Per stato</h2>${statoRows}
+    <h2 class="sec">Copertura per località <small>clienti attivi sul totale</small></h2>${luoghiRows || `<p class="empty">Ancora nessun dato.</p>`}
+    <h2 class="sec">Fornitori attuali dei locali</h2>${fornRows || `<p class="hint" style="margin:6px 0">Compila "Fornitori attuali" nelle schede per vedere qui con chi lavorano i tuoi locali.</p>`}
+    <h2 class="sec">Dati</h2>
+    <div class="tools">
+      <button class="btn" type="button" id="impBtn">Importa da Excel</button>
+      <button class="btn" type="button" id="expBtn">Esporta in Excel</button>
+    </div>
+    <p class="hint" style="margin-top:10px">L'importazione salta i locali già presenti (stesso nome, indirizzo e località).</p>
+    <h2 class="sec">Account</h2>
+    <p style="margin:6px 0 10px;color:var(--muted)">${esc(auth?.currentUser?.email || "")}</p>
+    <button class="btn" type="button" id="logoutBtn">Esci</button>`;
+  $("#impBtn").onclick = () => $("#fileImport").click();
+  $("#expBtn").onclick = exportExcel;
+  $("#logoutBtn").onclick = () => signOut(auth);
+}
+
+/* ---------- Scheda ---------- */
+function openDetail(id){
+  ui.openId = id;
+  $("#noteText").value = "";
+  renderDetail();
+  if(!$("#dlgDetail").open) $("#dlgDetail").showModal();
+}
+function renderDetail(){
+  const c = byId(ui.openId);
+  if(!c){ $("#dlgDetail").close(); return; }
+  $("#dTitle").innerHTML = `${esc(c.nome)}<span class="sub">${esc([c.tipologia, c.codice ? "Cod. " + c.codice : ""].filter(Boolean).join(", "))}</span>`;
+  const tel = firstPhone(c.tel), wa = waLink(c.tel);
+  const act = (href, label, svg, ext) => href ? `<a href="${href}" ${ext ? 'target="_blank" rel="noopener"' : ""}>${svg}${label}</a>` : `<span aria-disabled="true">${svg}${label}</span>`;
+  const ic = p => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${p}</svg>`;
+  const info = [
+    ["Referente", esc(c.referente)],
+    ["Telefono", esc(c.tel)],
+    ["Email", esc(c.email)],
+    ["Indirizzo", esc([c.indirizzo, c.luogo].filter(Boolean).join(", "))],
+    ["P.IVA", esc(c.piva)],
+    ["Cod. univoco", esc(c.codiceUnivoco)],
+    ["Fornitori", esc((c.fornitori||[]).join(", "))],
+    ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine].filter(Boolean).join(" · "))],
+    ["Consegna", esc([(c.giorniConsegna||[]).join(", "), c.orarioConsegna].filter(Boolean).join(" · "))],
+    ["Note", esc(c.note)]
+  ].filter(x => x[1]);
+  $("#dBody").innerHTML = `
+    <div class="actions">
+      ${act(tel ? "tel:" + tel : "", "Chiama", ic('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'))}
+      ${act(wa, "WhatsApp", ic('<path d="M3 21l1.6-4.8A8.5 8.5 0 1 1 8 19.6Z"/>'), true)}
+      ${act(c.email ? "mailto:" + encodeURIComponent(c.email) : "", "Email", ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'))}
+      ${act(mapsLink(c), "Naviga", ic('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>'), true)}
+    </div>
+    <div class="stato-pick">
+      <span class="dot ${statoCls(c.stato)}"></span>
+      <select class="input" id="dStato" aria-label="Stato cliente">${STATI.map(([v,l]) => `<option value="${v}" ${v === (c.stato || "DA CONTATTARE") ? "selected" : ""}>${l}</option>`).join("")}</select>
+    </div>
+    ${info.length ? `<dl class="info">${info.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : `<p class="hint">Nessun dato di contatto. Tocca Modifica per completare la scheda.</p>`}
+    <div class="richiamo">
+      <label for="dRich">Richiama il</label>
+      <input class="input" type="date" id="dRich" value="${c.ricontattare || ""}">
+      <button class="chip-btn" type="button" data-rich="7">+1 settimana</button>
+      <button class="chip-btn" type="button" data-rich="30">+1 mese</button>
+      ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
+    </div>`;
+  const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
+  $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
+    : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
+  $("#dStato").onchange = e => {
+    const old = c.stato || "DA CONTATTARE", nu = e.target.value;
+    update(c.id, { stato: nu, storico: [...(c.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old)} → ${statoLabel(nu)}` }] });
+    toast("Stato aggiornato");
+  };
+  $("#dRich").onchange = e => update(c.id, { ricontattare: e.target.value || "" });
+}
+$("#dBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-rich]"); if(!b) return;
+  const c = byId(ui.openId);
+  if(b.dataset.rich === "done"){
+    update(c.id, { ricontattare: "", storico: [...(c.storico||[]), { d: localISO(), t: "Ricontattato" }] });
+    toast("Richiamo completato");
+  } else {
+    const d = addDays(+b.dataset.rich);
+    update(c.id, { ricontattare: d }); toast("Richiamo il " + fmtDate(d));
+  }
+});
+$("#dStorico").addEventListener("click", e => {
+  const b = e.target.closest("[data-delnote]"); if(!b) return;
+  const c = byId(ui.openId);
+  if(!confirm("Eliminare questa nota?")) return;
+  const s = [...(c.storico||[])]; s.splice(+b.dataset.delnote, 1);
+  update(c.id, { storico: s });
+});
+$("#noteForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const t = $("#noteText").value.trim(); if(!t) return;
+  const c = byId(ui.openId);
+  update(c.id, { storico: [...(c.storico||[]), { d: localISO(), t }] });
+  $("#noteText").value = ""; toast("Nota aggiunta");
+});
+$("#editBtn").addEventListener("click", () => { const id = ui.openId; $("#dlgDetail").close(); openForm(id); });
+$("#delBtn").addEventListener("click", () => {
+  const c = byId(ui.openId);
+  if(!confirm(`Eliminare "${c.nome}"? L'operazione non si può annullare.`)) return;
+  deleteDoc(ref(c.id)).catch(fail);
+  $("#dlgDetail").close(); toast("Cliente eliminato");
+});
+$("#dlgDetail").addEventListener("close", () => { ui.openId = null; });
+$$("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+$$("dialog").forEach(d => d.addEventListener("click", e => { if(e.target === d) d.close(); }));
+
+function update(id, data){ return updateDoc(ref(id), { ...data, aggiornato: nowISO() }).catch(fail); }
+
+/* ---------- Modulo ---------- */
+const F = $("#cForm");
+$("#fStatoSel").innerHTML = STATI.map(([v,l]) => `<option value="${v}">${l}</option>`).join("");
+$$("[data-days]").forEach(box => {
+  box.innerHTML = DAYS.map((d,i) => `<label class="day"><input type="checkbox" value="${d}"><span>${DAY_SHORT[i]}</span></label>`).join("");
+});
+function openForm(id = null, preset = {}){
+  ui.editId = id;
+  const c = id ? byId(id) : { stato: "DA CONTATTARE", ...preset };
+  $("#fTitle").textContent = id ? "Modifica cliente" : "Nuovo cliente";
+  $("#saveNewBtn").classList.toggle("hidden", !!id);
+  for(const el of F.elements){
+    if(!el.name) continue;
+    let v = c[el.name];
+    if(el.name === "fornitori") v = (v || []).join(", ");
+    el.value = v ?? (el.name === "stato" ? "DA CONTATTARE" : "");
+  }
+  $$("[data-days]").forEach(box => {
+    const sel = c[box.dataset.days] || [];
+    box.querySelectorAll("input").forEach(i => i.checked = sel.includes(i.value));
+  });
+  if(!$("#dlgForm").open) $("#dlgForm").showModal();
+  F.querySelector("[name=nome]").focus();
+  F.querySelector(".dlg-body").scrollTop = 0;
+}
+function readForm(){
+  const d = {};
+  for(const el of F.elements){ if(el.name) d[el.name] = el.value.trim(); }
+  d.fornitori = splitList(d.fornitori);
+  d.codiceUnivoco = d.codiceUnivoco.toUpperCase();
+  d.piva = d.piva.replace(/\s/g, "").toUpperCase();
+  $$("[data-days]").forEach(box => d[box.dataset.days] = [...box.querySelectorAll("input:checked")].map(i => i.value));
+  return d;
+}
+async function save(andNew){
+  const d = readForm();
+  const miss = ["nome","luogo","tipologia"].filter(k => !d[k]);
+  if(miss.length){
+    const el = F.querySelector(`[name=${miss[0]}]`); el.focus();
+    toast("Compila nome, località e tipologia"); return;
+  }
+  if(d.email && !F.querySelector("[name=email]").checkValidity()){ F.querySelector("[name=email]").focus(); toast("Controlla l'indirizzo email"); return; }
+  const piva = d.piva.replace(/^IT/, "");
+  if(d.piva && !/^\d{11}$/.test(piva) && !confirm("La P.IVA non ha 11 cifre. Salvo comunque?")) return;
+  if(d.codiceUnivoco && !/^[A-Z0-9]{7}$/.test(d.codiceUnivoco) && !confirm("Il codice univoco di solito ha 7 caratteri. Salvo comunque?")) return;
+  const dup = clienti.find(c => c.id !== ui.editId && (
+    (norm(c.nome) === norm(d.nome) && norm(c.luogo) === norm(d.luogo)) ||
+    (d.indirizzo && norm(c.indirizzo) === norm(d.indirizzo) && norm(c.luogo) === norm(d.luogo))
+  ));
+  if(dup && !confirm(`Esiste già "${dup.nome}" (${[dup.indirizzo, dup.luogo].filter(Boolean).join(", ")}). Salvo comunque?`)) return;
+
+  if(ui.editId){
+    const old = byId(ui.editId);
+    const extra = {};
+    if((old.stato || "DA CONTATTARE") !== d.stato) extra.storico = [...(old.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old.stato)} → ${statoLabel(d.stato)}` }];
+    update(ui.editId, { ...d, ...extra });
+    $("#dlgForm").close(); toast("Cliente salvato");
+    openDetail(ui.editId);
+  } else {
+    setDoc(doc(col()), { ...d, storico: [], creato: nowISO(), aggiornato: nowISO() }).catch(fail);
+    toast(`${d.nome} salvato`);
+    if(andNew) openForm(null, { luogo: d.luogo, tipologia: d.tipologia, stato: d.stato });
+    else $("#dlgForm").close();
+  }
+}
+F.addEventListener("submit", e => { e.preventDefault(); save(false); });
+$("#saveNewBtn").addEventListener("click", () => save(true));
+$("#fab").addEventListener("click", () => openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
+
+/* ---------- Import / Export ---------- */
+$("#fileImport").addEventListener("change", async e => {
+  const file = e.target.files[0]; e.target.value = "";
+  if(!file) return;
+  if(!window.XLSX){ toast("Libreria Excel non ancora caricata, riprova tra un attimo"); return; }
+  try {
+    const wb = XLSX.read(await file.arrayBuffer());
+    const ws = wb.Sheets["DATABASE"] || wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+    const seen = new Set(clienti.map(keyOf));
+    const nuovi = []; let saltati = 0;
+    for(const r of rows){
+      const c = fromRow(r);
+      if(!c.nome) continue;
+      const k = keyOf(c);
+      if(seen.has(k)){ saltati++; continue; }
+      seen.add(k); nuovi.push(c);
+    }
+    if(!nuovi.length){ toast(`Nessun locale nuovo da importare (${saltati} già presenti)`); return; }
+    if(!confirm(`Trovati ${nuovi.length} locali nuovi${saltati ? ` (${saltati} già presenti verranno saltati)` : ""}. Importo?`)) return;
+    for(let i = 0; i < nuovi.length; i += 400){
+      const b = writeBatch(db);
+      nuovi.slice(i, i+400).forEach(c => b.set(doc(col()), { ...c, creato: nowISO(), aggiornato: nowISO() }));
+      await b.commit();
+    }
+    toast(`Importati ${nuovi.length} locali`);
+  } catch(err){ fail(err); }
+});
+function exportExcel(){
+  if(!window.XLSX){ toast("Libreria Excel non ancora caricata, riprova tra un attimo"); return; }
+  const rows = [...clienti].sort((a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it")).map(c => ({
+    "CLIENTE": c.nome, "CODICE CLIENTE": c.codice, "REFERENTE": c.referente, "TEL": c.tel, "EMAIL": c.email,
+    "LUOGO": c.luogo, "INDIRIZZO": c.indirizzo, "TIPOLOGIA ATTIVITA'": c.tipologia,
+    "P.IVA": c.piva, "CODICE UNIVOCO": c.codiceUnivoco, "FORNITORI ATTUALI": (c.fornitori||[]).join(", "),
+    "GIORNO ORDINE": (c.giorniOrdine||[]).join(" "), "ORARIO ORDINE": c.orarioOrdine,
+    "GIORNO DI CONSEGNA": (c.giorniConsegna||[]).join(" "), "ORARIO CONSEGNA": c.orarioConsegna,
+    "STATO CLIENTE": c.stato, "DA RICONTATTARE": fmtDate(c.ricontattare), "NOTE": c.note,
+    "STORICO": (c.storico||[]).map(s => `${fmtDate(s.d)}: ${s.t}`).join(" | ")
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [40,14,16,14,26,18,30,22,14,12,24,22,12,26,22,16,14,40,60].map(w => ({ wch: w }));
+  ws["!autofilter"] = { ref: ws["!ref"] };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "DATABASE");
+  XLSX.writeFile(wb, `Mappatura_clienti_${localISO()}.xlsx`);
+}
+
+/* ---------- offline ---------- */
+const net = () => $("#offline").classList.toggle("hidden", navigator.onLine);
+addEventListener("online", net); addEventListener("offline", net); net();
+</script>
+</body>
+</html>
