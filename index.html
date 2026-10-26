@@ -17,6 +17,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
 <style>
 :root{
   --bg:#F3F5F4; --surface:#FFFFFF; --surface-2:#EAEFEE; --ink:#1C2B2E; --muted:#5E6F72; --line:#DCE3E1;
@@ -127,7 +129,7 @@ button.stat-row:hover{background:var(--surface-2)}
 
 /* Tab bar */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs-inner{max-width:780px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--tabbar)}
+.tabs-inner{max-width:780px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);height:var(--tabbar)}
 .tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:500;color:var(--muted)}
 .tabs button[aria-current="page"]{color:var(--accent)}
 .tabs .num{position:absolute;margin:-26px 0 0 26px;background:var(--danger);color:#fff;font-size:11px;border-radius:99px;padding:0 5px;line-height:16px}
@@ -183,6 +185,29 @@ form h3:first-child{margin-top:4px}
 .req::after{content:" *";color:var(--danger)}
 .hint{font-size:13px;color:var(--muted);margin:-8px 0 12px}
 
+/* Mappa */
+#v-mappa:not(.hidden){display:flex;flex-direction:column;height:calc(100vh - env(safe-area-inset-top,0px));height:calc(100dvh - env(safe-area-inset-top,0px))}
+#v-mappa header.top{flex:0 0 auto}
+.map-wrap{position:relative;flex:1;min-height:220px;margin-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom,0px))}
+#map{position:absolute;inset:0;z-index:0;background:var(--surface-2)}
+.map-chips{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:2px}
+.map-chips button{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:14px;font-weight:500;min-height:36px;color:var(--muted)}
+.map-chips button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.map-chips i{width:11px;height:11px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.map-chips button[aria-pressed="false"] i{opacity:.35}
+.map-info{font-size:13px;color:var(--muted);margin-top:6px}
+.map-info .bar{display:block;margin-top:4px}
+.pick-bar{position:absolute;z-index:5;left:10px;right:10px;top:10px;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:10px 12px;border-radius:12px;font-weight:500;font-size:15px}
+.pick-bar span{flex:1}
+.pick-bar .btn{min-height:36px;padding:6px 12px}
+.map-btn{width:36px;height:36px;display:grid;place-items:center;background:#fff;color:#17607A;border:0;cursor:pointer}
+.leaflet-container{font:inherit}
+.leaflet-popup-content{margin:12px 14px;font-size:14px;line-height:1.4}
+.pop b{display:block;font-size:15px;margin-bottom:2px}
+.pop .s{color:#5E6F72}
+.pop .acts{display:flex;gap:6px;margin-top:8px}
+.pop .acts button,.pop .acts a{flex:1;border:0;border-radius:8px;padding:7px 8px;font-weight:600;font-size:13px;text-align:center;text-decoration:none;background:#E1EEF2;color:#17607A}
+.pop .acts button{background:#17607A;color:#fff}
 #toast{position:fixed;left:50%;bottom:calc(var(--tabbar) + 86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;font-size:15px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
 #offline{background:var(--st-contattato);color:#1C2B2E;font-size:14px;font-weight:500;text-align:center;padding:6px 12px}
@@ -226,6 +251,18 @@ form h3:first-child{margin-top:4px}
     <main class="wrap view"><ul class="list" id="list"></ul></main>
   </section>
 
+  <section id="v-mappa" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Mappa</h1><span class="count" id="mapLbl"></span></div>
+      <div class="map-chips" id="mapChips"></div>
+      <div class="map-info hidden" id="mapInfo"></div>
+    </div></header>
+    <div class="map-wrap">
+      <div id="map" aria-label="Mappa dei clienti"></div>
+      <div class="pick-bar hidden" id="pickBar"><span id="pickTxt"></span><button class="btn" type="button" id="pickCancel">Annulla</button></div>
+    </div>
+  </section>
+
   <section id="v-giro" class="view-wrap hidden">
     <header class="top"><div class="wrap">
       <div class="top-row"><h1>Giro</h1><span class="count" id="giroLbl"></span></div>
@@ -252,6 +289,7 @@ form h3:first-child{margin-top:4px}
 
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
     <button data-view="clienti" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
+    <button data-view="mappa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
     <button data-view="giro"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
     <button data-view="richiami"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
     <button data-view="riepilogo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
@@ -510,6 +548,8 @@ function go(view){
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
   $$(".tabs button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
+  $("#fab").classList.toggle("hidden", view === "mappa");
+  if(view !== "mappa") stopPick();
   renderAll();
 }
 
@@ -522,6 +562,7 @@ function renderAll(){
   if(ui.view === "clienti") renderList();
   if(ui.view === "giro") renderGiro();
   if(ui.view === "riepilogo") renderRiepilogo();
+  if(ui.view === "mappa") renderMap();
   renderRichiami();
   if($("#dlgDetail").open && ui.openId) renderDetail();
 }
@@ -715,6 +756,12 @@ function renderDetail(){
     </div>
     ${info.length ? `<dl class="info">${info.map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : `<p class="hint">Nessun dato di contatto. Tocca Modifica per completare la scheda.</p>`}
     <div class="richiamo">
+      <label>Mappa</label>
+      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.lat != null ? (c.approx ? "Posizione approssimativa (centro paese)" : "Posizionato") : (c.geoFail ? "Indirizzo non trovato" : "Non ancora posizionato")}</span>
+      ${c.lat != null ? `<button class="chip-btn" type="button" data-map="see">Vedi</button>` : ""}
+      <button class="chip-btn" type="button" data-map="fix">Correggi posizione</button>
+    </div>
+    <div class="richiamo">
       <label for="dRich">Richiama il</label>
       <input class="input" type="date" id="dRich" value="${c.ricontattare || ""}">
       <input class="input" type="time" id="dRichOra" value="${c.ricontattareOra || ""}" aria-label="Ora del richiamo">
@@ -830,6 +877,7 @@ async function save(andNew){
   if(ui.editId){
     const old = byId(ui.editId);
     const extra = {};
+    if(norm(old.indirizzo) !== norm(d.indirizzo) || norm(old.luogo) !== norm(d.luogo)) Object.assign(extra, { lat: null, lng: null, approx: false, geoFail: false });
     if((old.stato || "DA CONTATTARE") !== d.stato) extra.storico = [...(old.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old.stato)} → ${statoLabel(d.stato)}` }];
     update(ui.editId, { ...d, ...extra });
     $("#dlgForm").close(); toast("Cliente salvato");
@@ -891,6 +939,163 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "DATABASE");
   XLSX.writeFile(wb, `Mappatura_clienti_${localISO()}.xlsx`);
 }
+
+/* ---------- Mappa ---------- */
+const MAP_GROUPS = [
+  { k: "attivi", label: "Clienti", color: "#2E9E48", match: c => ATTIVI.includes(c.stato) },
+  { k: "contattato", label: "Contattati", color: "#E39B12", match: c => c.stato === "CONTATTATO" },
+  { k: "dacontattare", label: "Da contattare", color: "#D93A2F", match: c => (c.stato || "DA CONTATTARE") === "DA CONTATTARE" },
+  { k: "nonservibile", label: "Non servibili", color: "#8A969A", match: c => c.stato === "NON SERVIBILE" }
+];
+ui.mapOn = { attivi: true, contattato: true, dacontattare: true, nonservibile: false };
+let map = null, markers = new Map(), fitted = false, meMarker = null;
+const groupOf = c => MAP_GROUPS.find(g => g.match(c)) || MAP_GROUPS[2];
+
+function initMap(){
+  if(map || !window.L) return !!map;
+  map = L.map("map", { zoomControl: true }).setView([45.9, 10.95], 10);
+  const strade = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" });
+  const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "© Esri" });
+  strade.addTo(map);
+  L.control.layers({ "Mappa": strade, "Satellite": sat }, null, { position: "topright" }).addTo(map);
+  const Locate = L.Control.extend({ options: { position: "topright" }, onAdd(){
+    const b = L.DomUtil.create("button", "map-btn leaflet-bar");
+    b.type = "button"; b.title = "La mia posizione"; b.setAttribute("aria-label", "La mia posizione");
+    b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+    L.DomEvent.disableClickPropagation(b);
+    b.onclick = () => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => {
+      const ll = [p.coords.latitude, p.coords.longitude];
+      if(meMarker) meMarker.setLatLng(ll); else meMarker = L.circleMarker(ll, { radius: 7, color: "#fff", weight: 3, fillColor: "#1A73E8", fillOpacity: 1 }).addTo(map);
+      map.setView(ll, 13);
+    }, () => toast("Posizione non disponibile: controlla i permessi")) : toast("Posizione non disponibile");
+    return b;
+  }});
+  new Locate().addTo(map);
+  map.on("click", e => {
+    if(!ui.pickId) return;
+    const id = ui.pickId; stopPick();
+    update(id, { lat: e.latlng.lat, lng: e.latlng.lng, approx: false, geoFail: false });
+    toast("Posizione salvata");
+    setTimeout(() => markers.get(id)?.openPopup(), 300);
+  });
+  map.on("popupopen", e => {
+    const el = e.popup.getElement();
+    el.querySelectorAll("[data-pop]").forEach(b => b.onclick = () => openDetail(b.dataset.pop));
+  });
+  return true;
+}
+function popHTML(c){
+  return `<div class="pop"><b>${esc(c.nome)}</b><span class="s">${esc(statoLabel(c.stato))}${c.approx ? ", posizione approssimativa" : ""}</span><br>${esc([c.indirizzo, c.luogo].filter(Boolean).join(", "))}
+    <div class="acts"><button type="button" data-pop="${c.id}">Apri scheda</button><a href="${mapsLink(c)}" target="_blank" rel="noopener">Naviga</a></div></div>`;
+}
+function renderMap(){
+  $("#mapChips").innerHTML = MAP_GROUPS.map(g => `<button type="button" data-g="${g.k}" aria-pressed="${!!ui.mapOn[g.k]}"><i style="background:${g.color}"></i>${g.label} ${clienti.filter(g.match).length}</button>`).join("");
+  const placed = clienti.filter(c => c.lat != null);
+  const approx = placed.filter(c => c.approx).length, fails = clienti.filter(c => c.geoFail).length;
+  const missing = clienti.filter(c => c.lat == null && !c.geoFail).length;
+  $("#mapLbl").textContent = `${placed.length} di ${clienti.length} sulla mappa`;
+  const info = $("#mapInfo");
+  if(geo.running){
+    info.classList.remove("hidden");
+    info.innerHTML = `Sto posizionando i locali sulla mappa: ${geo.done} di ${geo.total}. Tieni aperta questa schermata.<span class="bar"><i style="width:${geo.total ? geo.done/geo.total*100 : 0}%"></i></span>`;
+  } else if(approx || fails || geo.error){
+    info.classList.remove("hidden");
+    info.textContent = [geo.error, approx && `${approx} in posizione approssimativa`, fails && `${fails} non trovati`].filter(Boolean).join(", ") + ((approx || fails) ? ". Correggili dalla scheda con \"Correggi posizione\"." : "");
+  } else info.classList.add("hidden");
+
+  if(!initMap()) { setTimeout(renderMap, 300); return; }
+  setTimeout(() => map.invalidateSize(), 0);
+  const visible = new Set();
+  const order = ["nonservibile", "dacontattare", "contattato", "attivi"];
+  placed.filter(c => ui.mapOn[groupOf(c).k])
+    .sort((a,b) => order.indexOf(groupOf(a).k) - order.indexOf(groupOf(b).k))
+    .forEach(c => {
+      visible.add(c.id);
+      const g = groupOf(c);
+      const style = { radius: g.k === "attivi" ? 9 : 7, color: c.approx ? "#1C2B2E" : "#FFFFFF", weight: 2, dashArray: c.approx ? "3 3" : null, fillColor: g.color, fillOpacity: .95 };
+      let m = markers.get(c.id);
+      if(!m){ m = L.circleMarker([c.lat, c.lng], style).bindPopup(popHTML(c)).addTo(map); markers.set(c.id, m); }
+      else {
+        m.setLatLng([c.lat, c.lng]); m.setStyle(style); m.setRadius(style.radius);
+        if(!m.isPopupOpen()) m.setPopupContent(popHTML(c));
+        if(!map.hasLayer(m)) m.addTo(map);
+      }
+      if(g.k === "attivi") m.bringToFront();
+    });
+  for(const [id, m] of markers) if(!visible.has(id)){ map.removeLayer(m); if(!byId(id) || byId(id).lat == null) markers.delete(id); }
+  if(!fitted && visible.size){ fitted = true; map.fitBounds(L.latLngBounds([...visible].map(id => markers.get(id).getLatLng())), { padding: [30, 30], maxZoom: 13 }); }
+  if(missing && !geo.running && !geo.error) geocodeMissing();
+}
+$("#mapChips").addEventListener("click", e => {
+  const b = e.target.closest("[data-g]"); if(!b) return;
+  ui.mapOn[b.dataset.g] = !ui.mapOn[b.dataset.g]; renderMap();
+});
+
+/* posizionamento automatico (OpenStreetMap Nominatim, max 1 richiesta al secondo) */
+const geo = { running: false, done: 0, total: 0, error: "", tried: new Set(), city: {} };
+let lastReq = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function nomi(q){
+  await sleep(Math.max(0, lastReq + 1100 - Date.now())); lastReq = Date.now();
+  const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&accept-language=it&viewbox=10.3,46.6,11.6,45.4&q=" + encodeURIComponent(q));
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json();
+  return j[0] ? { lat: +j[0].lat, lng: +j[0].lon } : null;
+}
+async function geocode(c){
+  if(c.indirizzo){ const r = await nomi(`${c.indirizzo}, ${c.luogo}`); if(r) return { ...r, approx: false }; }
+  const r2 = await nomi(`${c.nome}, ${c.luogo}`); if(r2) return { ...r2, approx: false };
+  const via = (c.indirizzo || "").replace(/[,\s]+\d+\s*[\/\w]*\s*$/, "").trim();
+  if(via && via !== c.indirizzo){ const r3 = await nomi(`${via}, ${c.luogo}`); if(r3) return { ...r3, approx: false }; }
+  const k = norm(c.luogo);
+  if(!(k in geo.city)) geo.city[k] = await nomi(c.luogo);
+  return geo.city[k] ? { ...geo.city[k], approx: true } : null;
+}
+async function geocodeMissing(){
+  if(geo.running) return;
+  const todo = () => clienti.filter(c => c.lat == null && !c.geoFail && c.luogo && !geo.tried.has(c.id));
+  if(!todo().length) return;
+  geo.running = true; geo.done = 0; geo.total = todo().length; geo.error = "";
+  try {
+    let c;
+    while((c = todo()[0])){
+      geo.tried.add(c.id);
+      const r = await geocode(c);
+      await update(c.id, r ? { lat: r.lat, lng: r.lng, approx: r.approx, geoFail: false } : { geoFail: true });
+      geo.done++;
+      if(ui.view === "mappa") renderMap();
+    }
+  } catch(err){
+    console.error(err);
+    geo.error = "Servizio mappe non raggiungibile, riprovo alla prossima apertura";
+  } finally {
+    geo.running = false;
+    if(ui.view === "mappa") renderMap();
+  }
+}
+
+/* correzione manuale */
+function startPick(id){
+  const c = byId(id); ui.pickId = id;
+  $("#dlgDetail").close();
+  go("mappa");
+  $("#pickTxt").textContent = `Tocca sulla mappa il punto esatto di ${c.nome}`;
+  $("#pickBar").classList.remove("hidden");
+  if(c.lat != null) setTimeout(() => map && map.setView([c.lat, c.lng], 17), 50);
+  else { const near = clienti.find(x => x.luogo === c.luogo && x.lat != null); if(near) setTimeout(() => map && map.setView([near.lat, near.lng], 15), 50); }
+}
+function stopPick(){ ui.pickId = null; $("#pickBar").classList.add("hidden"); }
+$("#pickCancel").addEventListener("click", stopPick);
+$("#dBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-map]"); if(!b) return;
+  const id = ui.openId;
+  if(b.dataset.map === "fix") startPick(id);
+  else {
+    const c = byId(id); $("#dlgDetail").close(); go("mappa");
+    if(!ui.mapOn[groupOf(c).k]){ ui.mapOn[groupOf(c).k] = true; renderMap(); }
+    setTimeout(() => { map.setView([c.lat, c.lng], 16); markers.get(id)?.openPopup(); }, 80);
+  }
+});
 
 /* ---------- Calendario (.ics) ---------- */
 function icsEsc(t){ return String(t ?? "").replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/([,;])/g, "\\$1"); }
