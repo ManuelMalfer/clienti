@@ -159,6 +159,8 @@ dialog::backdrop{background:rgba(10,20,22,.45)}
 .richiamo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
 .richiamo label{font-weight:600;font-size:15px}
 .richiamo input{width:auto;flex:1;min-width:150px}
+.btn-cal{margin-top:10px;width:100%;color:var(--accent);border-color:var(--accent)}
+.richiamo input[type=time]{flex:0 0 auto;min-width:0;width:130px}
 .chip-btn{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:14px;font-weight:500;min-height:36px}
 .storico{list-style:none;margin:8px 0 0;padding:0}
 .storico li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
@@ -233,7 +235,9 @@ form h3:first-child{margin-top:4px}
   </section>
 
   <section id="v-richiami" class="view-wrap hidden">
-    <header class="top"><div class="wrap"><div class="top-row"><h1>Da ricontattare</h1><span class="count" id="richLbl"></span></div></div></header>
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Da ricontattare</h1><span class="count" id="richLbl"></span></div>
+      <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>Aggiungi al calendario</button>
+    </div></header>
     <main class="wrap view" id="richBody"></main>
   </section>
 
@@ -313,7 +317,10 @@ form h3:first-child{margin-top:4px}
       <label class="field"><span>Orario consegna</span><input class="input" name="orarioConsegna" placeholder="Es. dalle 7:30 alle 11:00" autocomplete="off"></label>
 
       <h3>Promemoria e note</h3>
-      <label class="field"><span>Da ricontattare il</span><input class="input" name="ricontattare" type="date"></label>
+      <div class="grid2">
+        <label class="field"><span>Da ricontattare il</span><input class="input" name="ricontattare" type="date"></label>
+        <label class="field"><span>Ora</span><input class="input" name="ricontattareOra" type="time"></label>
+      </div>
       <label class="field"><span>Note</span><textarea class="input" name="note"></textarea></label>
     </div>
     <div class="dlg-foot">
@@ -402,7 +409,8 @@ function fromRow(r){
     giorniConsegna: parseDays(v("GIORNODICONSEGNA")),
     orarioConsegna: v("ORARIOCONSEGNA"),
     stato: cleanStato(v("STATOCLIENTE")),
-    ricontattare: parseItDate(v("DARICONTATTARE")),
+    ricontattare: parseItDate(v("DARICONTATTARE").split(/\s+/)[0]),
+    ricontattareOra: (v("DARICONTATTARE").match(/(\d{1,2})[:.](\d{2})\s*$/) || []).slice(1).map((x,i) => i ? x : x.padStart(2,"0")).join(":"),
     note: v("NOTE"),
     storico
   };
@@ -549,7 +557,7 @@ function filtered(){
 function richiamoTag(c){
   if(!c.ricontattare) return "";
   const late = c.ricontattare < localISO();
-  return `<span class="flag ${late ? "late" : ""}">Richiama ${fmtDate(c.ricontattare).slice(0,5)}</span>`;
+  return `<span class="flag ${late ? "late" : ""}">Richiama ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
 }
 function rowHTML(c, side = ""){
   const sub = [c.luogo, c.indirizzo].filter(Boolean).join(", ");
@@ -609,7 +617,7 @@ $("#daysStrip").addEventListener("click", e => { const b = e.target.closest("[da
 /* ---------- Richiami ---------- */
 function renderRichiami(){
   const t = localISO(), w = addDays(7);
-  const all = clienti.filter(c => c.ricontattare).sort((a,b) => a.ricontattare.localeCompare(b.ricontattare));
+  const all = clienti.filter(c => c.ricontattare).sort((a,b) => (a.ricontattare + (a.ricontattareOra || "99")).localeCompare(b.ricontattare + (b.ricontattareOra || "99")));
   const due = all.filter(c => c.ricontattare <= t).length;
   const num = $("#richNum"); num.textContent = due; num.classList.toggle("hidden", !due);
   if(ui.view !== "richiami") return;
@@ -620,8 +628,9 @@ function renderRichiami(){
     ["Più avanti", all.filter(c => c.ricontattare > w)]
   ].filter(g => g[1].length);
   $("#richLbl").textContent = all.length ? `${all.length} in programma` : "";
+  $("#calAllBtn").classList.toggle("hidden", !all.some(c => c.ricontattare >= t));
   $("#richBody").innerHTML = groups.length ? groups.map(([title, list]) =>
-    `<h2 class="sec">${title} <small>${list.length}</small></h2><ul class="list">${list.map(c => "<li>" + rowHTML(c, `<span class="flag ${c.ricontattare < t ? "late" : ""}">${fmtDate(c.ricontattare)}</span>`) + "</li>").join("")}</ul>`).join("")
+    `<h2 class="sec">${title} <small>${list.length}</small></h2><ul class="list">${list.map(c => "<li>" + rowHTML(c, `<span class="flag ${c.ricontattare < t ? "late" : ""}">${fmtDate(c.ricontattare)}${c.ricontattareOra ? "<br>ore " + c.ricontattareOra : ""}</span>`) + "</li>").join("")}</ul>`).join("")
     : `<p class="empty">Nessun ricontatto in programma. Nella scheda di un cliente imposta "Da ricontattare il" e lo ritrovi qui.</p>`;
 }
 
@@ -708,9 +717,10 @@ function renderDetail(){
     <div class="richiamo">
       <label for="dRich">Richiama il</label>
       <input class="input" type="date" id="dRich" value="${c.ricontattare || ""}">
+      <input class="input" type="time" id="dRichOra" value="${c.ricontattareOra || ""}" aria-label="Ora del richiamo">
       <button class="chip-btn" type="button" data-rich="7">+1 settimana</button>
       <button class="chip-btn" type="button" data-rich="30">+1 mese</button>
-      ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
+      ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="cal">Aggiungi al calendario</button><button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
     </div>`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
@@ -720,14 +730,20 @@ function renderDetail(){
     update(c.id, { stato: nu, storico: [...(c.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old)} → ${statoLabel(nu)}` }] });
     toast("Stato aggiornato");
   };
-  $("#dRich").onchange = e => update(c.id, { ricontattare: e.target.value || "" });
+  $("#dRich").onchange = e => update(c.id, e.target.value ? { ricontattare: e.target.value } : { ricontattare: "", ricontattareOra: "" });
+  $("#dRichOra").onchange = e => {
+    if(!c.ricontattare && e.target.value){ update(c.id, { ricontattare: localISO(), ricontattareOra: e.target.value }); return; }
+    update(c.id, { ricontattareOra: e.target.value || "" });
+  };
 }
 $("#dBody").addEventListener("click", e => {
   const b = e.target.closest("[data-rich]"); if(!b) return;
   const c = byId(ui.openId);
   if(b.dataset.rich === "done"){
-    update(c.id, { ricontattare: "", storico: [...(c.storico||[]), { d: localISO(), t: "Ricontattato" }] });
+    update(c.id, { ricontattare: "", ricontattareOra: "", storico: [...(c.storico||[]), { d: localISO(), t: "Ricontattato" }] });
     toast("Richiamo completato");
+  } else if(b.dataset.rich === "cal"){
+    downloadICS([c], "richiamo-" + (c.nome || "cliente").replace(/[^\w]+/g, "-").toLowerCase());
   } else {
     const d = addDays(+b.dataset.rich);
     update(c.id, { ricontattare: d }); toast("Richiamo il " + fmtDate(d));
@@ -865,7 +881,7 @@ function exportExcel(){
     "P.IVA": c.piva, "CODICE UNIVOCO": c.codiceUnivoco, "FORNITORI ATTUALI": (c.fornitori||[]).join(", "),
     "GIORNO ORDINE": (c.giorniOrdine||[]).join(" "), "ORARIO ORDINE": c.orarioOrdine,
     "GIORNO DI CONSEGNA": (c.giorniConsegna||[]).join(" "), "ORARIO CONSEGNA": c.orarioConsegna,
-    "STATO CLIENTE": c.stato, "DA RICONTATTARE": fmtDate(c.ricontattare), "NOTE": c.note,
+    "STATO CLIENTE": c.stato, "DA RICONTATTARE": [fmtDate(c.ricontattare), c.ricontattareOra].filter(Boolean).join(" "), "NOTE": c.note,
     "STORICO": (c.storico||[]).map(s => `${fmtDate(s.d)}: ${s.t}`).join(" | ")
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -875,6 +891,66 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "DATABASE");
   XLSX.writeFile(wb, `Mappatura_clienti_${localISO()}.xlsx`);
 }
+
+/* ---------- Calendario (.ics) ---------- */
+function icsEsc(t){ return String(t ?? "").replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/([,;])/g, "\\$1"); }
+function icsFold(line){
+  const out = []; let cur = "", bytes = 0;
+  for(const ch of line){
+    const n = new TextEncoder().encode(ch).length;
+    if(bytes + n > 73){ out.push(cur); cur = " "; bytes = 1; }
+    cur += ch; bytes += n;
+  }
+  out.push(cur); return out.join("\r\n");
+}
+function buildICS(list){
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const L = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Malfer//Clienti//IT","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Richiami clienti"];
+  for(const c of list){
+    const d = c.ricontattare.replace(/-/g, "");
+    const ultima = [...(c.storico||[])].sort((a,b) => (b.d||"").localeCompare(a.d||""))[0];
+    const desc = [
+      c.referente && "Referente: " + c.referente,
+      c.tel && "Tel: " + c.tel,
+      c.email && "Email: " + c.email,
+      c.stato && "Stato: " + statoLabel(c.stato),
+      c.note && "Note: " + c.note,
+      ultima && `Ultima nota (${fmtDate(ultima.d)}): ${ultima.t}`,
+      "Scheda: https://clienti.malfer.it"
+    ].filter(Boolean).join("\n");
+    L.push("BEGIN:VEVENT", `UID:${c.id}-${d}@clienti.malfer.it`, "DTSTAMP:" + stamp);
+    if(c.ricontattareOra){
+      const [h, m] = c.ricontattareOra.split(":").map(Number);
+      const end = new Date(2000, 0, 1, h, m + 30);
+      const pad = n => String(n).padStart(2, "0");
+      L.push(`DTSTART:${d}T${pad(h)}${pad(m)}00`, `DTEND:${d}T${pad(end.getHours())}${pad(end.getMinutes())}00`);
+      L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:" + icsEsc("Richiamare " + c.nome),"TRIGGER:-PT15M","END:VALARM");
+    } else {
+      const next = new Date(c.ricontattare + "T12:00:00"); next.setDate(next.getDate() + 1);
+      L.push(`DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${localISO(next).replace(/-/g, "")}`);
+    }
+    L.push("SUMMARY:" + icsEsc("Richiamare: " + c.nome));
+    const loc = [c.indirizzo, c.luogo].filter(Boolean).join(", ");
+    if(loc) L.push("LOCATION:" + icsEsc(loc));
+    L.push("DESCRIPTION:" + icsEsc(desc), "END:VEVENT");
+  }
+  L.push("END:VCALENDAR");
+  return L.map(icsFold).join("\r\n") + "\r\n";
+}
+function downloadICS(list, name){
+  if(!list.length){ toast("Nessun richiamo da aggiungere"); return; }
+  const blob = new Blob([buildICS(list)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if(iOS){ location.href = url; }
+  else { const a = document.createElement("a"); a.href = url; a.download = name + ".ics"; document.body.appendChild(a); a.click(); a.remove(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  toast(list.length === 1 ? "Richiamo pronto per il calendario" : `${list.length} richiami pronti per il calendario`);
+}
+$("#calAllBtn").addEventListener("click", () => {
+  const t = localISO();
+  downloadICS(clienti.filter(c => c.ricontattare && c.ricontattare >= t), "richiami-clienti");
+});
 
 /* ---------- offline ---------- */
 const net = () => $("#offline").classList.toggle("hidden", navigator.onLine);
