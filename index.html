@@ -979,6 +979,8 @@ const MAP_GROUPS = [
   { k: "nonservibile", label: "Non servibili", color: "#8A969A", match: c => c.stato === "NON SERVIBILE" }
 ];
 ui.mapOn = { attivi: true, contattato: true, dacontattare: true, nonservibile: false };
+ui.zona = true;            // colori solo nella zona di lavoro
+const ZONA_KM = 5;         // raggio attorno a ogni locale
 let map = null, markers = new Map(), fitted = false, meMarker = null;
 const groupOf = c => MAP_GROUPS.find(g => g.match(c)) || MAP_GROUPS[2];
 
@@ -1002,6 +1004,8 @@ function initMap(){
     return b;
   }});
   new Locate().addTo(map);
+  zonaLayer = new (makeZonaLayer())();
+  if(ui.zona) zonaLayer.addTo(map);
   map.on("click", e => {
     if(!ui.pickId) return;
     const id = ui.pickId; stopPick();
@@ -1015,12 +1019,64 @@ function initMap(){
   });
   return true;
 }
+/* Zona di lavoro: fuori dai 5 km attorno ai locali la mappa diventa in bianco e nero */
+let zonaLayer = null;
+function makeZonaLayer(){
+  return L.Layer.extend({
+    onAdd(m){
+      this._m = m;
+      this._panes = [["zonaGrigio", "saturation", 1, "#808080"], ["zonaVelo", "normal", .28, "#FFFFFF"]].map(([name, blend, op, color]) => {
+        const pane = m.getPane(name) || m.createPane(name);
+        pane.style.zIndex = 350; pane.style.pointerEvents = "none";
+        pane.style.mixBlendMode = blend; pane.style.opacity = op;
+        const cv = L.DomUtil.create("canvas", "", pane);
+        return { pane, cv, color };
+      });
+      m.on("moveend zoomend resize viewreset", this._draw, this);
+      m.on("zoomstart", this._hide, this);
+      this._draw();
+    },
+    onRemove(m){
+      this._panes.forEach(p => p.cv.remove());
+      m.off("moveend zoomend resize viewreset", this._draw, this);
+      m.off("zoomstart", this._hide, this);
+    },
+    _hide(){ this._panes.forEach(p => p.cv.style.visibility = "hidden"); },
+    _draw(){
+      const m = this._m, size = m.getSize(), pad = size.multiplyBy(0.5);
+      const w = size.x + pad.x*2, h = size.y + pad.y*2;
+      const topLeft = m.containerPointToLayerPoint(pad.multiplyBy(-1));
+      const pts = clienti.filter(c => c.lat != null);
+      const dpr = window.devicePixelRatio || 1;
+      this._panes.forEach(p => {
+        const cv = p.cv;
+        cv.width = w*dpr; cv.height = h*dpr; cv.style.width = w + "px"; cv.style.height = h + "px";
+        L.DomUtil.setPosition(cv, topLeft);
+        const ctx = cv.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = p.color; ctx.fillRect(0, 0, w, h);
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "#000";
+        for(const c of pts){
+          const cp = m.latLngToContainerPoint([c.lat, c.lng]).add(pad);
+          const mpp = 40075016.686 * Math.cos(c.lat * Math.PI/180) / Math.pow(2, m.getZoom() + 8);
+          const r = ZONA_KM * 1000 / mpp;
+          if(cp.x < -r || cp.y < -r || cp.x > w + r || cp.y > h + r) continue;
+          ctx.beginPath(); ctx.arc(cp.x, cp.y, r, 0, Math.PI*2); ctx.fill();
+        }
+        cv.style.visibility = "visible";
+      });
+    }
+  });
+}
 function popHTML(c){
   return `<div class="pop"><b>${esc(c.nome)}</b><span class="s">${esc(statoLabel(c.stato))}${c.approx ? ", posizione approssimativa" : ""}</span><br>${esc([c.indirizzo, c.luogo].filter(Boolean).join(", "))}
     <div class="acts"><button type="button" data-pop="${c.id}">Apri scheda</button><a href="${mapsLink(c)}" target="_blank" rel="noopener">Naviga</a></div></div>`;
 }
 function renderMap(){
-  $("#mapChips").innerHTML = MAP_GROUPS.map(g => `<button type="button" data-g="${g.k}" aria-pressed="${!!ui.mapOn[g.k]}"><i style="background:${g.color}"></i>${g.label} ${clienti.filter(g.match).length}</button>`).join("");
+  $("#mapChips").innerHTML = `<button type="button" data-zona aria-pressed="${ui.zona}" title="Colori solo entro ${ZONA_KM} km dai tuoi locali"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>Solo la mia zona</button>`
+    + MAP_GROUPS.map(g => `<button type="button" data-g="${g.k}" aria-pressed="${!!ui.mapOn[g.k]}"><i style="background:${g.color}"></i>${g.label} ${clienti.filter(g.match).length}</button>`).join("");
   const placed = clienti.filter(c => c.lat != null);
   const approx = placed.filter(c => c.approx).length, fails = clienti.filter(c => c.geoFail).length;
   const missing = clienti.filter(c => c.lat == null && !c.geoFail).length;
@@ -1035,7 +1091,7 @@ function renderMap(){
   } else info.classList.add("hidden");
 
   if(!initMap()) { setTimeout(renderMap, 300); return; }
-  setTimeout(() => map.invalidateSize(), 0);
+  setTimeout(() => { map.invalidateSize(); if(ui.zona && zonaLayer && map.hasLayer(zonaLayer)) zonaLayer._draw(); }, 0);
   const visible = new Set();
   const order = ["nonservibile", "dacontattare", "contattato", "attivi"];
   placed.filter(c => ui.mapOn[groupOf(c).k])
@@ -1054,10 +1110,23 @@ function renderMap(){
       if(g.k === "attivi") m.bringToFront();
     });
   for(const [id, m] of markers) if(!visible.has(id)){ map.removeLayer(m); if(!byId(id) || byId(id).lat == null) markers.delete(id); }
-  if(!fitted && visible.size){ fitted = true; map.fitBounds(L.latLngBounds([...visible].map(id => markers.get(id).getLatLng())), { padding: [30, 30], maxZoom: 13 }); }
+  if(!fitted && visible.size){
+    fitted = true;
+    // inquadra la zona principale, ignorando i locali isolati a più di 60 km dalla mediana
+    const ll = [...visible].map(id => markers.get(id).getLatLng());
+    const med = arr => arr.slice().sort((x,y) => x-y)[Math.floor(arr.length/2)];
+    const centro = L.latLng(med(ll.map(p => p.lat)), med(ll.map(p => p.lng)));
+    const vicini = ll.filter(p => p.distanceTo(centro) < 60000);
+    map.fitBounds(L.latLngBounds(vicini.length ? vicini : ll), { padding: [30, 30], maxZoom: 13 });
+  }
   if(missing && !geo.running && !geo.error) geocodeMissing();
 }
 $("#mapChips").addEventListener("click", e => {
+  if(e.target.closest("[data-zona]")){
+    ui.zona = !ui.zona;
+    if(map && zonaLayer){ ui.zona ? zonaLayer.addTo(map) : map.removeLayer(zonaLayer); }
+    renderMap(); return;
+  }
   const b = e.target.closest("[data-g]"); if(!b) return;
   ui.mapOn[b.dataset.g] = !ui.mapOn[b.dataset.g]; renderMap();
 });
