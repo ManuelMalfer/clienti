@@ -395,8 +395,11 @@ const firebaseConfig = {
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
 const DAY_SHORT = ["Lun","Mar","Mer","Gio","Ven","Sab"];
 const DAY_KEY = ["lun","mar","mer","gio","ven","sab"];
-const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["CLIENTE MAX","Cliente Max"],["CLIENTE LUTTERI","Cliente Lutteri"],["NON SERVIBILE","Non servibile"]];
-const ATTIVI = ["CLIENTE","CLIENTE MAX","CLIENTE LUTTERI"];
+const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["NON SERVIBILE","Non servibile"]];
+const ATTIVI = ["CLIENTE"];
+// Vecchie categorie convertite in "Non servibile" con una nota
+const EX_CLIENTI = { "CLIENTE MAX": "Cliente di Massimiliano", "CLIENTE LUTTERI": "Cliente di Lutteri" };
+const notaEx = (nota, testo) => nota && nota.includes(testo) ? nota : [testo, nota].filter(Boolean).join(". ");
 const TIPI_BASE = ["Ristorante","Ristorante - Pizzeria","Pizzeria","Hotel","Bar","Catering","Casa di riposo","Casa vacanze","Centro riabilitativo","Onlus"];
 
 const deaccent = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -420,7 +423,7 @@ function cleanStato(s){
   const hit = STATI.find(x => norm(x[0]) === n);
   return hit ? hit[0] : "DA CONTATTARE";
 }
-function fromRow(r){
+function fromRowRaw(r){
   const m = {};
   for(const k in r) m[normKey(k)] = r[k];
   const v = k => { let x = m[k]; if(x == null) return ""; x = String(x).trim(); return x === "0" ? "" : x; };
@@ -452,6 +455,13 @@ function fromRow(r){
     note: v("NOTE"),
     storico
   };
+}
+function fromRow(r){
+  const m = {}; for(const k in r) m[normKey(k)] = r[k];
+  const orig = deaccent(m.STATOCLIENTE ?? "").toUpperCase().trim().replace(/\s+/g, " ");
+  const c = fromRowRaw(r);
+  if(EX_CLIENTI[orig]){ c.stato = "NON SERVIBILE"; c.note = notaEx(c.note, EX_CLIENTI[orig]); }
+  return c;
 }
 // PARSE-END
 
@@ -532,6 +542,7 @@ function subscribe(){
   if(unsub) return;
   unsub = onSnapshot(col(), snap => {
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    migraExClienti();
     renderAll();
   }, err => {
     console.error(err);
@@ -539,6 +550,26 @@ function subscribe(){
       ? "Questo account non è autorizzato a vedere i dati. Controlla le regole di Firestore."
       : "Impossibile caricare i dati: " + esc(err.message)}</li>`;
   });
+}
+
+/* Converte una volta sola i vecchi stati Cliente Max / Cliente Lutteri */
+let migrando = false;
+async function migraExClienti(){
+  const da = clienti.filter(c => EX_CLIENTI[c.stato]);
+  if(!da.length || migrando) return;
+  migrando = true;
+  try {
+    const b = writeBatch(db);
+    da.forEach(c => b.update(ref(c.id), {
+      stato: "NON SERVIBILE",
+      note: notaEx(c.note, EX_CLIENTI[c.stato]),
+      storico: [...(c.storico || []), { d: localISO(), t: `Stato: ${EX_CLIENTI[c.stato]} → Non servibile` }],
+      aggiornato: nowISO()
+    }));
+    await b.commit();
+    toast(`${da.length} ex clienti spostati in Non servibile`);
+  } catch(err){ fail(err); }
+  finally { migrando = false; }
 }
 
 /* ---------- navigazione ---------- */
