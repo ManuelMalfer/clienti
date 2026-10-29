@@ -208,6 +208,12 @@ form h3:first-child{margin-top:4px}
 .pop .acts{display:flex;gap:6px;margin-top:8px}
 .pop .acts button,.pop .acts a{flex:1;border:0;border-radius:8px;padding:7px 8px;font-weight:600;font-size:13px;text-align:center;text-decoration:none;background:#E1EEF2;color:#17607A}
 .pop .acts button{background:#17607A;color:#fff}
+.shot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px;border-radius:12px;background:var(--accent-soft);margin-bottom:6px}
+.shot .btn{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.shot span{flex:1;min-width:160px;font-size:14px;color:var(--ink)}
+.shot .bar{flex-basis:100%}
+.banner{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:14px;font-weight:500}
+.input.check{border-color:var(--st-contattato);box-shadow:0 0 0 3px rgba(201,138,18,.25)}
 #toast{position:fixed;left:50%;bottom:calc(var(--tabbar) + 86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;font-size:15px;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
 #offline{background:var(--st-contattato);color:#1C2B2E;font-size:14px;font-weight:500;text-align:center;padding:6px 12px}
@@ -321,11 +327,20 @@ form h3:first-child{margin-top:4px}
   <form class="dlg" id="cForm" novalidate>
     <div class="dlg-head"><h2 id="fTitle">Nuovo cliente</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
+      <div class="shot" id="shotBox">
+        <button class="btn" type="button" id="shotBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>Compila da screenshot</button>
+        <span id="shotTxt">Scegli lo screenshot della scheda del gestionale: compilo i campi in automatico.</span>
+        <span class="bar hidden" id="shotBar"><i id="shotProg" style="width:0%"></i></span>
+      </div>
+      <p class="banner hidden" id="formBanner"></p>
       <h3>Locale</h3>
       <label class="field"><span class="req">Nome del locale</span><input class="input" name="nome" required autocomplete="off"></label>
+      <label class="field"><span>Ragione sociale</span><input class="input" name="ragioneSociale" autocomplete="off"></label>
       <div class="grid2">
         <label class="field"><span class="req">Località</span><input class="input" name="luogo" list="dlLuoghi" required autocomplete="off"></label>
         <label class="field"><span>Indirizzo</span><input class="input" name="indirizzo" autocomplete="off"></label>
+        <label class="field"><span>CAP</span><input class="input" name="cap" inputmode="numeric" maxlength="5" autocomplete="off"></label>
+        <label class="field"><span>Provincia</span><input class="input" name="prov" maxlength="2" autocomplete="off" style="text-transform:uppercase"></label>
         <label class="field"><span class="req">Tipologia</span><input class="input" name="tipologia" list="dlTipi" required autocomplete="off"></label>
         <label class="field"><span>Stato</span><select class="input" name="stato" id="fStatoSel"></select></label>
       </div>
@@ -334,15 +349,21 @@ form h3:first-child{margin-top:4px}
       <div class="grid2">
         <label class="field"><span>Referente</span><input class="input" name="referente" autocomplete="off"></label>
         <label class="field"><span>Telefono</span><input class="input" name="tel" type="tel" inputmode="tel" autocomplete="off"></label>
+        <label class="field"><span>Cellulare</span><input class="input" name="cellulare" type="tel" inputmode="tel" autocomplete="off"></label>
+        <label class="field"><span>Email</span><input class="input" name="email" type="email" inputmode="email" autocomplete="off"></label>
       </div>
-      <label class="field"><span>Email</span><input class="input" name="email" type="email" inputmode="email" autocomplete="off"></label>
+      <label class="field"><span>PEC</span><input class="input" name="pec" type="email" inputmode="email" autocomplete="off"></label>
 
       <h3>Dati fiscali</h3>
       <div class="grid2">
         <label class="field"><span>Codice cliente</span><input class="input" name="codice" inputmode="numeric" autocomplete="off"></label>
         <label class="field"><span>P.IVA</span><input class="input" name="piva" inputmode="numeric" maxlength="13" autocomplete="off"></label>
       </div>
-      <label class="field"><span>Codice univoco (SDI)</span><input class="input" name="codiceUnivoco" maxlength="7" autocomplete="off" style="text-transform:uppercase"></label>
+      <div class="grid2">
+        <label class="field"><span>Codice fiscale</span><input class="input" name="codiceFiscale" maxlength="16" autocomplete="off" style="text-transform:uppercase"></label>
+        <label class="field"><span>Codice univoco (SDI)</span><input class="input" name="codiceUnivoco" maxlength="7" autocomplete="off" style="text-transform:uppercase"></label>
+      </div>
+      <label class="field"><span>Pagamento</span><input class="input" name="pagamento" autocomplete="off"></label>
 
       <h3>Fornitori e ordini</h3>
       <label class="field"><span>Fornitori attuali</span><input class="input" name="fornitori" list="dlFornitori" autocomplete="off"></label>
@@ -372,6 +393,7 @@ form h3:first-child{margin-top:4px}
 <datalist id="dlTipi"></datalist>
 <datalist id="dlFornitori"></datalist>
 <input type="file" id="fileImport" accept=".xlsx,.xls,.xlsm" class="hidden">
+<input type="file" id="shotFile" accept="image/*" class="hidden">
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
@@ -437,6 +459,13 @@ function fromRowRaw(r){
   return {
     nome, codice,
     referente: v("REFERENTE"),
+    ragioneSociale: v("RAGIONESOCIALE"),
+    cellulare: v("CELLULARE"),
+    pec: v("PEC"),
+    cap: v("CAP"),
+    prov: v("PROV").toUpperCase(),
+    codiceFiscale: v("CODICEFISCALE").toUpperCase(),
+    pagamento: v("PAGAMENTO"),
     tel: v("TEL"),
     email: v("EMAIL"),
     luogo: v("LUOGO"),
@@ -619,7 +648,7 @@ function filtered(){
     if(ui.luogo && c.luogo !== ui.luogo) return false;
     if(ui.tipo && c.tipologia !== ui.tipo) return false;
     if(words.length){
-      const hay = norm([c.nome, c.codice, c.referente, c.luogo, c.indirizzo, c.tipologia, c.tel, c.email, c.piva, (c.fornitori||[]).join(" "), c.note].join(" "));
+      const hay = norm([c.nome, c.ragioneSociale, c.cellulare, c.codice, c.referente, c.luogo, c.indirizzo, c.tipologia, c.tel, c.email, c.piva, (c.fornitori||[]).join(" "), c.note].join(" "));
       return words.every(w => hay.includes(w));
     }
     return true;
@@ -672,7 +701,7 @@ function renderGiro(){
   const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day)).sort(byPlace);
   $("#giroLbl").textContent = day;
   const giroRow = (c, orario) => {
-    const tel = firstPhone(c.tel);
+    const tel = firstPhone(c.tel) || firstPhone(c.cellulare);
     return `<li class="giro-li">
       <div class="giro-main">${rowHTML(c, esc(orario || ""))}</div>
       ${tel ? `<a class="icon-btn" href="tel:${tel}" aria-label="Chiama ${esc(c.nome)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></a>` : ""}
@@ -759,15 +788,21 @@ function renderDetail(){
   const c = byId(ui.openId);
   if(!c){ $("#dlgDetail").close(); return; }
   $("#dTitle").innerHTML = `${esc(c.nome)}<span class="sub">${esc([c.tipologia, c.codice ? "Cod. " + c.codice : ""].filter(Boolean).join(", "))}</span>`;
-  const tel = firstPhone(c.tel), wa = waLink(c.tel);
+  const tel = firstPhone(c.tel) || firstPhone(c.cellulare);
+  const wa = waLink(c.cellulare) || (/^\+?(39)?3/.test(firstPhone(c.tel)) ? waLink(c.tel) : "");
   const act = (href, label, svg, ext) => href ? `<a href="${href}" ${ext ? 'target="_blank" rel="noopener"' : ""}>${svg}${label}</a>` : `<span aria-disabled="true">${svg}${label}</span>`;
   const ic = p => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${p}</svg>`;
   const info = [
     ["Referente", esc(c.referente)],
+    ["Rag. sociale", esc(c.ragioneSociale)],
     ["Telefono", esc(c.tel)],
+    ["Cellulare", esc(c.cellulare)],
     ["Email", esc(c.email)],
-    ["Indirizzo", esc([c.indirizzo, c.luogo].filter(Boolean).join(", "))],
+    ["PEC", esc(c.pec)],
+    ["Indirizzo", esc([c.indirizzo, [c.cap, c.luogo].filter(Boolean).join(" ") + (c.prov ? ` (${c.prov})` : "")].filter(Boolean).join(", "))],
     ["P.IVA", esc(c.piva)],
+    ["Cod. fiscale", esc(c.codiceFiscale)],
+    ["Pagamento", esc(c.pagamento)],
     ["Cod. univoco", esc(c.codiceUnivoco)],
     ["Fornitori", esc((c.fornitori||[]).join(", "))],
     ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine].filter(Boolean).join(" · "))],
@@ -860,10 +895,17 @@ $("#fStatoSel").innerHTML = STATI.map(([v,l]) => `<option value="${v}">${l}</opt
 $$("[data-days]").forEach(box => {
   box.innerHTML = DAYS.map((d,i) => `<label class="day"><input type="checkbox" value="${d}"><span>${DAY_SHORT[i]}</span></label>`).join("");
 });
-function openForm(id = null, preset = {}){
+function openForm(id = null, preset = {}, opts = {}){
   ui.editId = id;
-  const c = id ? byId(id) : { stato: "DA CONTATTARE", ...preset };
+  ui.fromShot = !!opts.fromShot;
+  const c = id ? { ...byId(id), ...preset } : { stato: "DA CONTATTARE", ...preset };
   $("#fTitle").textContent = id ? "Modifica cliente" : "Nuovo cliente";
+  $("#shotBox").classList.toggle("hidden", !!id && !opts.fromShot);
+  if(!opts.keepStatus){ $("#shotTxt").textContent = "Scegli lo screenshot della scheda del gestionale: compilo i campi in automatico."; $("#shotBar").classList.add("hidden"); }
+  $("#formBanner").classList.toggle("hidden", !opts.banner);
+  $("#formBanner").textContent = opts.banner || "";
+  F.querySelectorAll(".check").forEach(el => el.classList.remove("check"));
+  (opts.check || []).forEach(n => F.querySelector(`[name=${n}]`)?.classList.add("check"));
   $("#saveNewBtn").classList.toggle("hidden", !!id);
   for(const el of F.elements){
     if(!el.name) continue;
@@ -876,7 +918,7 @@ function openForm(id = null, preset = {}){
     box.querySelectorAll("input").forEach(i => i.checked = sel.includes(i.value));
   });
   if(!$("#dlgForm").open) $("#dlgForm").showModal();
-  F.querySelector("[name=nome]").focus();
+  if(!opts.fromShot) F.querySelector("[name=nome]").focus();
   F.querySelector(".dlg-body").scrollTop = 0;
 }
 function readForm(){
@@ -885,6 +927,7 @@ function readForm(){
   d.fornitori = splitList(d.fornitori);
   d.codiceUnivoco = d.codiceUnivoco.toUpperCase();
   d.piva = d.piva.replace(/\s/g, "").toUpperCase();
+  d.prov = d.prov.toUpperCase(); d.codiceFiscale = d.codiceFiscale.toUpperCase();
   $$("[data-days]").forEach(box => d[box.dataset.days] = [...box.querySelectorAll("input:checked")].map(i => i.value));
   return d;
 }
@@ -910,19 +953,213 @@ async function save(andNew){
     const extra = {};
     if(norm(old.indirizzo) !== norm(d.indirizzo) || norm(old.luogo) !== norm(d.luogo)) Object.assign(extra, { lat: null, lng: null, approx: false, geoFail: false });
     if((old.stato || "DA CONTATTARE") !== d.stato) extra.storico = [...(old.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old.stato)} → ${statoLabel(d.stato)}` }];
+    if(ui.fromShot) extra.storico = [...(extra.storico || old.storico || []), { d: localISO(), t: "Scheda aggiornata da screenshot del gestionale" }];
     update(ui.editId, { ...d, ...extra });
     $("#dlgForm").close(); toast("Cliente salvato");
     openDetail(ui.editId);
   } else {
-    setDoc(doc(col()), { ...d, storico: [], creato: nowISO(), aggiornato: nowISO() }).catch(fail);
+    setDoc(doc(col()), { ...d, storico: ui.fromShot ? [{ d: localISO(), t: "Scheda creata da screenshot del gestionale" }] : [], creato: nowISO(), aggiornato: nowISO() }).catch(fail);
     toast(`${d.nome} salvato`);
     if(andNew) openForm(null, { luogo: d.luogo, tipologia: d.tipologia, stato: d.stato });
     else $("#dlgForm").close();
   }
 }
 F.addEventListener("submit", e => { e.preventDefault(); save(false); });
+F.addEventListener("input", e => e.target.classList.remove("check"));
 $("#saveNewBtn").addEventListener("click", () => save(true));
 $("#fab").addEventListener("click", () => openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
+
+/* ---------- Compila da screenshot del gestionale ----------
+   La schermata del gestionale ha sempre gli stessi campi nella stessa posizione.
+   Trovo il pannello grigio, ritaglio ogni riquadro e leggo il testo (OCR sul dispositivo). */
+const SS_PANEL = { x: 166, y: 68, w: 2027, h: 1359 };   // misure di riferimento (screenshot iPad 2360x1640)
+const SS_FIELDS = {
+  codice:    [531, 90, 401, 78, "t"],
+  ragione:   [1076, 89, 1008, 79, "t"],
+  insegna:   [1076, 181, 1008, 78, "t"],
+  indirizzo: [531, 271, 1007, 79, "t"],
+  cap:       [1783, 271, 301, 79, "d"],
+  localita:  [531, 362, 1007, 79, "t"],
+  prov:      [1783, 362, 301, 79, "u"],
+  telefono:  [531, 453, 603, 79, "d"],
+  cellulare: [1480, 453, 604, 79, "d"],
+  email:     [531, 635, 1553, 78, "e"],
+  piva:      [531, 726, 603, 78, "d"],
+  codfisc:   [1561, 726, 604, 78, "u"],
+  pec:       [531, 817, 805, 78, "e"],
+  gg:        [1522, 818, 642, 87, "g"],
+  pagamento: [531, 929, 643, 87, "t"],
+  canale:    [531, 1060, 643, 87, "t"],
+  matDa:     [531, 1293, 178, 86, "h"],
+  matA:      [814, 1293, 178, 86, "h"],
+  pomDa:     [1522, 1293, 177, 86, "h"],
+  pomA:      [1905, 1293, 178, 86, "h"]
+};
+const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const WL = { d: "0123456789", g: "1234567;", h: "0123456789:.", u: UPPER + "0123456789", e: UPPER + "abcdefghijklmnopqrstuvwxyz0123456789@._-", t: "" };
+let ocrWorker = null;
+function loadScript(src){ return new Promise((ok, ko) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => ko(new Error("Impossibile caricare " + src)); document.head.appendChild(s); }); }
+async function getOcr(onProgress){
+  if(ocrWorker) return ocrWorker;
+  if(!window.Tesseract) await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+  ocrWorker = await Tesseract.createWorker("ita", 1, { logger: m => { if(m.status && m.progress != null && /load|initializ/.test(m.status)) onProgress?.(m.progress); } });
+  return ocrWorker;
+}
+function loadImage(file){
+  return new Promise((ok, ko) => { const url = URL.createObjectURL(file); const im = new Image(); im.onload = () => { ok(im); URL.revokeObjectURL(url); }; im.onerror = () => ko(new Error("Immagine non leggibile")); im.src = url; });
+}
+function findPanel(ctx, W, H){
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const isGrey = i => Math.abs(data[i]-170) < 6 && Math.abs(data[i+1]-170) < 6 && Math.abs(data[i+2]-170) < 6;
+  const rows = [], cols = new Array(W).fill(0);
+  for(let y = 0; y < H; y += 2){
+    let n = 0;
+    for(let x = 0; x < W; x += 2){ if(isGrey((y*W + x)*4)){ n++; cols[x]++; } }
+    if(n > W/2 * 0.3) rows.push(y);
+  }
+  const xs = cols.map((n,x) => n > H/2 * 0.3 ? x : -1).filter(x => x >= 0);
+  if(rows.length < 20 || xs.length < 20) return null;
+  return { x: xs[0], y: rows[0], w: xs[xs.length-1] - xs[0], h: rows[rows.length-1] - rows[0] };
+}
+function cropField(img, panel, f){
+  const sx = panel.w / SS_PANEL.w, sy = panel.h / SS_PANEL.h;
+  const x = panel.x + (f[0] - SS_PANEL.x + 12) * sx, y = panel.y + (f[1] - SS_PANEL.y + 7) * sy;
+  const w = (f[2] - 24) * sx, h = (f[3] - 14) * sy;
+  const H = 64, W = Math.round(w * H / h), pad = 14;
+  const cv = document.createElement("canvas"); cv.width = W + pad*2; cv.height = H + pad*2;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, x, y, w, h, pad, pad, W, H);
+  const id = ctx.getImageData(pad, pad, W, H), d = id.data;
+  // soglia automatica (Otsu): separa testo e sfondo qualunque sia il colore del riquadro
+  const gray = new Uint8Array(d.length/4), hist = new Array(256).fill(0);
+  for(let i = 0, j = 0; i < d.length; i += 4, j++){ const g = Math.round(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]); gray[j] = g; hist[g]++; }
+  const tot = gray.length; let sumAll = 0; for(let i = 0; i < 256; i++) sumAll += i*hist[i];
+  let sumB = 0, wB = 0, best = 0, thr = 128;
+  for(let i = 0; i < 256; i++){
+    wB += hist[i]; if(!wB) continue; const wF = tot - wB; if(!wF) break;
+    sumB += i*hist[i]; const mB = sumB/wB, mF = (sumAll - sumB)/wF, v = wB*wF*(mB - mF)**2;
+    if(v > best){ best = v; thr = i; }
+  }
+  let below = 0; for(const g of gray) if(g <= thr) below++;
+  const contrast = Math.sqrt(best / (tot*tot)) ;        // separazione tra le due classi
+  const textIsDark = below < tot/2;                     // il testo è la classe minoritaria
+  let dark = 0;
+  for(let i = 0, j = 0; i < d.length; i += 4, j++){
+    const isText = textIsDark ? gray[j] <= thr : gray[j] > thr;
+    const v = isText ? 0 : 255; if(!v) dark++;
+    d[i] = d[i+1] = d[i+2] = v; d[i+3] = 255;
+  }
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.putImageData(id, pad, pad);
+  return { cv, empty: contrast < 12 || dark / (W*H) < 0.004 };
+}
+const SMALL_WORDS = new Set(["di","del","della","dei","degli","delle","da","dal","dalla","e","al","alla","alle","in","per","la","le","lo","il","a","con"]);
+const KEEP_UP = new Set(["SRL","SRLS","SNC","SAS","SPA","SS","S.R.L.","S.N.C.","S.A.S.","S.P.A.","II","III","IV","SCARL","SCRL"]);
+function titleCase(s){
+  return String(s || "").toLowerCase().split(/(\s+)/).map((w, i) => {
+    if(/^\s+$/.test(w) || !w) return w;
+    if(KEEP_UP.has(w.toUpperCase())) return w.toUpperCase();
+    if(i > 0 && SMALL_WORDS.has(w)) return w;
+    return w.replace(/^(\p{L})/u, ch => ch.toUpperCase()).replace(/(['’])(\p{L})/u, (m, a, b) => a + b.toUpperCase());
+  }).join("");
+}
+function pivaValida(p){
+  if(!/^\d{11}$/.test(p)) return false;
+  let s = 0;
+  for(let i = 0; i < 11; i++){ let n = +p[i]; if(i % 2){ n *= 2; if(n > 9) n -= 9; } s += n; }
+  return s % 10 === 0;
+}
+const ora = t => { const m = String(t).replace(/\s/g, "").match(/^(\d{1,2})[:.]?(\d{2})$/); return m ? `${m[1].padStart(2,"0")}:${m[2]}` : ""; };
+function matchFrom(list, value){ const n = norm(value); return list.find(x => norm(x) === n) || ""; }
+
+function shotToCliente(raw){
+  const check = [];
+  const t = k => (raw[k]?.text || "").replace(/\s+/g, " ").trim();
+  const low = (k, name) => { if(raw[k] && raw[k].text && raw[k].conf < 75) check.push(name); };
+  const out = {};
+  const ragione = t("ragione"), insegna = t("insegna");
+  out.nome = titleCase(insegna || ragione); low(insegna ? "insegna" : "ragione", "nome");
+  out.ragioneSociale = titleCase(ragione); low("ragione", "ragioneSociale");
+  let ind = t("indirizzo").replace(/^(.*?\p{L}\.?)\s*,?\s*(\d+\s*[A-Za-z]?(?:\/\w+)?)$/u, "$1, $2");
+  out.indirizzo = titleCase(ind); low("indirizzo", "indirizzo");
+  out.cap = t("cap").replace(/\D/g, "").slice(0, 5); low("cap", "cap");
+  if(out.cap && out.cap.length !== 5) check.push("cap");
+  const loc = t("localita");
+  out.luogo = matchFrom(clienti.map(c => c.luogo), loc) || titleCase(loc); low("localita", "luogo");
+  out.prov = t("prov").replace(/[^A-Z]/gi, "").toUpperCase().slice(0, 2);
+  out.tel = t("telefono").replace(/\D/g, ""); low("telefono", "tel");
+  out.cellulare = t("cellulare").replace(/\D/g, ""); low("cellulare", "cellulare");
+  out.email = t("email").replace(/\s/g, "").toLowerCase(); low("email", "email");
+  if(out.email && !/^[^@]+@[^@]+\.[a-z]{2,}$/.test(out.email)) check.push("email");
+  out.piva = t("piva").replace(/\D/g, ""); low("piva", "piva");
+  if(out.piva && !pivaValida(out.piva)) check.push("piva");
+  out.codiceFiscale = t("codfisc").replace(/[^A-Z0-9]/gi, "").toUpperCase(); low("codfisc", "codiceFiscale");
+  out.pec = t("pec").replace(/\s/g, "").toLowerCase(); low("pec", "pec");
+  // i giorni sono scritti "1;2;3;": prendo solo la prima cifra di ogni gruppo (il ";" a volte viene letto come cifra)
+  const gg = [...new Set(t("gg").split(";").map(x => x.trim()[0]).filter(x => /[1-7]/.test(x)).map(Number))].sort();
+  out.giorniConsegna = gg.filter(n => n <= 6).map(n => DAYS[n-1]);
+  const mat = [ora(t("matDa")), ora(t("matA"))].filter(Boolean).join("-");
+  const pom = [ora(t("pomDa")), ora(t("pomA"))].filter(Boolean).join("-");
+  out.orarioConsegna = [mat, pom].filter(Boolean).join(" e ");
+  out.pagamento = titleCase(t("pagamento"));
+  const canale = t("canale");
+  if(canale && !/^-+$/.test(canale)) out.tipologia = matchFrom(uniq([...TIPI_BASE, ...clienti.map(c => c.tipologia)]), canale) || titleCase(canale);
+  const cod = t("codice");
+  if(/^\d{4,}$/.test(cod)) out.codice = cod;
+  out.stato = "CLIENTE";
+  for(const k in out) if(out[k] === "" || (Array.isArray(out[k]) && !out[k].length)) delete out[k];
+  return { dati: out, check: [...new Set(check)] };
+}
+
+async function readShot(file){
+  const txt = $("#shotTxt"), bar = $("#shotBar"), prog = $("#shotProg");
+  const step = (msg, p) => { txt.textContent = msg; bar.classList.remove("hidden"); prog.style.width = Math.round(p*100) + "%"; };
+  $("#shotBtn").disabled = true;
+  try {
+    step("Preparo la lettura del testo…", 0.02);
+    const worker = await getOcr(p => step("Preparo la lettura del testo (solo la prima volta)…", 0.02 + p*0.2));
+    const img = await loadImage(file);
+    const cv = document.createElement("canvas"); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const ctx = cv.getContext("2d", { willReadFrequently: true }); ctx.drawImage(img, 0, 0);
+    let panel = findPanel(ctx, cv.width, cv.height);
+    if(!panel){
+      const k = cv.width / 2360;
+      panel = { x: SS_PANEL.x*k, y: SS_PANEL.y*k, w: SS_PANEL.w*k, h: SS_PANEL.h*k };
+    }
+    const keys = Object.keys(SS_FIELDS), raw = {};
+    for(let i = 0; i < keys.length; i++){
+      const k = keys[i], f = SS_FIELDS[k];
+      step(`Leggo i campi… ${i+1} di ${keys.length}`, 0.22 + 0.78 * i / keys.length);
+      const { cv: crop, empty } = cropField(img, panel, f);
+      if(empty){ raw[k] = { text: "", conf: 100 }; continue; }
+      await worker.setParameters({ tessedit_pageseg_mode: "7", tessedit_char_whitelist: WL[f[4]] });
+      const { data } = await worker.recognize(crop);
+      raw[k] = { text: data.text.trim(), conf: data.confidence };
+    }
+    const { dati, check } = shotToCliente(raw);
+    if(!dati.nome){ step("Non ho trovato il nome del cliente: è lo screenshot giusto della scheda?", 1); return; }
+    const esistente = clienti.find(c =>
+      (dati.piva && c.piva && c.piva.replace(/\D/g, "") === dati.piva) ||
+      (norm(c.nome) === norm(dati.nome) && norm(c.luogo) === norm(dati.luogo)) ||
+      (dati.ragioneSociale && c.ragioneSociale && norm(c.ragioneSociale) === norm(dati.ragioneSociale)));
+    const nota = check.length ? ` Controlla i campi evidenziati in arancione (${check.length}).` : " Controlla i dati e salva.";
+    if(esistente){
+      openForm(esistente.id, dati, { fromShot: true, check, keepStatus: true,
+        banner: `"${esistente.nome}" era già nell'elenco (${statoLabel(esistente.stato)}): aggiorno la sua scheda e la porto a Cliente. Note, storico e richiami restano.` });
+    } else {
+      const corrente = readForm();
+      const base = {}; ["fornitori","giorniOrdine","orarioOrdine","ricontattare","ricontattareOra","note","referente","codiceUnivoco"].forEach(k => { if(corrente[k] && (!Array.isArray(corrente[k]) || corrente[k].length)) base[k] = corrente[k]; });
+      openForm(null, { ...base, ...dati }, { fromShot: true, check, keepStatus: true });
+    }
+    step("Campi compilati dallo screenshot." + nota, 1);
+    F.querySelector(".dlg-body").scrollTop = 0;
+  } catch(err){
+    console.error(err);
+    step("Lettura non riuscita: " + (err.message || err) + ". Controlla la connessione e riprova.", 1);
+  } finally { $("#shotBtn").disabled = false; }
+}
+$("#shotBtn").addEventListener("click", () => $("#shotFile").click());
+$("#shotFile").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if(f) readShot(f); });
 
 /* ---------- Import / Export ---------- */
 $("#fileImport").addEventListener("change", async e => {
@@ -955,16 +1192,16 @@ $("#fileImport").addEventListener("change", async e => {
 function exportExcel(){
   if(!window.XLSX){ toast("Libreria Excel non ancora caricata, riprova tra un attimo"); return; }
   const rows = [...clienti].sort((a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it")).map(c => ({
-    "CLIENTE": c.nome, "CODICE CLIENTE": c.codice, "REFERENTE": c.referente, "TEL": c.tel, "EMAIL": c.email,
-    "LUOGO": c.luogo, "INDIRIZZO": c.indirizzo, "TIPOLOGIA ATTIVITA'": c.tipologia,
-    "P.IVA": c.piva, "CODICE UNIVOCO": c.codiceUnivoco, "FORNITORI ATTUALI": (c.fornitori||[]).join(", "),
+    "CLIENTE": c.nome, "RAGIONE SOCIALE": c.ragioneSociale, "CODICE CLIENTE": c.codice, "REFERENTE": c.referente, "TEL": c.tel, "CELLULARE": c.cellulare, "EMAIL": c.email, "PEC": c.pec,
+    "LUOGO": c.luogo, "INDIRIZZO": c.indirizzo, "CAP": c.cap, "PROV": c.prov, "TIPOLOGIA ATTIVITA'": c.tipologia,
+    "P.IVA": c.piva, "CODICE FISCALE": c.codiceFiscale, "CODICE UNIVOCO": c.codiceUnivoco, "PAGAMENTO": c.pagamento, "FORNITORI ATTUALI": (c.fornitori||[]).join(", "),
     "GIORNO ORDINE": (c.giorniOrdine||[]).join(" "), "ORARIO ORDINE": c.orarioOrdine,
     "GIORNO DI CONSEGNA": (c.giorniConsegna||[]).join(" "), "ORARIO CONSEGNA": c.orarioConsegna,
     "STATO CLIENTE": c.stato, "DA RICONTATTARE": [fmtDate(c.ricontattare), c.ricontattareOra].filter(Boolean).join(" "), "NOTE": c.note,
     "STORICO": (c.storico||[]).map(s => `${fmtDate(s.d)}: ${s.t}`).join(" | ")
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [40,14,16,14,26,18,30,22,14,12,24,22,12,26,22,16,14,40,60].map(w => ({ wch: w }));
+  ws["!cols"] = [40,30,14,16,14,14,26,26,18,30,7,5,22,14,18,12,24,24,22,12,26,22,16,18,40,60].map(w => ({ wch: w }));
   ws["!autofilter"] = { ref: ws["!ref"] };
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "DATABASE");
