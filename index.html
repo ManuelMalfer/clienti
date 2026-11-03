@@ -265,7 +265,7 @@ body.pv-open{overflow:hidden}
 
 /* foglio dell'offerta: sempre carta bianca */
 .pv-page{flex:none;width:794px;height:1123px;background:#fff;color:#1B1F1D;box-shadow:0 1px 2px rgba(0,0,0,.08),0 8px 28px rgba(0,0,0,.12);padding:44px 52px 36px;display:flex;flex-direction:column;gap:18px;font-family:'Barlow','Helvetica Neue',Arial,sans-serif;line-height:normal;color-scheme:light;font-size:15px}
-.pv-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.pv-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:18px;overflow:visible}
 .pv-h1{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:3px solid #005A3C;gap:20px}
 .pv-h1 img{height:72px;width:auto;display:block}
 .pv-h1 .r{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0}
@@ -305,6 +305,19 @@ body.pv-open{overflow:hidden}
 .pv-page [contenteditable]{outline:none;border-radius:2px;-webkit-user-select:text;user-select:text}
 .pv-page [contenteditable]:hover{background:rgba(0,90,60,.06)}
 .pv-page [contenteditable]:focus{background:rgba(0,90,60,.09);box-shadow:0 0 0 2px rgba(0,90,60,.25)}
+.pv-move{position:absolute;left:-44px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:1px solid #C9D6CF;background:#fff;color:#55605B;display:grid;place-items:center;overflow:hidden;cursor:pointer}
+.pv-move:hover,.pv-row.sel .pv-move{border-color:#005A3C;color:#005A3C;background:#EEF4F0}
+.pv-move svg{pointer-events:none}
+.pv-move select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px;-webkit-appearance:none;appearance:none}
+.pv-ready{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center;max-width:320px}
+.pv-ready span{font-size:14px;color:var(--muted);word-break:break-all}
+.pv-capture .pv-pin,.pv-capture .pv-pill,.pv-capture .pv-add,.pv-capture .pv-move{display:none!important}
+.pv-capture .pv-pout{display:inline}
+.pv-capture .pv-row.sel{background:none;box-shadow:none}
+.pv-capture .pv-note:empty,.pv-capture .pv-client:empty,.pv-capture .pv-name:empty{display:none!important}
+.pv-capture .pv-page [contenteditable]{background:none!important;box-shadow:none!important}
+.pv-capture .pv-page{box-shadow:none}
+.pv-capture .pv-empty{display:none!important}
 .pv-pill{display:none;position:absolute;right:0;bottom:calc(100% - 2px);z-index:3;background:#16201B;color:#fff;border-radius:6px;padding:4px;gap:4px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .pv-row.sel .pv-pill{display:flex}
 .pv-pill select{background:#2A3630;color:#fff;border:none;border-radius:4px;font-size:12px;padding:3px 4px}
@@ -331,7 +344,7 @@ body.pv-open{overflow:hidden}
   .pv-pages{zoom:1!important;display:block;gap:0}
   .pv-page{box-shadow:none;margin:0;break-after:page;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .pv-page:last-child{break-after:auto;page-break-after:auto}
-  .pv-pin,.pv-pill,.pv-add{display:none!important}
+  .pv-pin,.pv-pill,.pv-add,.pv-move{display:none!important}
   .pv-pout{display:inline}
   .pv-row.sel{background:none;box-shadow:none}
   .pv-note:empty,.pv-client:empty{display:none!important}
@@ -530,7 +543,8 @@ body.pv-open{overflow:hidden}
   <div class="pv-top">
     <button class="pv-back" type="button" id="pvBack">‹ Preventivi</button>
     <h2 id="pvTitle">Preventivo<small id="pvSaved" class="pv-saved"></small></h2>
-    <button class="btn btn-primary" type="button" id="pvPrint">Stampa</button>
+    <button class="btn" type="button" id="pvPrint">Stampa</button>
+    <button class="btn btn-primary" type="button" id="pvPdf">Crea PDF</button>
   </div>
   <div class="pv-layout">
     <aside class="pv-side">
@@ -539,12 +553,11 @@ body.pv-open{overflow:hidden}
         <label class="field"><span>Cliente</span><input class="input" id="pvCliente" list="dlPvClienti" autocomplete="off" placeholder="Scegli o scrivi il nome"></label>
         <label class="field"><span>Data</span><input class="input" id="pvData" type="date"></label>
         <label class="field"><span>Validità offerta</span><input class="input" id="pvValid" autocomplete="off" placeholder="es. fino al 30 novembre 2026"></label>
-        <label class="field"><span>Pagamento</span><input class="input" id="pvPag" autocomplete="off"></label>
         <div class="pv-gnote hidden" id="pvGnote"></div>
       </div>
       <div class="pv-grp">
         <h3>Articoli</h3>
-        <p class="pv-hint">Tocca nomi, formati, note e prezzi per modificarli. Tocca “al kg” o “al pz” per cambiare l’unità. Seleziona una riga per spostarla di categoria o toglierla. Le correzioni a nomi, formati, categorie e unità vengono ricordate per codice articolo.</p>
+        <p class="pv-hint">Tocca nomi, formati, note e prezzi per modificarli. Tocca “al kg” o “al pz” per cambiare l’unità. Per cambiare categoria tocca l’icona ⇅ a sinistra dell’articolo. Seleziona una riga per toglierla. Le correzioni a nomi, formati, categorie e unità vengono ricordate per codice articolo.</p>
         <label class="field"><span>Aggiungi un articolo in</span>
           <span class="pv-inline"><select class="input" id="pvAddCat"></select><button class="btn" type="button" id="pvAddBtn">Aggiungi</button></span>
         </label>
@@ -566,6 +579,7 @@ body.pv-open{overflow:hidden}
   </div>
 </div>
 <div class="pv-busy hidden" id="pvBusy"><div id="pvBusyTxt">Lettura del PDF…</div></div>
+<div class="pv-busy hidden" id="pvReady"><div class="pv-ready"><strong>PDF pronto</strong><span id="pvReadyName"></span><button class="btn btn-primary" type="button" id="pvShare">Condividi o salva il PDF</button><button class="link" type="button" id="pvReadyClose">Chiudi</button></div></div>
 <datalist id="dlPvClienti"></datalist>
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
 <div id="toast" role="status" aria-live="polite"></div>
@@ -1686,7 +1700,7 @@ const PV_RULES = [
   ["Conserve e condimenti", ["POLPA DI POMODORO","POLPA POMODORO","POLPA FINE","POLPA RUSTICA","TONNO SOTT","TONNO ALL","TONNO IN OLIO","FUNGHI SOTT","CARCIOFINI SOTT","FILETTI DI ALICI SOTT","ACCIUGHE SOTT"]],
   ["Farine e semole", ["FARIN","SEMOL","LIEVIT","MANITOBA","GERME","CRUSCA","AMIDO","FECOLA","PANGRATT","PAN GRATT","MAIZENA"]],
   ["Pesce e crostacei", ["SCAMP","GAMBER","CALAMAR","MAZZANCOLL","POLPO","POLPI\\b","MOSCARDIN","SEPPI","TOTAN","TONNO","SALMON","BACCAL","STOCCAFISS","COZZ","VONGOL","CANNOLICCH","OSTRIC","ORAT","BRANZIN","SPIGOL","PESC","ACCIUG","ALICI","ASTIC","ARAGOST","MERLUZZ","NASELL","PLATESS","SOGLIOL","ROMBO","CAPESANT","CAPPESANT","GRANCHI","GRANCEOL","SURIMI","CERNI","DENTIC","SGOMBR","SARDE","SARDIN","TROT","ANGUILL","CEFAL","CODA DI ROSPO","RANA PESCATRICE","FRUTTI DI MARE","MOLLUSC","CROSTAC","PANGASI","TILAPIA","HALIBUT","LUCCI","PERSICO","CORATELLA DI PESCE","MISTO MARE","RICCI DI MARE"]],
-  ["Salumi", ["PROSCIUTT","PROSC\\.","SALAM","SPECK","MORTADELL","COPPA","PANCETT","BRESAOL","GUANCIAL","LARDO","WURSTEL","CULATELL","CIAUSCOL","NDUJA","SOPPRESS","CAPOCOLL","COTECHIN","ZAMPON","SALUM","PORCHETT","SPALLA COTTA","CARNE SALADA","MOCETTA"]],
+  ["Salumi", ["CRUDO","COTTO\\b","SAN DANIELE","PARMA\\b","JAMON","SERRANO","PATA NEGRA","PROSCIUTT","PROSC\\.","SALAM","SPECK","MORTADELL","COPPA","PANCETT","BRESAOL","GUANCIAL","LARDO","WURSTEL","CULATELL","CIAUSCOL","NDUJA","SOPPRESS","CAPOCOLL","COTECHIN","ZAMPON","SALUM","PORCHETT","SPALLA COTTA","CARNE SALADA","MOCETTA"]],
   ["Carni", ["BOVIN","SUIN","VITELL","POLLO","POLLAST","GALLIN","FARAON","TACCHIN","AGNELL","CAPRETT","MANZO","SCOTTONA","CAVALL","PULEDR","CONIGL","ANATR","QUAGL","CERVO","CINGHIAL","CAPRIOL","HAMBURG","BURGER","SALSICC","LUGANEG","FILETT","CONTROFILETT","ENTRECOTE","COSTAT","COSTOLETT","COSTIN","BRACIOL","NODIN","SPIEDIN","ARROST","SCOTTADIT","PETTO","COSCI","SOVRACOSC","SOVRACCOSC","FESA","GIRELLO","LOMBAT","LONZA","SCAMONE","TAGLIATA","MACINAT","STINCO","OSSOBUC","POLPETT","TRIPPA","FEGAT","CARNE","RIBS","PULLED","KEBAB","CORDON","COTOLETT","BISTECC","SCALOPP","ROAST","TOMAHAWK","PICANHA","FIORENTIN","GUANCIA","CHIANINA"]],
   ["Latticini e formaggi", ["MOZZAREL","MOZZ\\.","FIOR DI LATTE","FIORDILATTE","F\\.LATTE","BURRAT","STRACCIAT","RICOTT","FORMAGG","FORM\\.","PARMIGIAN","GRANA","PECORIN","GORGONZOL","ZOLA","PROVOL","PANNA","BURRO","MASCARPON","SCAMORZ","ASIAGO","TALEGG","FONTIN","LATTE","YOGURT","EMMENT","BRIE","CAMEMBERT","FETA","CACIO","MONTASIO","TOMA\\b","TOMINO","STRACCHIN","CRESCENZ","BOCCONCIN","TRECCIA","EDAMER","CHEDDAR","GOUDA","BITTO","CASOLET","PUZZONE","GRATTUGIAT","BRANZI","PRIMOSALE","ROBIOLA","TREVAL","LATTERIA"]],
   ["Pasta, riso e cereali", ["PASTA","SPAGHETT","PENNE","RISO","RISOTT","CARNAROLI","ARBORIO","GNOCCH","LASAGN","TAGLIATELL","TAGLIOLIN","FUSILL","ORZO","FARRO","PACCHER","RIGATON","LINGUIN","BUCATIN","TROFIE","ORECCHIETT","MACCHERON","FETTUCCIN","PAPPARDELL","RAVIOL","TORTELL","CAPPELLETT","AGNOLOTT","MEZZE MANICHE","CASARECC","CUSCUS","COUS COUS","COUSCOUS","QUINOA","POLENTA","CEREALI","FREGOLA","CANNELLON","STROZZAPRET","CALAMARATA","GRAMIGN","DITALIN","TUBETT","CANEDERL","SPATZLE","SPAETZLE"]],
@@ -1697,7 +1711,8 @@ const PV_RULES = [
   ["Bevande", ["ACQUA","VINO","VINI\\b","BIRRA","BIRRE","BIBIT","SUCCO","SUCCHI","CAFF","TISAN","COCA","CHINOTTO","TONIC","SPRITE","FANTA","APEROL","CAMPARI","PROSECCO","SPUMANT","LIQUOR","GRAPPA","AMARO","SCIROPP","ENERGY","GASSOSA","LEMONSODA","CEDRATA"]]
 ];
 const PV_KW = PV_RULES.map(([c, words]) => [c, new RegExp("(?:^|[^A-Z])(?:" + words.map(w => w.replace(/ /g, "\\s+")).join("|") + ")")]);
-const PV_COND = "Prezzi netti IVA esclusa. Per i prodotti a peso variabile si fattura il peso effettivo.";
+const PV_COND = "Prezzi netti IVA esclusa.";
+const PV_COND_VECCHIE = ["Prezzi netti IVA esclusa. Per i prodotti a peso variabile si fattura il peso effettivo."];
 const pvCol = () => collection(db, "utenti", uid, "preventivi");
 const pvAgentRef = () => doc(db, "utenti", uid, "impostazioni", "agente");
 let preventivi = [], pvUnsub = null, pvCur = null, pvSelId = null, pvPreset = null;
@@ -1973,6 +1988,7 @@ function pvOpen(id){ const p = preventivi.find(x => x.id === id); if(p) pvOpenOb
 function pvOpenObj(p){
   pvCur = p; pvSelId = null;
   if(!Array.isArray(pvCur.items)) pvCur.items = [];
+  if(!pvCur.condizioni || PV_COND_VECCHIE.includes(pvCur.condizioni)) pvCur.condizioni = PV_COND;
   $("#pvAi").classList.add("hidden");
   $("#pvSaved").textContent = "";
   $("#pvEditor").classList.remove("hidden"); document.body.classList.add("pv-open");
@@ -1992,7 +2008,6 @@ function pvSyncSide(){
   $("#pvCliente").value = pvCur.cliente || "";
   $("#pvData").value = pvCur.data || "";
   $("#pvValid").value = pvCur.validita || "";
-  $("#pvPag").value = pvCur.pagamento || "";
   $("#pvANome").value = agente.nome || ""; $("#pvAEmail").value = agente.email || ""; $("#pvATel").value = agente.tel || "";
   const g = $("#pvGnote"); g.classList.toggle("hidden", !pvCur.general); g.textContent = pvCur.general ? "Nota dal gestionale: " + pvCur.general : "";
   $("#pvTitle").firstChild.textContent = pvCur.cliente ? "Preventivo " + pvCur.cliente : "Nuovo preventivo";
@@ -2005,7 +2020,8 @@ const pvPack = it => (it.mode === "kg" && it.conv && it.weight && Math.abs(it.we
 function pvRowHTML(it){
   const p = pvPriceOf(it);
   return `<div class="pv-row${it.id === pvSelId ? " sel" : ""}" data-id="${it.id}">
-<div class="pv-pill"><select class="pv-cat" aria-label="Categoria">${PV_CATS.map(c => `<option${c === it.cat ? " selected" : ""}>${esc(c)}</option>`).join("")}</select><button class="pv-del" type="button">Rimuovi</button></div>
+<label class="pv-move" title="Sposta in un’altra categoria"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 4v16M7 4 3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/></svg><select class="pv-cat" aria-label="Sposta in un’altra categoria">${PV_CATS.map(c => `<option${c === it.cat ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+<div class="pv-pill"><button class="pv-del" type="button">Rimuovi articolo</button></div>
 <div class="pv-code" contenteditable="true" data-f="codice" data-key="${it.id}:codice">${esc(it.codice)}</div>
 <div class="pv-desc"><div class="pv-name" contenteditable="true" data-f="nome" data-key="${it.id}:nome">${esc(it.nome)}</div>
 <div class="pv-fmt"><span contenteditable="true" data-f="formato" data-key="${it.id}:formato">${esc(it.formato)}</span><span class="pv-packp">${esc(pvPack(it))}</span></div>
@@ -2026,7 +2042,7 @@ function pvNewPage(n){
 const pvOver = b => b.scrollHeight > b.clientHeight + 1;
 const pvSecEl = (cat, cont) => pvEl(`<div class="pv-sec"><div class="pv-shead"><div class="t">${esc(cat)}${cont ? "<small>(segue)</small>" : ""}</div><div class="l"><button class="pv-add" type="button" data-cat="${esc(cat)}">+ Articolo</button><span>Prezzo</span><span>IVA</span></div></div></div>`);
 function pvClosingEl(){
-  const extra = [pvCur.pagamento ? "Pagamento: " + pvCur.pagamento.replace(/\.$/, "").toLowerCase() + "." : "", pvCur.validita ? "Validità offerta: " + pvCur.validita.replace(/\.$/, "") + "." : ""].filter(Boolean).join(" ");
+  const extra = pvCur.validita ? "Validità offerta: " + pvCur.validita.replace(/\.$/, "") + "." : "";
   const lines = ["Agente di commercio Marchi S.p.A.", agente.email, agente.tel ? "Tel. " + agente.tel : ""].filter(Boolean).map(esc).join("<br>");
   return pvEl(`<div class="pv-closing"><div class="pv-cond"><div class="h">Condizioni</div><div class="txt"><span contenteditable="true" data-k="condizioni" data-key="condizioni">${esc(pvCur.condizioni || "")}</span>${extra ? " " + esc(extra) : ""}</div></div><div class="pv-agent"><div class="h">Il vostro agente</div><div class="n">${esc(agente.nome || "")}</div><div class="d">${lines}</div></div></div>`);
 }
@@ -2125,11 +2141,66 @@ $("#pvCliente").addEventListener("input", e => {
   $("#pvTitle").firstChild.textContent = pvCur.cliente ? "Preventivo " + pvCur.cliente : "Nuovo preventivo";
   pvSave(); pvLater();
 });
-[["#pvData", "data"], ["#pvValid", "validita"], ["#pvPag", "pagamento"]].forEach(([s, k]) => $(s).addEventListener("input", e => { if(!pvCur) return; pvCur[k] = e.target.value; pvSave(); pvLater(); }));
+[["#pvData", "data"], ["#pvValid", "validita"]].forEach(([s, k]) => $(s).addEventListener("input", e => { if(!pvCur) return; pvCur[k] = e.target.value; pvSave(); pvLater(); }));
 [["#pvANome", "nome"], ["#pvAEmail", "email"], ["#pvATel", "tel"]].forEach(([s, k]) => $(s).addEventListener("input", e => { agente[k] = e.target.value.trim(); pvSaveAgent(); pvLater(); }));
 $("#pvAddBtn").addEventListener("click", () => pvAddItem($("#pvAddCat").value));
 $("#pvBack").addEventListener("click", pvClose);
-$("#pvPrint").addEventListener("click", () => { pvSelect(null); if(document.activeElement) document.activeElement.blur(); pvSave(true); setTimeout(() => window.print(), 80); });
+$("#pvPrint").addEventListener("click", () => {
+  pvSelect(null); if(document.activeElement) document.activeElement.blur(); pvSave(true);
+  try { window.print(); } catch(e){}
+});
+
+/* ----- PDF vero e proprio: funziona anche su iPhone e iPad ----- */
+let pvPdfFile = null;
+const pvIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+async function pvMakePdf(){
+  if(!pvCur) return;
+  pvSelect(null); if(document.activeElement) document.activeElement.blur(); pvSave(true);
+  pvBusy(true, "Creo il PDF…");
+  const host = $("#pvPages");
+  try {
+    if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    if(document.fonts) await document.fonts.ready;
+    host.querySelectorAll(".pv-client,.pv-note,.pv-name").forEach(e => e.classList.toggle("pv-empty", !e.textContent.trim()));
+    document.body.classList.add("pv-capture"); host.style.zoom = "";
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+    const pages = [...host.querySelectorAll(".pv-page")];
+    for(let i = 0; i < pages.length; i++){
+      const c = await html2canvas(pages[i], { scale: pvIOS ? 2 : 2.5, backgroundColor: "#ffffff", useCORS: true, logging: false, windowWidth: 1200 });
+      if(i) pdf.addPage();
+      pdf.addImage(c.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
+    }
+    const nome = ("Offerta " + (pvCur.cliente || "cliente") + " " + (pvCur.data || "")).trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "_") + ".pdf";
+    pvPdfFile = new File([pdf.output("blob")], nome, { type: "application/pdf" });
+  } catch(err){
+    console.error(err); toast("Non sono riuscito a creare il PDF. Controlla la connessione e riprova.");
+    pvPdfFile = null;
+  } finally {
+    document.body.classList.remove("pv-capture"); pvFit(); pvBusy(false);
+  }
+  if(!pvPdfFile) return;
+  // Su iPhone/iPad (e dove si può) si apre il menu Condividi: Stampa, Mail, WhatsApp, Salva in File…
+  if(navigator.canShare && navigator.canShare({ files: [pvPdfFile] })){
+    $("#pvReadyName").textContent = pvPdfFile.name;
+    $("#pvReady").classList.remove("hidden");
+  } else {
+    pvDownload(pvPdfFile); toast("PDF scaricato: lo trovi nella cartella Download");
+  }
+}
+function pvDownload(file){
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a"); a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+$("#pvPdf").addEventListener("click", pvMakePdf);
+$("#pvShare").addEventListener("click", async () => {
+  if(!pvPdfFile) return;
+  try { await navigator.share({ files: [pvPdfFile], title: pvPdfFile.name }); $("#pvReady").classList.add("hidden"); }
+  catch(err){ if(err && err.name === "AbortError") return; pvDownload(pvPdfFile); $("#pvReady").classList.add("hidden"); }
+});
+$("#pvReadyClose").addEventListener("click", () => $("#pvReady").classList.add("hidden"));
 $("#pvDup").addEventListener("click", () => {
   if(!pvCur) return;
   const copia = JSON.parse(JSON.stringify(pvCur));
