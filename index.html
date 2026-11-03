@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="theme-color" content="#17607A">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -218,6 +218,9 @@ form h3:first-child{margin-top:4px}
 #toast.show{opacity:1}
 #offline{background:var(--st-contattato);color:#1C2B2E;font-size:14px;font-weight:500;text-align:center;padding:6px 12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* iPhone/iPad: niente zoom con il doppio tap (resta lo zoom con due dita) */
+html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:manipulation}
 
 /* ---------- Preventivi ---------- */
 .tabs-inner{grid-template-columns:repeat(6,1fr)}
