@@ -636,6 +636,7 @@ function cleanStato(s){
 function fromRowRaw(r){
   const m = {};
   for(const k in r) m[normKey(k)] = r[k];
+  if(isGestionale(m)) return fromGestionale(m);
   const v = k => { let x = m[k]; if(x == null) return ""; x = String(x).trim(); return x === "0" ? "" : x; };
   let nome = v("CLIENTE"), codice = v("CODICECLIENTE");
   const mm = nome.match(/\s*\((\d{5,})\)\s*$/);
@@ -679,6 +680,48 @@ function fromRow(r){
   const c = fromRowRaw(r);
   if(EX_CLIENTI[orig]){ c.stato = "NON SERVIBILE"; c.note = notaEx(c.note, EX_CLIENTI[orig]); }
   return c;
+}
+
+/* ---------- Export contatti dal gestionale (COD_CONTO, RAG_SOCIALE, LOCALITA…) ---------- */
+const SIGLE = new Set(["SNC","SAS","SRL","SRLS","SPA","SS","APS","ONLUS","ETS","APSP","RSA","BBQ","PAFOM","SCARL","SOC","COOP","HS","DOP","IGP","II","III","IV"]);
+const PICCOLE = new Set(["di","del","della","delle","dei","degli","e","ed","d","dell","del","da","dal","dalla"]);
+function titolo(s, primaGrande = true){
+  return String(s ?? "").replace(/\s+/g, " ").trim().split(" ").map((w, i) => {
+    const lettere = deaccent(w).toUpperCase().replace(/[^A-Z]/g, "");
+    if(/^([A-Z]\.){2,}[A-Z]?\.?$/i.test(w) || (SIGLE.has(lettere) && lettere.length >= 2 && !/^(SOC|COOP)$/.test(lettere))) return w.toUpperCase();
+    return w.toLowerCase().split("'").map((p, j, a) => {
+      if(!p) return p;
+      const low = (i > 0 || j > 0) && PICCOLE.has(p) && (j < a.length - 1 || a.length === 1);
+      if(low && !(i === 0 && j === 0 && primaGrande)) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    }).join("'");
+  }).join(" ");
+}
+const isGestionale = m => !m.CLIENTE && !!(m.RAGSOCIALE || m.RAGIONESOCIALE) && ("CODCONTO" in m || "LOCALITA" in m || "NUMTELEFONO" in m);
+function fromGestionale(m){
+  const v = k => { let x = m[k]; if(x == null) return ""; x = String(x).replace(/\s+/g, " ").trim(); return x === "0" ? "" : x; };
+  const rag = v("RAGSOCIALE") || v("RAGIONESOCIALE");
+  const tel = v("NUMTELEFONO") || v("TELEFONO") || v("TEL");
+  const telDigits = tel.replace(/[^\d]/g, "");
+  const mails = (v("MAIL") || v("EMAIL")).split(/[;,\s]+/).map(x => x.trim()).filter(x => x.includes("@"));
+  const isPec = x => /pec|legalmail|postacert|\.cert|arubapec/i.test(x);
+  let nota = v("NOTECONSEGNA").replace(/^\+\s*/, "").trim();
+  if(nota) nota = "Note consegna: " + nota.charAt(0).toUpperCase() + nota.slice(1).toLowerCase();
+  return {
+    nome: titolo(rag), codice: v("CODCONTO") || v("CODICE"),
+    referente: titolo(v("RIFCONSEGNA") || v("REFERENTE")),
+    ragioneSociale: titolo(rag),
+    cellulare: /^3\d{8,9}$/.test(telDigits) ? tel : "",
+    tel: /^3\d{8,9}$/.test(telDigits) ? "" : tel,
+    email: mails.filter(x => !isPec(x)).join(", "),
+    pec: mails.filter(isPec).join(", "),
+    cap: v("CAP"), prov: (v("PROVINCIA") || v("PROV")).toUpperCase(),
+    luogo: titolo(v("LOCALITA") || v("COMUNE")), indirizzo: titolo(v("INDIRIZZO")),
+    codiceFiscale: "", pagamento: "", tipologia: "", piva: v("PIVA") || v("PARTITAIVA"), codiceUnivoco: "",
+    fornitori: [], giorniOrdine: [], orarioOrdine: "", giorniConsegna: [], orarioConsegna: "",
+    stato: "CLIENTE", ricontattare: "", ricontattareOra: "",
+    note: nota, storico: [], _gestionale: true
+  };
 }
 // PARSE-END
 
@@ -1360,23 +1403,52 @@ $("#fileImport").addEventListener("change", async e => {
     const wb = XLSX.read(await file.arrayBuffer());
     const ws = wb.Sheets["DATABASE"] || wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
+    if(!rows.length){ toast("Il file è vuoto: nessuna riga trovata nel primo foglio."); return; }
     const seen = new Set(clienti.map(keyOf));
-    const nuovi = []; let saltati = 0;
+    // Località già presenti: riuso la stessa scrittura (es. "Nago-Torbole")
+    const luoghi = {}; clienti.forEach(c => { if(c.luogo) luoghi[norm(c.luogo)] = c.luogo; });
+    const digits = t => String(t || "").replace(/[^\d]/g, "").replace(/^0039|^39(?=3\d{9}$)/, "");
+    const trova = c => {
+      if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)); if(x) return x; }
+      const tels = [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
+      if(tels.length){ const x = clienti.find(e => [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
+      if(c.ragioneSociale){ const x = clienti.find(e => e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
+      const n = norm(c.nome), l = norm(c.luogo);
+      return clienti.find(e => { const en = norm(e.nome); if(en.length < 4 || !(n === en || n.includes(en))) return false; const stessoLuogo = !l || !e.luogo || norm(e.luogo) === l || norm(e.luogo).includes(l) || l.includes(norm(e.luogo)); return stessoLuogo || en.length >= 9; }) || null;
+    };
+    const CAMPI = ["codice","referente","ragioneSociale","tel","cellulare","email","pec","cap","prov","indirizzo","luogo","piva"];
+    const nuovi = [], aggiornamenti = []; let saltati = 0, esclusi = 0;
     for(const r of rows){
       const c = fromRow(r);
       if(!c.nome) continue;
+      if(/^marchispa/.test(norm(c.nome))){ esclusi++; continue; }
+      if(c.luogo && luoghi[norm(c.luogo)]) c.luogo = luoghi[norm(c.luogo)];
+      const gest = c._gestionale; delete c._gestionale;
+      const old = gest ? trova(c) : null;
+      if(old){
+        const patch = {};
+        CAMPI.forEach(f => { if(c[f] && !String(old[f] || "").trim()) patch[f] = c[f]; });
+        if(c.note && !String(old.note || "").includes(c.note)) patch.note = [old.note, c.note].filter(Boolean).join(". ");
+        if(Object.keys(patch).length) aggiornamenti.push([old, patch]); else saltati++;
+        continue;
+      }
       const k = keyOf(c);
       if(seen.has(k)){ saltati++; continue; }
       seen.add(k); nuovi.push(c);
     }
-    if(!nuovi.length){ toast(`Nessun locale nuovo da importare (${saltati} già presenti)`); return; }
-    if(!confirm(`Trovati ${nuovi.length} locali nuovi${saltati ? ` (${saltati} già presenti verranno saltati)` : ""}. Importo?`)) return;
-    for(let i = 0; i < nuovi.length; i += 400){
+    if(!nuovi.length && !aggiornamenti.length){ toast(`Nessun locale nuovo da importare (${saltati} già presenti)`); return; }
+    const parti = [nuovi.length ? `${nuovi.length} locali nuovi` : "", aggiornamenti.length ? `${aggiornamenti.length} già presenti da completare con i dati mancanti` : "", saltati ? `${saltati} già presenti senza novità` : ""].filter(Boolean);
+    if(!confirm(`Trovati ${parti.join(", ")}. Importo?`)) return;
+    const ops = [
+      ...nuovi.map(c => b => b.set(doc(col()), { ...c, creato: nowISO(), aggiornato: nowISO() })),
+      ...aggiornamenti.map(([old, patch]) => b => b.update(ref(old.id), { ...patch, storico: [...(old.storico || []), { d: localISO(), t: "Dati completati dall’export contatti del gestionale" }], aggiornato: nowISO() }))
+    ];
+    for(let i = 0; i < ops.length; i += 400){
       const b = writeBatch(db);
-      nuovi.slice(i, i+400).forEach(c => b.set(doc(col()), { ...c, creato: nowISO(), aggiornato: nowISO() }));
+      ops.slice(i, i+400).forEach(op => op(b));
       await b.commit();
     }
-    toast(`Importati ${nuovi.length} locali`);
+    toast([nuovi.length ? `Importati ${nuovi.length} locali` : "", aggiornamenti.length ? `${aggiornamenti.length} schede completate` : ""].filter(Boolean).join(", "));
   } catch(err){ fail(err); }
 });
 function exportExcel(){
