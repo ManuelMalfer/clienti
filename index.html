@@ -2197,7 +2197,8 @@ function pvSyncSide(){
 $("#pvAddCat").innerHTML = PV_CATS.map(c => `<option>${esc(c)}</option>`).join("");
 
 const pvPriceOf = it => it.mode === "kg" ? it.priceKg : it.pricePz;
-const pvPack = it => (it.mode === "kg" && it.conv && it.weight && Math.abs(it.weight - 1) > 0.001 && it.pricePz != null) ? " · € " + pvFmt(it.pricePz) + " " + (it.contenitore || "la confezione") : "";
+// Prezzo della singola confezione/cartone accanto al formato: disattivato su richiesta (si mostra solo il prezzo principale)
+const pvPack = it => "";
 function pvRowHTML(it){
   const p = pvPriceOf(it);
   return `<div class="pv-row${it.id === pvSelId ? " sel" : ""}" data-id="${it.id}">
