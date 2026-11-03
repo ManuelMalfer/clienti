@@ -2332,7 +2332,27 @@ let gKey = "", gPlace = null;
 // Zona di lavoro (Garda, Vallagarina, Trento, Val di Non): i risultati qui vengono prima
 const G_ZONA = { rectangle: { low: { latitude: 45.55, longitude: 10.55 }, high: { latitude: 46.55, longitude: 11.45 } } };
 const gRef = () => doc(db, "utenti", uid, "impostazioni", "google");
-function gLoad(){ getDoc(gRef()).then(s => { gKey = (s.exists() && s.data().key) || ""; }).catch(() => {}); }
+/* Tetto mensile per utente, sotto le soglie gratuite di Google anche con due utenti:
+   dettagli del locale 1.000 gratis/mese, ricerche 5.000 gratis/mese. */
+const G_MAX = { det: 450, cerca: 2000 };
+const gMese = () => localISO().slice(0, 7);
+let gUso = { mese: "", det: 0, cerca: 0 };
+const gUsoRef = () => doc(db, "utenti", uid, "impostazioni", "googleUso");
+function gLoad(){
+  getDoc(gRef()).then(s => { gKey = (s.exists() && s.data().key) || ""; }).catch(() => {});
+  getDoc(gUsoRef()).then(s => { if(s.exists()) gUso = { ...gUso, ...s.data() }; }).catch(() => {});
+}
+function gPuoi(tipo){
+  if(gUso.mese !== gMese()) gUso = { mese: gMese(), det: 0, cerca: 0 };
+  return (gUso[tipo] || 0) < G_MAX[tipo];
+}
+function gConta(tipo){
+  if(gUso.mese !== gMese()) gUso = { mese: gMese(), det: 0, cerca: 0 };
+  gUso[tipo] = (gUso[tipo] || 0) + 1;
+  setDoc(gUsoRef(), gUso).catch(() => {});
+}
+const gRimaste = () => { gPuoi("det"); return G_MAX.det - (gUso.det || 0); };
+const G_STOP = "Hai usato tutte le ricerche gratuite di questo mese: riprendono il 1° del mese prossimo. Nel frattempo compila i campi a mano.";
 function gMsg(t, err){ const m = $("#gMsg"); m.textContent = t; m.classList.toggle("err", !!err); }
 function gResetBox(){
   gPlace = null;
@@ -2353,6 +2373,9 @@ $("#gKeySave").addEventListener("click", async () => {
 });
 
 async function gApi(url, body, mask){
+  const tipo = /\/places\/[^:]+$/.test(url.split("?")[0]) ? "det" : "cerca";
+  if(!gPuoi(tipo)) throw Object.assign(new Error(G_STOP), { stop: true });
+  gConta(tipo);
   const r = await fetch(url, {
     method: body ? "POST" : "GET",
     headers: { "Content-Type": "application/json", "X-Goog-Api-Key": gKey, "X-Goog-FieldMask": mask },
@@ -2366,6 +2389,7 @@ async function gApi(url, body, mask){
   return j;
 }
 function gErr(e){
+  if(e.stop) return G_STOP;
   console.error(e);
   const r = (e.reason || "") + " " + e.message;
   if(/REFERRER|referer/i.test(r)) return "Google blocca la chiave per questo sito: nelle restrizioni della chiave aggiungi clienti.malfer.it/*.";
@@ -2382,7 +2406,7 @@ function gShowList(places, intro){
   if(!places.length){ ul.classList.add("hidden"); gMsg("Nessun risultato. Prova a scrivere il nome in un altro modo o aggiungi il paese."); return; }
   ul.innerHTML = places.map((p, i) => `<li><button type="button" data-gi="${i}"><b>${esc(p.displayName?.text || "")}</b><span>${esc([p.primaryTypeDisplayName?.text, p.shortFormattedAddress || p.formattedAddress].filter(Boolean).join(" · "))}</span></button></li>`).join("");
   ul.classList.remove("hidden"); ul._places = places;
-  gMsg(intro || "Tocca il locale giusto:");
+  gMsg((intro || "Tocca il locale giusto:") + ` (ricerche gratuite rimaste questo mese: ${gRimaste()})`);
 }
 // Capisce cosa hai incollato: testo libero o link di Google Maps
 function gParseInput(s){
