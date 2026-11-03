@@ -350,6 +350,28 @@ body.pv-open{overflow:hidden}
   .pv-note:empty,.pv-client:empty{display:none!important}
   .pv-page [contenteditable]{background:none!important;box-shadow:none!important}
 }
+
+/* ---------- Cerca su Google ---------- */
+.gbox{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);margin-bottom:6px}
+.gbox-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.gbox-row .btn{flex:1;min-width:140px;justify-content:center}
+.gbox-key{border:0;background:none;color:var(--muted);font-size:18px;min-width:44px;min-height:44px;border-radius:10px}
+.gbox-key:hover{background:var(--line)}
+.gbox-q{display:flex;gap:8px}
+.gbox-q .input{flex:1;min-width:0}
+.gbox-msg{margin:0;font-size:14px;color:var(--muted)}
+.gbox-msg.err{color:var(--danger)}
+.gbox-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.gbox-list button{width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-height:44px}
+.gbox-list button:hover{border-color:var(--accent)}
+.gbox-list b{font-size:15px}
+.gbox-list span{font-size:13px;color:var(--muted)}
+.gbox-prev{display:flex;flex-direction:column;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.gbox-prev h4{margin:0 0 2px;font-size:15px}
+.gbox-prev label{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:4px 0}
+.gbox-prev label input{margin-top:3px;width:18px;height:18px;flex:none}
+.gbox-prev small{display:block;color:var(--muted);font-size:13px}
+.gbox-prev .gbox-row{margin-top:6px}
 </style>
 </head>
 <body>
@@ -475,6 +497,18 @@ body.pv-open{overflow:hidden}
         <button class="btn" type="button" id="shotBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>Compila da screenshot</button>
         <span id="shotTxt">Scegli lo screenshot della scheda del gestionale: compilo i campi in automatico.</span>
         <span class="bar hidden" id="shotBar"><i id="shotProg" style="width:0%"></i></span>
+      </div>
+      <div class="gbox" id="gBox">
+        <div class="gbox-row">
+          <button class="btn" type="button" id="gSearchBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>Cerca su Google</button>
+          <button class="btn" type="button" id="gHereBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Sono qui</button>
+          <button class="gbox-key" type="button" id="gKeyBtn" title="Chiave Google" aria-label="Chiave Google">⚙</button>
+        </div>
+        <div class="gbox-q hidden" id="gQBox"><input class="input" id="gQ" placeholder="Nome e paese, oppure link di Google Maps" autocomplete="off" enterkeyhint="search"><button class="btn" type="button" id="gGo">Cerca</button></div>
+        <div class="gbox-q hidden" id="gKeyBox"><input class="input" id="gKeyIn" placeholder="Incolla qui la chiave API di Google" autocomplete="off" spellcheck="false"><button class="btn" type="button" id="gKeySave">Salva</button></div>
+        <p class="gbox-msg" id="gMsg">Trova il locale su Google Maps: compilo indirizzo, telefono, tipologia e posizione sulla mappa.</p>
+        <ul class="gbox-list hidden" id="gList"></ul>
+        <div class="gbox-prev hidden" id="gPrev"></div>
       </div>
       <p class="banner hidden" id="formBanner"></p>
       <h3>Locale</h3>
@@ -778,7 +812,7 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); subscribe(); pvStart(); }
+    if(user){ uid = user.uid; showApp(); subscribe(); pvStart(); gLoad(); }
     else { pvStop(); if(unsub){ unsub(); unsub = null; } uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
@@ -1131,6 +1165,7 @@ $$("[data-days]").forEach(box => {
 function openForm(id = null, preset = {}, opts = {}){
   ui.editId = id;
   ui.fromShot = !!opts.fromShot;
+  ui.gGeo = null; gResetBox();
   const c = id ? { ...byId(id), ...preset } : { stato: "DA CONTATTARE", ...preset };
   $("#fTitle").textContent = id ? "Modifica cliente" : "Nuovo cliente";
   $("#shotBox").classList.toggle("hidden", !!id && !opts.fromShot);
@@ -1187,11 +1222,14 @@ async function save(andNew){
     if(norm(old.indirizzo) !== norm(d.indirizzo) || norm(old.luogo) !== norm(d.luogo)) Object.assign(extra, { lat: null, lng: null, approx: false, geoFail: false });
     if((old.stato || "DA CONTATTARE") !== d.stato) extra.storico = [...(old.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old.stato)} → ${statoLabel(d.stato)}` }];
     if(ui.fromShot) extra.storico = [...(extra.storico || old.storico || []), { d: localISO(), t: "Scheda aggiornata da screenshot del gestionale" }];
+    if(ui.gGeo){ Object.assign(extra, { lat: ui.gGeo.lat, lng: ui.gGeo.lng, approx: false, geoFail: false }); extra.storico = [...(extra.storico || old.storico || []), { d: localISO(), t: "Dati completati da Google Maps" }]; }
     update(ui.editId, { ...d, ...extra });
     $("#dlgForm").close(); toast("Cliente salvato");
     openDetail(ui.editId);
   } else {
-    setDoc(doc(col()), { ...d, storico: ui.fromShot ? [{ d: localISO(), t: "Scheda creata da screenshot del gestionale" }] : [], creato: nowISO(), aggiornato: nowISO() }).catch(fail);
+    const geoG = ui.gGeo ? { lat: ui.gGeo.lat, lng: ui.gGeo.lng, approx: false, geoFail: false } : {};
+    const st0 = [...(ui.fromShot ? [{ d: localISO(), t: "Scheda creata da screenshot del gestionale" }] : []), ...(ui.gGeo ? [{ d: localISO(), t: "Dati presi da Google Maps" }] : [])];
+    setDoc(doc(col()), { ...d, ...geoG, storico: st0, creato: nowISO(), aggiornato: nowISO() }).catch(fail);
     toast(`${d.nome} salvato`);
     if(andNew) openForm(null, { luogo: d.luogo, tipologia: d.tipologia, stato: d.stato });
     else $("#dlgForm").close();
@@ -2285,6 +2323,193 @@ $("#pvDel").addEventListener("click", () => {
   deleteDoc(doc(pvCol(), id)).catch(fail); pvClose(); toast("Preventivo eliminato");
 });
 addEventListener("keydown", e => { if(e.key === "Escape" && pvCur && !document.querySelector("dialog[open]")) pvClose(); });
+
+/* ============================================================
+   CERCA SU GOOGLE: compila la scheda dai dati di Google Maps
+   (Places API New). La chiave si salva in utenti/{uid}/impostazioni/google.
+   ============================================================ */
+let gKey = "", gPlace = null;
+// Zona di lavoro (Garda, Vallagarina, Trento, Val di Non): i risultati qui vengono prima
+const G_ZONA = { rectangle: { low: { latitude: 45.55, longitude: 10.55 }, high: { latitude: 46.55, longitude: 11.45 } } };
+const gRef = () => doc(db, "utenti", uid, "impostazioni", "google");
+function gLoad(){ getDoc(gRef()).then(s => { gKey = (s.exists() && s.data().key) || ""; }).catch(() => {}); }
+function gMsg(t, err){ const m = $("#gMsg"); m.textContent = t; m.classList.toggle("err", !!err); }
+function gResetBox(){
+  gPlace = null;
+  ["#gQBox", "#gKeyBox", "#gList", "#gPrev"].forEach(s => $(s).classList.add("hidden"));
+  $("#gList").innerHTML = ""; $("#gPrev").innerHTML = "";
+  gMsg("Trova il locale su Google Maps: compilo indirizzo, telefono, tipologia e posizione sulla mappa.");
+}
+function gAskKey(msg){
+  $("#gKeyBox").classList.remove("hidden"); $("#gKeyIn").value = gKey; $("#gKeyIn").focus();
+  gMsg(msg || "Per usare la ricerca serve la chiave API di Google (una volta sola).");
+}
+$("#gKeyBtn").addEventListener("click", () => { if($("#gKeyBox").classList.contains("hidden")) gAskKey("Chiave API di Google usata per la ricerca:"); else $("#gKeyBox").classList.add("hidden"); });
+$("#gKeySave").addEventListener("click", async () => {
+  const k = $("#gKeyIn").value.trim();
+  if(!/^AIza[\w-]{30,}$/.test(k)){ gMsg("Questa non sembra una chiave Google: inizia con “AIza” ed è lunga circa 39 caratteri.", true); return; }
+  try { await setDoc(gRef(), { key: k }); gKey = k; $("#gKeyBox").classList.add("hidden"); gMsg("Chiave salvata. Ora puoi cercare il locale."); }
+  catch(e){ fail(e); }
+});
+
+async function gApi(url, body, mask){
+  const r = await fetch(url, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type": "application/json", "X-Goog-Api-Key": gKey, "X-Goog-FieldMask": mask },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok){
+    const e = new Error((j.error && j.error.message) || ("errore " + r.status));
+    e.status = r.status; e.reason = JSON.stringify(j.error || {}); throw e;
+  }
+  return j;
+}
+function gErr(e){
+  console.error(e);
+  const r = (e.reason || "") + " " + e.message;
+  if(/REFERRER|referer/i.test(r)) return "Google blocca la chiave per questo sito: nelle restrizioni della chiave aggiungi clienti.malfer.it/*.";
+  if(/SERVICE_DISABLED|has not been used|is disabled/i.test(r)) return "Nel progetto Google non è attiva la “Places API (New)”: va abilitata dalla console.";
+  if(/BILLING/i.test(r)) return "Google chiede di collegare un account di fatturazione al progetto.";
+  if(/API key not valid|API_KEY_INVALID/i.test(r)) { return "La chiave non è valida: toccala con ⚙ e reincollala."; }
+  if(/RESOURCE_EXHAUSTED|quota/i.test(r) || e.status === 429) return "Raggiunto il limite giornaliero di ricerche impostato: riprova domani.";
+  if(e instanceof TypeError) return "Nessuna connessione: riprova quando hai rete.";
+  return "Ricerca non riuscita: " + e.message;
+}
+const G_LIST_MASK = "places.id,places.displayName,places.formattedAddress,places.shortFormattedAddress,places.primaryTypeDisplayName,places.location";
+function gShowList(places, intro){
+  const ul = $("#gList"); $("#gPrev").classList.add("hidden");
+  if(!places.length){ ul.classList.add("hidden"); gMsg("Nessun risultato. Prova a scrivere il nome in un altro modo o aggiungi il paese."); return; }
+  ul.innerHTML = places.map((p, i) => `<li><button type="button" data-gi="${i}"><b>${esc(p.displayName?.text || "")}</b><span>${esc([p.primaryTypeDisplayName?.text, p.shortFormattedAddress || p.formattedAddress].filter(Boolean).join(" · "))}</span></button></li>`).join("");
+  ul.classList.remove("hidden"); ul._places = places;
+  gMsg(intro || "Tocca il locale giusto:");
+}
+// Capisce cosa hai incollato: testo libero o link di Google Maps
+function gParseInput(s){
+  s = s.trim();
+  if(/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(s)) return { short: true };
+  if(!/^https?:\/\//i.test(s)) return { q: s };
+  let q = "", lat = null, lng = null, pid = "";
+  try {
+    const u = new URL(s);
+    pid = u.searchParams.get("query_place_id") || ((u.searchParams.get("q") || "").match(/^place_id:(.+)$/) || [])[1] || "";
+    q = u.searchParams.get("query") || u.searchParams.get("q") || "";
+    const m = u.pathname.match(/\/place\/([^/]+)/); if(m) q = decodeURIComponent(m[1].replace(/\+/g, " "));
+    const c = s.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if(c){ lat = +c[1]; lng = +c[2]; }
+  } catch(e){}
+  if(/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(q)){ const [a, b] = q.split(","); lat = lat ?? +a; lng = lng ?? +b; q = ""; }
+  return { q, lat, lng, pid };
+}
+async function gSearch(){
+  if(!gKey){ gAskKey(); return; }
+  const input = $("#gQ").value.trim();
+  if(!input){ gMsg("Scrivi il nome del locale e il paese."); $("#gQ").focus(); return; }
+  const p = gParseInput(input);
+  if(p.short){ gMsg("I link corti “maps.app.goo.gl” non si possono leggere. Aprilo nel browser e copia il link lungo dalla barra degli indirizzi, oppure scrivi nome e paese.", true); return; }
+  gMsg("Cerco su Google…"); $("#gList").classList.add("hidden"); $("#gPrev").classList.add("hidden");
+  try {
+    if(p.pid){ await gPick(p.pid); return; }
+    const body = { textQuery: p.q || input, languageCode: "it", regionCode: "IT", pageSize: 6 };
+    body.locationBias = p.lat != null ? { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 500 } } : G_ZONA;
+    if(!p.q && p.lat != null){
+      const j = await gApi("https://places.googleapis.com/v1/places:searchNearby", { locationRestriction: { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 60 } }, maxResultCount: 8, rankPreference: "DISTANCE", languageCode: "it", regionCode: "IT" }, G_LIST_MASK);
+      gShowList(j.places || []); return;
+    }
+    const j = await gApi("https://places.googleapis.com/v1/places:searchText", body, G_LIST_MASK);
+    gShowList(j.places || []);
+  } catch(e){ gMsg(gErr(e), true); }
+}
+$("#gSearchBtn").addEventListener("click", () => {
+  gResetBox();
+  if(!gKey){ gAskKey(); return; }
+  const nome = F.querySelector("[name=nome]").value.trim(), luogo = F.querySelector("[name=luogo]").value.trim();
+  $("#gQBox").classList.remove("hidden");
+  $("#gQ").value = [nome, luogo].filter(Boolean).join(" ");
+  if(nome) gSearch(); else { gMsg("Scrivi il nome del locale e il paese, oppure incolla un link di Google Maps."); $("#gQ").focus(); }
+});
+$("#gGo").addEventListener("click", gSearch);
+$("#gQ").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); gSearch(); } });
+$("#gHereBtn").addEventListener("click", () => {
+  gResetBox();
+  if(!gKey){ gAskKey(); return; }
+  if(!navigator.geolocation){ gMsg("Questo dispositivo non fornisce la posizione.", true); return; }
+  gMsg("Rilevo la tua posizione…");
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const center = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+    const req = types => gApi("https://places.googleapis.com/v1/places:searchNearby", { locationRestriction: { circle: { center, radius: 150 } }, maxResultCount: 10, rankPreference: "DISTANCE", languageCode: "it", regionCode: "IT", ...(types ? { includedTypes: types } : {}) }, G_LIST_MASK);
+    try {
+      let j;
+      try { j = await req(["restaurant", "pizza_restaurant", "bar", "cafe", "hotel", "lodging", "meal_takeaway", "bakery"]); }
+      catch(e){ if(e.status === 400) j = await req(null); else throw e; }
+      if(!(j.places || []).length) j = await req(null);
+      gShowList(j.places || [], "Attività vicino a te, dalla più vicina:");
+    } catch(e){ gMsg(gErr(e), true); }
+  }, err => gMsg(err.code === 1 ? "Permesso di posizione negato: attivalo nelle impostazioni di Safari/Chrome per questo sito." : "Non riesco a rilevare la posizione. Riprova all’aperto o usa la ricerca per nome.", true), { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+});
+$("#gList").addEventListener("click", e => { const b = e.target.closest("[data-gi]"); if(!b) return; const p = $("#gList")._places[+b.dataset.gi]; gPick(p.id); });
+
+function gTipologia(types, name){
+  const t = new Set(types || []), n = norm(name);
+  const pizz = t.has("pizza_restaurant") || n.includes("pizz");
+  const rist = [...t].some(x => x.endsWith("_restaurant") && x !== "pizza_restaurant") || t.has("restaurant") && !t.has("pizza_restaurant") || /ristor|trattor|osteria|locanda/.test(n);
+  if(pizz && rist) return "Ristorante - Pizzeria";
+  if(pizz) return "Pizzeria";
+  if(rist || t.has("restaurant")) return "Ristorante";
+  if(["hotel", "resort_hotel", "motel", "inn", "bed_and_breakfast", "extended_stay_hotel"].some(x => t.has(x))) return "Hotel";
+  if(["guest_house", "cottage", "private_guest_room", "farmstay", "campground"].some(x => t.has(x))) return "Casa vacanze";
+  if(["bar", "cafe", "coffee_shop", "pub", "wine_bar", "cocktail_bar", "bar_and_grill"].some(x => t.has(x))) return "Bar";
+  if(t.has("catering_service")) return "Catering";
+  if(t.has("lodging")) return "Hotel";
+  return "";
+}
+async function gPick(id){
+  gMsg("Leggo i dati del locale…"); $("#gList").classList.add("hidden");
+  try {
+    const p = await gApi("https://places.googleapis.com/v1/places/" + encodeURIComponent(id) + "?languageCode=it&regionCode=IT", null, "id,displayName,addressComponents,location,nationalPhoneNumber,primaryType,types");
+    const comp = t => (p.addressComponents || []).find(c => (c.types || []).includes(t));
+    const via = comp("route")?.longText || "", num = comp("street_number")?.longText || "";
+    const tel = (p.nationalPhoneNumber || "").replace(/[^\d+]/g, "");
+    const cell = /^3\d{8,9}$/.test(tel);
+    const val = {
+      nome: p.displayName?.text || "",
+      indirizzo: [via, num].filter(Boolean).join(" "),
+      cap: comp("postal_code")?.longText || "",
+      luogo: comp("locality")?.longText || comp("administrative_area_level_3")?.longText || "",
+      prov: (comp("administrative_area_level_2")?.shortText || "").toUpperCase().slice(0, 2),
+      tel: cell ? "" : tel, cellulare: cell ? tel : "",
+      tipologia: gTipologia(p.types, p.displayName?.text || "")
+    };
+    // riuso la scrittura della località già usata negli altri clienti
+    const lu = clienti.find(c => norm(c.luogo) === norm(val.luogo)); if(lu) val.luogo = lu.luogo;
+    gPlace = { val, lat: p.location?.latitude, lng: p.location?.longitude };
+    const NOMI = { nome: "Nome", indirizzo: "Indirizzo", cap: "CAP", luogo: "Località", prov: "Provincia", tel: "Telefono", cellulare: "Cellulare", tipologia: "Tipologia" };
+    const righe = Object.keys(NOMI).filter(k => val[k]).map(k => {
+      const cur = (F.querySelector(`[name=${k}]`)?.value || "").trim();
+      if(norm(cur) === norm(val[k])) return "";
+      const sost = cur ? `<small>Sostituisce: ${esc(cur)}</small>` : "";
+      return `<label><input type="checkbox" data-gk="${k}"${cur ? "" : " checked"}><span><b>${NOMI[k]}:</b> ${esc(val[k])}${sost}</span></label>`;
+    }).filter(Boolean);
+    if(gPlace.lat != null) righe.push(`<label><input type="checkbox" data-gk="_pos" checked><span><b>Posizione sulla mappa</b> esatta di Google<small>Sostituisce quella calcolata in automatico</small></span></label>`);
+    const box = $("#gPrev");
+    box.innerHTML = `<h4>${esc(val.nome)}</h4>${righe.length ? righe.join("") : "<p class=\"gbox-msg\">I dati della scheda sono già uguali a quelli di Google.</p>"}<div class="gbox-row"><button class="btn btn-primary" type="button" id="gApply"${righe.length ? "" : " disabled"}>Compila i campi selezionati</button><button class="btn" type="button" id="gBack">Altro locale</button></div>`;
+    box.classList.remove("hidden");
+    gMsg("Scegli cosa compilare. I campi già pieni restano come sono, a meno che non li selezioni.");
+  } catch(e){ gMsg(gErr(e), true); }
+}
+$("#gPrev").addEventListener("click", e => {
+  if(e.target.closest("#gBack")){ $("#gPrev").classList.add("hidden"); if($("#gList").innerHTML){ $("#gList").classList.remove("hidden"); gMsg("Tocca il locale giusto:"); } else gMsg("Cerca di nuovo il locale."); $("#gQBox").classList.remove("hidden"); return; }
+  if(!e.target.closest("#gApply") || !gPlace) return;
+  let n = 0;
+  $$("#gPrev [data-gk]:checked").forEach(cb => {
+    const k = cb.dataset.gk;
+    if(k === "_pos"){ ui.gGeo = { lat: gPlace.lat, lng: gPlace.lng }; n++; return; }
+    const el = F.querySelector(`[name=${k}]`); if(!el) return;
+    el.value = gPlace.val[k]; el.classList.add("check"); n++;
+  });
+  $("#gPrev").classList.add("hidden"); $("#gQBox").classList.add("hidden");
+  gMsg(n ? `Compilati ${n} campi da Google (evidenziati): controllali e salva.` : "Nessun campo selezionato.");
+});
 
 /* ---------- offline ---------- */
 const net = () => $("#offline").classList.toggle("hidden", navigator.onLine);
