@@ -224,6 +224,13 @@ form h3:first-child{margin-top:4px}
 .tabs button{font-size:11.5px}
 .pv-li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
 .pv-li .row{border-bottom:0}
+.pv-trash{flex:0 0 44px;height:44px;border:0;background:none;color:var(--muted);border-radius:10px;display:grid;place-items:center}
+.pv-trash:hover{color:var(--danger);background:var(--surface-2)}
+.pv-link{display:flex;gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px}
+.pv-link span{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.pv-link span.none{font-weight:400;color:var(--muted)}
+#pvCliQ{margin-bottom:10px}
+#pvCliList .row-sub b{font-weight:600;color:var(--ink)}
 .pv-ico{flex:0 0 36px;height:36px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .pv-detail{margin:16px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface-2)}
 .pv-detail h3{margin:0 0 6px;font-size:14px;color:var(--muted);font-weight:600;display:flex;justify-content:space-between;align-items:center}
@@ -584,7 +591,9 @@ body.pv-open{overflow:hidden}
     <aside class="pv-side">
       <div class="pv-grp">
         <h3>Offerta</h3>
-        <label class="field"><span>Cliente</span><input class="input" id="pvCliente" list="dlPvClienti" autocomplete="off" placeholder="Scegli o scrivi il nome"></label>
+        <div class="field"><span>Scheda cliente</span><div class="pv-link"><span id="pvLinkName">Nessun cliente collegato</span><button class="btn" type="button" id="pvLinkBtn">Scegli</button></div></div>
+        <label class="field"><span>Nome sul preventivo</span><input class="input" id="pvCliente" autocomplete="off" placeholder="Come appare in alto sul preventivo"></label>
+        <p class="pv-hint">Puoi scrivere il nome come preferisci: il preventivo resta comunque nella scheda del cliente collegato.</p>
         <label class="field"><span>Data</span><input class="input" id="pvData" type="date"></label>
         <label class="field"><span>Validità offerta</span><input class="input" id="pvValid" autocomplete="off" placeholder="es. fino al 30 novembre 2026"></label>
         <div class="pv-gnote hidden" id="pvGnote"></div>
@@ -614,7 +623,16 @@ body.pv-open{overflow:hidden}
 </div>
 <div class="pv-busy hidden" id="pvBusy"><div id="pvBusyTxt">Lettura del PDF…</div></div>
 <div class="pv-busy hidden" id="pvReady"><div class="pv-ready"><strong>PDF pronto</strong><span id="pvReadyName"></span><button class="btn btn-primary" type="button" id="pvShare">Condividi o salva il PDF</button><button class="link" type="button" id="pvReadyClose">Chiudi</button></div></div>
-<datalist id="dlPvClienti"></datalist>
+<dialog id="dlgPvCli" aria-labelledby="pvCliTitle">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="pvCliTitle">Per quale cliente?<span class="sub" id="pvCliSub">Il preventivo verrà salvato nella sua scheda</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <input class="input" id="pvCliQ" type="search" placeholder="Cerca per nome, località o codice" autocomplete="off" aria-label="Cerca cliente">
+      <ul class="list" id="pvCliList"></ul>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" id="pvCliNone">Continua senza cliente</button></div>
+  </div>
+</dialog>
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1877,11 +1895,58 @@ function pvRenderList(){
     .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.aggiornato || "").localeCompare(a.aggiornato || ""));
   $("#pvLbl").textContent = preventivi.length ? (q ? `${rows.length} di ${preventivi.length}` : `${preventivi.length} preventivi`) : "";
   const ico = `<span class="pv-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg></span>`;
-  $("#pvList").innerHTML = rows.length ? rows.map(p => `<li class="pv-li"><button class="row" type="button" data-pv="${p.id}">${ico}<span class="row-main"><span class="row-name">${esc(p.cliente || "Senza cliente")}</span><span class="row-sub">${esc(fmtDate(p.data))} · ${(p.items || []).length} articoli</span></span><span class="row-side">›</span></button></li>`).join("")
+  const linked = p => { const c = p.clienteId && byId(p.clienteId); return c && norm(c.nome) !== norm(p.cliente) ? " · scheda: " + c.nome : ""; };
+  $("#pvList").innerHTML = rows.length ? rows.map(p => `<li class="pv-li"><button class="row" type="button" data-pv="${p.id}">${ico}<span class="row-main"><span class="row-name">${esc(p.cliente || "Senza cliente")}</span><span class="row-sub">${esc(fmtDate(p.data))} · ${(p.items || []).length} articoli${esc(linked(p))}</span></span><span class="row-side">›</span></button><button class="pv-trash" type="button" data-pvdel="${p.id}" aria-label="Elimina preventivo" title="Elimina preventivo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button></li>`).join("")
     : `<li class="empty">${preventivi.length ? "Nessun preventivo trovato." : "Nessun preventivo ancora. Tocca Nuovo e carica il PDF dell’ordine generato dal gestionale."}</li>`;
 }
 $("#pvQ").addEventListener("input", e => { pvQ = e.target.value; pvRenderList(); });
-$("#pvList").addEventListener("click", e => { const b = e.target.closest("[data-pv]"); if(b) pvOpen(b.dataset.pv); });
+$("#pvList").addEventListener("click", e => {
+  const d = e.target.closest("[data-pvdel]");
+  if(d){
+    const p = preventivi.find(x => x.id === d.dataset.pvdel); if(!p) return;
+    if(!confirm(`Eliminare il preventivo ${p.cliente ? "di " + p.cliente + " " : ""}del ${fmtDate(p.data)}? L’operazione non si può annullare.`)) return;
+    deleteDoc(doc(pvCol(), p.id)).then(() => toast("Preventivo eliminato")).catch(fail);
+    return;
+  }
+  const b = e.target.closest("[data-pv]"); if(b) pvOpen(b.dataset.pv);
+});
+
+/* Scelta del cliente: all'inizio di un nuovo preventivo o per cambiare collegamento */
+let pvCliMode = "new";
+function pvRenderCli(){
+  const q = norm($("#pvCliQ").value);
+  const ord = c => (c.stato === "CLIENTE" ? 0 : c.codice ? 1 : 2);
+  const rows = clienti.filter(c => !q || norm([c.nome, c.ragioneSociale, c.luogo, c.codice].join(" ")).includes(q))
+    .sort((a, b) => ord(a) - ord(b) || (a.nome || "").localeCompare(b.nome || "", "it")).slice(0, 80);
+  $("#pvCliList").innerHTML = rows.length ? rows.map(c => `<li><button class="row" type="button" data-cli="${c.id}"><span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc([c.luogo, c.codice ? "cod. " + c.codice : "", statoLabel(c.stato)].filter(Boolean).join(" · "))}</span></span><span class="row-side">›</span></button></li>`).join("")
+    : `<li class="empty">Nessun cliente trovato.</li>`;
+}
+function pvOpenPicker(mode){
+  pvCliMode = mode;
+  $("#pvCliTitle").firstChild.textContent = mode === "new" ? "Per quale cliente?" : "Collega a un cliente";
+  $("#pvCliSub").textContent = mode === "new" ? "Il preventivo verrà salvato nella sua scheda. Poi scegli il PDF dell’ordine." : "Il preventivo comparirà nella scheda del cliente scelto.";
+  $("#pvCliNone").textContent = mode === "new" ? "Continua senza cliente" : (pvCur && pvCur.clienteId ? "Scollega dal cliente" : "Annulla");
+  $("#pvCliQ").value = ""; pvRenderCli();
+  $("#dlgPvCli").showModal();
+  if(matchMedia("(pointer:fine)").matches) $("#pvCliQ").focus();
+}
+$("#pvCliQ").addEventListener("input", pvRenderCli);
+$("#pvCliList").addEventListener("click", e => {
+  const b = e.target.closest("[data-cli]"); if(!b) return;
+  const c = byId(b.dataset.cli); $("#dlgPvCli").close();
+  if(pvCliMode === "new"){ pvPreset = c.id; $("#pvFile").click(); return; }
+  if(!pvCur) return;
+  const vecchio = pvCur.clienteId && byId(pvCur.clienteId);
+  if(!pvCur.cliente || (vecchio && norm(vecchio.nome) === norm(pvCur.cliente))) pvCur.cliente = c.nome;
+  pvCur.clienteId = c.id;
+  pvSyncSide(); pvSave(); pvRender(); toast("Preventivo collegato a " + c.nome);
+});
+$("#pvCliNone").addEventListener("click", () => {
+  $("#dlgPvCli").close();
+  if(pvCliMode === "new"){ pvPreset = null; $("#pvFile").click(); return; }
+  if(pvCur && pvCur.clienteId){ pvCur.clienteId = ""; pvSyncSide(); pvSave(); toast("Preventivo scollegato dal cliente"); }
+});
+$("#pvLinkBtn").addEventListener("click", () => pvOpenPicker("link"));
 
 /* Preventivi nella scheda cliente */
 function pvDetailHTML(c){
@@ -2046,7 +2111,10 @@ function pvParse(lines){
   });
   return { items, pagamento, general };
 }
-function pvPick(clienteId){ pvPreset = clienteId || null; $("#pvFile").click(); }
+function pvPick(clienteId){
+  if(clienteId === undefined){ pvOpenPicker("new"); return; }
+  pvPreset = clienteId || null; $("#pvFile").click();
+}
 $("#pvFile").addEventListener("change", e => { const f = e.target.files[0]; e.target.value = ""; if(f) pvFromFile(f); });
 async function pvFromFile(file){
   if(!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)){ toast("Serve il PDF dell’ordine generato dal gestionale."); return; }
@@ -2121,7 +2189,10 @@ function pvSyncSide(){
   $("#pvANome").value = agente.nome || ""; $("#pvAEmail").value = agente.email || ""; $("#pvATel").value = agente.tel || "";
   const g = $("#pvGnote"); g.classList.toggle("hidden", !pvCur.general); g.textContent = pvCur.general ? "Nota dal gestionale: " + pvCur.general : "";
   $("#pvTitle").firstChild.textContent = pvCur.cliente ? "Preventivo " + pvCur.cliente : "Nuovo preventivo";
-  $("#dlPvClienti").innerHTML = clienti.map(c => `<option value="${esc(c.nome)}">${esc(c.luogo || "")}</option>`).join("");
+  const lc = pvCur.clienteId && byId(pvCur.clienteId), ln = $("#pvLinkName");
+  ln.textContent = lc ? [lc.nome, lc.luogo].filter(Boolean).join(" · ") : "Nessun cliente collegato";
+  ln.classList.toggle("none", !lc);
+  $("#pvLinkBtn").textContent = lc ? "Cambia" : "Scegli";
 }
 $("#pvAddCat").innerHTML = PV_CATS.map(c => `<option>${esc(c)}</option>`).join("");
 
@@ -2212,7 +2283,7 @@ pvPagesEl.addEventListener("input", e => {
     pvSave(); return;
   }
   if(t.dataset && t.dataset.f){ const it = pvItem(t.closest(".pv-row").dataset.id); if(it){ it[t.dataset.f] = t.textContent.replace(/\s+/g, " ").trim(); it.edited = true; pvSave(); if(["nome", "formato", "codice"].includes(t.dataset.f)) pvLearn(it); } return; }
-  if(t.dataset && t.dataset.k){ pvCur[t.dataset.k] = t.textContent.replace(/\s+/g, " ").trim(); if(t.dataset.k === "cliente"){ $("#pvCliente").value = pvCur.cliente; const c = pvMatchCliente(pvCur.cliente); pvCur.clienteId = c && norm(c.nome) === norm(pvCur.cliente) ? c.id : ""; } pvSave(); }
+  if(t.dataset && t.dataset.k){ pvCur[t.dataset.k] = t.textContent.replace(/\s+/g, " ").trim(); if(t.dataset.k === "cliente"){ $("#pvCliente").value = pvCur.cliente; $("#pvTitle").firstChild.textContent = pvCur.cliente ? "Preventivo " + pvCur.cliente : "Nuovo preventivo"; } pvSave(); }
 });
 pvPagesEl.addEventListener("change", e => {
   const t = e.target;
@@ -2247,7 +2318,6 @@ const pvLater = () => { clearTimeout(pvSideT); pvSideT = setTimeout(pvRender, 25
 $("#pvCliente").addEventListener("input", e => {
   if(!pvCur) return;
   pvCur.cliente = e.target.value.trim();
-  const c = clienti.find(c => norm(c.nome) === norm(pvCur.cliente)); pvCur.clienteId = c ? c.id : "";
   $("#pvTitle").firstChild.textContent = pvCur.cliente ? "Preventivo " + pvCur.cliente : "Nuovo preventivo";
   pvSave(); pvLater();
 });
