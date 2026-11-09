@@ -127,6 +127,25 @@ canale vendita → tipologia, Cons. mattino/pomeriggio → orario consegna.
 Il campo "Cliente" (es. "N4") viene usato come codice cliente solo se è numerico (≥ 4 cifre):
 da chiarire con Manuel se "N4" è un codice provvisorio o definitivo.
 
+## Funzioni ripristinate (9 novembre 2026)
+
+Il caricamento "Add files via upload" del 9/11/2026 alle 10:27 (commit `a099ab8`) aveva sostituito l'`index.html`
+completo (~2600 righe) con una versione più corta, facendo sparire tre funzioni. Sono state rimesse con una
+fusione a tre vie partendo dalla versione precedente (`e3c6667`). **Prima di caricare un `index.html` nuovo su
+GitHub controlla che contenga anche queste funzioni**, altrimenti spariscono di nuovo.
+
+- **Cerca su Google** (modulo Nuovo cliente): cerca il locale con Google Places API (nuova) e compila indirizzo,
+  telefono, tipologia e posizione; c'è anche "Sono qui" (locali vicini). La chiave API di Google si inserisce
+  dall'ingranaggio accanto al pulsante e sta in Firestore, `utenti/{uid}/impostazioni/google` (campo `key`).
+  Non va messa nel repository.
+- **Preventivi** (scheda in barra): legge il PDF dell'ordine del gestionale (pdf.js), ricorda le correzioni agli
+  articoli, permette di modificare e genera il PDF finale (jsPDF + html2canvas, funziona anche su iPhone/iPad).
+  Dati in `utenti/{uid}/preventivi`. Librerie da cdnjs: pdf.js 3.11.174, jsPDF 2.5.1, html2canvas 1.4.1.
+- **Import contatti dal gestionale**: l'importazione Excel riconosce anche l'export contatti del gestionale
+  (colonne COD_CONTO, RAG_SOCIALE, LOCALITA…) oltre al foglio DATABASE.
+
+La barra in basso ha quindi 7 schede: Clienti, Mappa, Giro, Richiami, Preventivi, Rosario, Riepilogo.
+
 ## Come lavorare su questo progetto
 
 - Modifiche piccole e mirate a `index.html`; non introdurre framework o build.
