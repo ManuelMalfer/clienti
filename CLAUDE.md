@@ -141,6 +141,17 @@ da chiarire con Manuel se "N4" è un codice provvisorio o definitivo.
   Home può mostrare la versione vecchia finché non viene chiusa e riaperta.
 - I dati vivono solo su Firestore: modificare `index.html` non tocca i dati.
 
+## Rosario (assistente vocale)
+
+Scheda **Rosario** nella barra in basso. Un servizio separato (repo/cartella "Rosario", su un server) legge il
+calendario iCloud di Manuel, gli telefona dopo gli appuntamenti e dalla conversazione scrive **proposte** in
+Firestore: `utenti/{uid}/rosario/{id}` con `stato` "in_attesa" | "approvata" | "rifiutata", `clienteId`,
+`clienteNome`, `campo`, `valoreProposto`, `motivo`, `appuntamento`, `creato`.
+Nell'app le proposte si approvano, modificano o rifiutano; **solo "Approva" scrive sulla scheda cliente**
+(funzioni `rosModifica` / `rosApprova`, elenco campi consentiti `ROS_CAMPI`: deve coincidere con `CAMPI` del
+servizio). Ogni modifica approvata aggiunge una riga allo storico. Servono le regole Firestore anche per
+`utenti/{uid}/rosario` (read + update, stessa condizione di `clienti`).
+
 ## Idee aperte / possibili sviluppi
 
 - Zona a colori calcolata solo sui clienti attivi invece che su tutti i locali (domanda posta, senza risposta).

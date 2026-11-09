@@ -185,7 +185,7 @@ button.rp-loc:hover{background:var(--surface-2)}
 
 /* Tab bar */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs-inner{max-width:780px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);height:var(--tabbar)}
+.tabs-inner{max-width:780px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);height:var(--tabbar)}
 .tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;font-weight:500;color:var(--muted)}
 .tabs button[aria-current="page"]{color:var(--accent)}
 .tabs .num{position:absolute;margin:-26px 0 0 26px;background:var(--danger);color:#fff;font-size:11px;border-radius:99px;padding:0 5px;line-height:16px}
@@ -274,6 +274,19 @@ form h3:first-child{margin-top:4px}
 #toast.show{opacity:1}
 #offline{background:var(--st-contattato);color:#1C2B2E;font-size:14px;font-weight:500;text-align:center;padding:6px 12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Rosario: proposte dell'assistente vocale */
+.ros-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 1px 2px rgba(16,32,36,.05)}
+.ros-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.ros-head button.link{font-weight:700;font-size:17px;padding:0;text-align:left}
+.ros-ev{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.ros-diff{margin:10px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:15px;overflow-wrap:anywhere}
+.ros-diff s{color:var(--muted)}
+.ros-diff b{color:var(--ink)}
+.ros-why{margin:8px 0 0;font-size:14px;color:var(--muted);font-style:italic}
+.ros-act{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.ros-act .btn{min-height:44px;padding:8px 16px}
+.ros-done{font-size:14px;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+#rosAllBtn{margin-top:10px;width:100%}
 </style>
 </head>
 <body>
@@ -348,6 +361,13 @@ form h3:first-child{margin-top:4px}
     <main class="wrap view" id="richBody"></main>
   </section>
 
+  <section id="v-rosario" class="view-wrap hidden">
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Rosario</h1><span class="count" id="rosLbl"></span></div>
+      <button class="btn btn-primary hidden" type="button" id="rosAllBtn">Approva tutte</button>
+    </div></header>
+    <main class="wrap view" id="rosBody"></main>
+  </section>
+
   <section id="v-riepilogo" class="view-wrap hidden">
     <header class="top"><div class="wrap"><div class="top-row"><h1>Riepilogo</h1></div></div></header>
     <main class="wrap view" id="riepBody"></main>
@@ -362,6 +382,7 @@ form h3:first-child{margin-top:4px}
     <button data-view="mappa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
     <button data-view="giro"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
     <button data-view="richiami"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
+    <button data-view="rosario"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNum"></span></button>
     <button data-view="riepilogo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
   </div></nav>
 </div>
@@ -611,8 +632,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); subscribe(); }
-    else { if(unsub){ unsub(); unsub = null; } uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); subscribe(); subscribeRosario(); }
+    else { if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } rosario = []; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -672,7 +693,7 @@ function go(view){
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
   $$(".tabs button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario");
   if(view !== "mappa") stopPick();
   renderAll();
 }
@@ -688,6 +709,7 @@ function renderAll(){
   if(ui.view === "riepilogo") renderRiepilogo();
   if(ui.view === "mappa") renderMap();
   renderRichiami();
+  renderRosario();
   if($("#dlgDetail").open && ui.openId) renderDetail();
 }
 
@@ -869,6 +891,154 @@ function renderRichiami(){
     `<h2 class="sec">${title} <small>${list.length}</small></h2><ul class="list">${list.map(c => "<li>" + rowHTML(c, `<span class="flag ${c.ricontattare < t ? "late" : ""}">${fmtDate(c.ricontattare)}${c.ricontattareOra ? "<br>ore " + c.ricontattareOra : ""}</span>`) + "</li>").join("")}</ul>`).join("")
     : `<p class="empty">Nessun ricontatto in programma. Nella scheda di un cliente imposta "Da ricontattare il" e lo ritrovi qui.</p>`;
 }
+
+/* ---------- Rosario (assistente vocale) ----------
+   Rosario ti telefona dopo gli appuntamenti e scrive le modifiche PROPOSTE in utenti/{uid}/rosario.
+   Qui le vedi e decidi tu: solo con "Approva" la scheda cliente viene toccata. */
+let rosario = [];
+let unsubRos = null;
+const rosCol = () => collection(db, "utenti", uid, "rosario");
+const rosRef = id => doc(rosCol(), id);
+// Unici campi che Rosario può proporre (qualsiasi altro viene rifiutato).
+const ROS_CAMPI = {
+  storico: "Nota nello storico", stato: "Stato", ricontattare: "Da ricontattare il",
+  referente: "Referente", tel: "Telefono", cellulare: "Cellulare", email: "Email",
+  fornitori: "Fornitori", pagamento: "Pagamento", orarioOrdine: "Orario ordine",
+  orarioConsegna: "Orario consegna", note: "Note"
+};
+const rosEdit = { id: null, val: "" };
+
+function subscribeRosario(){
+  if(unsubRos) return;
+  unsubRos = onSnapshot(rosCol(), snap => {
+    rosario = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.creato || "").localeCompare(a.creato || ""));
+    renderRosario();
+  }, err => {
+    console.error(err);
+    if(err.code === "permission-denied") $("#rosBody").innerHTML = `<p class="empty">Rosario non è ancora abilitato: aggiungi la regola per "rosario" nelle regole di Firestore.</p>`;
+  });
+}
+
+// Valore attuale del campo sulla scheda, come testo
+function rosAttuale(c, campo){
+  if(!c || campo === "storico") return "";
+  if(campo === "stato") return statoLabel(c.stato);
+  if(campo === "ricontattare") return c.ricontattare ? fmtDate(c.ricontattare) + (c.ricontattareOra ? " ore " + c.ricontattareOra : "") : "";
+  if(campo === "fornitori") return (c.fornitori || []).join(", ");
+  return String(c[campo] ?? "");
+}
+
+// Costruisce l'aggiornamento della scheda per una proposta approvata (lancia errore se il valore non è valido)
+function rosModifica(c, campo, v){
+  v = String(v ?? "").trim();
+  if(!v) throw new Error("Il valore è vuoto.");
+  const riga = t => ({ d: localISO(), t });
+  const storico = c.storico || [];
+  switch(campo){
+    case "storico": return { storico: [...storico, riga(v)] };
+    case "stato": {
+      const hit = STATI.find(x => norm(x[0]) === norm(v) || norm(x[1]) === norm(v));
+      if(!hit) throw new Error("Stato non valido: " + v);
+      if(hit[0] === (c.stato || "DA CONTATTARE")) return {};
+      return { stato: hit[0], storico: [...storico, riga(`Stato: ${statoLabel(c.stato)} → ${statoLabel(hit[0])}`)] };
+    }
+    case "ricontattare": {
+      const m = v.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?$/);
+      if(!m) throw new Error("Data non valida (serve AAAA-MM-GG).");
+      return { ricontattare: m[1], ricontattareOra: m[2] || "", storico: [...storico, riga(`Richiamo fissato per il ${fmtDate(m[1])}${m[2] ? " ore " + m[2] : ""}`)] };
+    }
+    case "fornitori": return { fornitori: splitList(v), storico: [...storico, riga("Fornitori aggiornati: " + v)] };
+    case "note": return { note: [c.note, v].filter(Boolean).join(". "), storico: [...storico, riga("Note aggiornate")] };
+    default:
+      if(!ROS_CAMPI[campo]) throw new Error("Campo non consentito: " + campo);
+      return { [campo]: v, storico: [...storico, riga(`${ROS_CAMPI[campo]}: ${rosAttuale(c, campo) || "vuoto"} → ${v}`)] };
+  }
+}
+
+async function rosApprova(id){
+  const p = rosario.find(x => x.id === id);
+  if(!p || p.stato !== "in_attesa") return false;
+  const c = byId(p.clienteId);
+  if(!c){ toast("Scegli prima la scheda cliente."); return false; }
+  const valore = rosEdit.id === id ? rosEdit.val : p.valoreProposto;
+  try {
+    if(!ROS_CAMPI[p.campo]) throw new Error("Campo non consentito: " + p.campo);
+    const mod = rosModifica(c, p.campo, valore);
+    if(Object.keys(mod).length) await updateDoc(ref(c.id), { ...mod, aggiornato: nowISO() });
+    await updateDoc(rosRef(id), { stato: "approvata", deciso: nowISO(), valoreApplicato: String(valore).trim() });
+    if(rosEdit.id === id) rosEdit.id = null;
+    return true;
+  } catch(err){ fail(err); return false; }
+}
+async function rosRifiuta(id){
+  try { await updateDoc(rosRef(id), { stato: "rifiutata", deciso: nowISO() }); if(rosEdit.id === id) rosEdit.id = null; }
+  catch(err){ fail(err); }
+}
+
+function renderRosario(){
+  const attesa = rosario.filter(p => p.stato === "in_attesa");
+  const num = $("#rosNum"); num.textContent = attesa.length; num.classList.toggle("hidden", !attesa.length);
+  if(ui.view !== "rosario") return;
+  $("#rosLbl").textContent = attesa.length ? `${attesa.length} da approvare` : "";
+  const pronte = attesa.filter(p => byId(p.clienteId) && p.id !== rosEdit.id);
+  $("#rosAllBtn").classList.toggle("hidden", pronte.length < 2);
+  $("#rosAllBtn").textContent = `Approva tutte (${pronte.length})`;
+
+  const card = p => {
+    const c = byId(p.clienteId);
+    const label = ROS_CAMPI[p.campo] || p.campo;
+    const prima = rosAttuale(c, p.campo);
+    const editing = rosEdit.id === p.id;
+    const sel = c ? "" : `<select class="input" data-ros-cli="${esc(p.id)}" aria-label="Scheda cliente"><option value="">Scegli la scheda cliente…</option>${
+      [...clienti].sort((a,b) => (a.nome||"").localeCompare(b.nome||"","it")).map(x => `<option value="${esc(x.id)}">${esc(x.nome)}${x.luogo ? " — " + esc(x.luogo) : ""}</option>`).join("")}</select>`;
+    return `<li class="ros-card" data-id="${esc(p.id)}">
+      <div class="ros-head">
+        <div>${c ? `<button class="link" type="button" data-ros-open="${esc(c.id)}">${esc(c.nome)}</button>` : `<b>${esc(p.clienteNome || "Cliente non riconosciuto")}</b>`}
+          ${p.appuntamento ? `<span class="ros-ev">${esc(p.appuntamento)}</span>` : ""}</div>
+        <span class="badge">${esc(label)}</span>
+      </div>
+      ${sel}
+      ${editing
+        ? `<textarea class="input" data-ros-text rows="3" aria-label="Valore proposto">${esc(rosEdit.val)}</textarea>`
+        : `<div class="ros-diff">${prima ? `<s>${esc(prima)}</s> → ` : ""}<b>${esc(p.valoreProposto)}</b></div>`}
+      ${p.motivo ? `<p class="ros-why">“${esc(p.motivo)}”</p>` : ""}
+      <div class="ros-act">
+        <button class="btn btn-danger" type="button" data-ros="no">Rifiuta</button>
+        <button class="btn" type="button" data-ros="edit">${editing ? "Annulla" : "Modifica"}</button>
+        <button class="btn btn-primary" type="button" data-ros="ok">Approva</button>
+      </div>
+    </li>`;
+  };
+  const fatte = rosario.filter(p => p.stato !== "in_attesa").slice(0, 10);
+  $("#rosBody").innerHTML =
+    (attesa.length ? `<ul class="list">${attesa.map(card).join("")}</ul>`
+      : `<p class="empty">Nessuna modifica da approvare. Dopo ogni appuntamento Rosario ti telefona e le sue proposte compaiono qui.</p>`)
+    + (fatte.length ? `<details style="margin-top:20px"><summary class="sec" style="cursor:pointer">Gestite di recente</summary>${fatte.map(p =>
+        `<div class="ros-done">${p.stato === "approvata" ? "✓" : "✕"} ${esc(p.clienteNome || "")} · ${esc(ROS_CAMPI[p.campo] || p.campo)}: ${esc(p.valoreApplicato || p.valoreProposto)}</div>`).join("")}</details>` : "");
+}
+$("#rosBody").addEventListener("click", async e => {
+  const open = e.target.closest("[data-ros-open]");
+  if(open){ openDetail(open.dataset.rosOpen); return; }
+  const b = e.target.closest("[data-ros]"); if(!b) return;
+  const id = b.closest(".ros-card").dataset.id;
+  const p = rosario.find(x => x.id === id);
+  if(b.dataset.ros === "ok") { if(await rosApprova(id)) toast("Modifica applicata"); }
+  else if(b.dataset.ros === "no") { await rosRifiuta(id); toast("Proposta rifiutata"); }
+  else { if(rosEdit.id === id) rosEdit.id = null; else { rosEdit.id = id; rosEdit.val = p.valoreProposto; } renderRosario(); }
+});
+$("#rosBody").addEventListener("input", e => { if(e.target.matches("[data-ros-text]")) rosEdit.val = e.target.value; });
+$("#rosBody").addEventListener("change", async e => {
+  const s = e.target.closest("[data-ros-cli]"); if(!s || !s.value) return;
+  const c = byId(s.value);
+  try { await updateDoc(rosRef(s.dataset.rosCli), { clienteId: c.id, clienteNome: c.nome }); } catch(err){ fail(err); }
+});
+$("#rosAllBtn").addEventListener("click", async () => {
+  const lista = rosario.filter(p => p.stato === "in_attesa" && byId(p.clienteId) && p.id !== rosEdit.id);
+  if(!confirm(`Approvare ${lista.length} modifiche?`)) return;
+  let ok = 0;
+  for(const p of lista){ if(await rosApprova(p.id)) ok++; await new Promise(r => setTimeout(r, 80)); }
+  toast(`${ok} modifiche applicate`);
+});
 
 /* ---------- Riepilogo ---------- */
 function renderRiepilogo(){
