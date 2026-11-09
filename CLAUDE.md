@@ -149,6 +149,9 @@ iCloud con password per app), gli scrive su Telegram (bot @Rosarioilbot) l'agend
 chiede com'è andato; dal vocale (Gemini) scrive **proposte** in Firestore: `utenti/{uid}/rosario/{id}` con `stato`
 "in_attesa" | "approvata" | "rifiutata", `clienteId`, `clienteNome`, `campo`, `valoreProposto`, `motivo`,
 `appuntamento`, `creato`.
+Promemoria: un vocale "ricordami…" crea una proposta con `campo: "promemoria"` (`quandoTs`); "Approva" NON tocca schede ma crea
+`utenti/{uid}/rosario_promemoria/{id}` che Rosario invia su Telegram alla scadenza (elenco "Promemoria programmati" nella scheda).
+Rosario risponde anche a domande libere (clienti, fornitori, prodotti alimentari).
 Il pulsante **Impostazioni** (nella scheda) apre il pannello `#dlgRos`: collega Telegram (codice monouso in
 `rosario_collegamenti/{codice}` → `t.me/Rosarioilbot?start=codice`), collega il calendario (credenziali scritte in
 `rosario_segreti/{uid}`, che il sito può solo SCRIVERE, mai leggere: regole Firestore dedicate) e preferenze in

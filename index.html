@@ -491,6 +491,17 @@ form h3:first-child{margin-top:4px}
     <div class="dlg-body">
       <p class="hint" style="margin:0 0 6px">Rosario è il tuo assistente su Telegram: ti scrive l'agenda del giorno e, dopo ogni appuntamento, ti chiede com'è andato. Rispondi con un messaggio vocale e lui prepara le modifiche alle schede cliente, che approvi tu.</p>
 
+      <details open><summary>Cosa puoi dire o chiedere a Rosario</summary>
+        <ul style="margin:6px 0 0;padding-left:20px">
+          <li><b>Resoconti:</b> dopo un appuntamento rispondi con un vocale e lui prepara le modifiche alla scheda.</li>
+          <li><b>Promemoria:</b> «ricordami stasera di mandare le offerte a Gigi». Lo trovi qui da approvare e poi te lo ricorda lui su Telegram.</li>
+          <li><b>Domande su un cliente:</b> «quando consegno al Bistrot Marina?», «che note ho su…?»</li>
+          <li><b>Domande su più clienti:</b> «chi consegno il martedì?», «quanti clienti ho a Riva?»</li>
+          <li><b>Prodotti e fornitori:</b> conservazione, allergeni, ingredienti, normative…</li>
+        </ul>
+        <p style="margin:6px 0 0">Scrivi <code>/aiuto</code> al bot per rivedere questo elenco.</p>
+      </details>
+
       <h3 class="rs-step">1. Collega Telegram</h3>
       <p class="rs-state" id="rsTg"></p>
       <button class="btn btn-primary" type="button" id="rsTgBtn">Collega Telegram</button>
@@ -722,8 +733,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); subscribe(); subscribeRosario(); subscribeRosCfg(); }
-    else { if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); }
+    else { if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -996,7 +1007,22 @@ const ROS_CAMPI = {
   fornitori: "Fornitori", pagamento: "Pagamento", orarioOrdine: "Orario ordine",
   orarioConsegna: "Orario consegna", note: "Note"
 };
-const rosEdit = { id: null, val: "" };
+const ROS_LABEL = { ...ROS_CAMPI, promemoria: "Promemoria" };
+const rosEdit = { id: null, val: "", when: "" };
+
+/* Promemoria approvati: utenti/{uid}/rosario_promemoria. Rosario li manda su Telegram all'ora indicata. */
+let promemoria = [];
+let unsubProm = null;
+const rosPromCol = () => collection(db, "utenti", uid, "rosario_promemoria");
+const fmtTs = ts => new Date(ts).toLocaleString("it-IT", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const toLocalInput = ts => { const d = new Date(ts); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
+function subscribeRosProm(){
+  if(unsubProm) return;
+  unsubProm = onSnapshot(rosPromCol(), snap => {
+    promemoria = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.stato === "attivo").sort((a,b) => (a.quandoTs || 0) - (b.quandoTs || 0));
+    renderRosario();
+  }, err => console.error(err));
+}
 
 function subscribeRosario(){
   if(unsubRos) return;
@@ -1048,9 +1074,22 @@ function rosModifica(c, campo, v){
 async function rosApprova(id){
   const p = rosario.find(x => x.id === id);
   if(!p || p.stato !== "in_attesa") return false;
+  const editing = rosEdit.id === id;
+  if(p.campo === "promemoria"){
+    // non tocca nessuna scheda: crea un promemoria che Rosario ti manderà su Telegram
+    const testo = String(editing ? rosEdit.val : p.valoreProposto).trim();
+    const ts = editing && rosEdit.when ? new Date(rosEdit.when).getTime() : p.quandoTs;
+    if(!testo || !Number.isFinite(ts)){ toast("Controlla testo e data del promemoria."); return false; }
+    try {
+      await setDoc(doc(rosPromCol(), rosCode(20)), { testo, quandoTs: ts, clienteId: p.clienteId || null, clienteNome: p.clienteNome || "", stato: "attivo", creato: nowISO() });
+      await updateDoc(rosRef(id), { stato: "approvata", deciso: nowISO(), valoreApplicato: testo });
+      if(editing) rosEdit.id = null;
+      return true;
+    } catch(err){ fail(err); return false; }
+  }
   const c = byId(p.clienteId);
   if(!c){ toast("Scegli prima la scheda cliente."); return false; }
-  const valore = rosEdit.id === id ? rosEdit.val : p.valoreProposto;
+  const valore = editing ? rosEdit.val : p.valoreProposto;
   try {
     if(!ROS_CAMPI[p.campo]) throw new Error("Campo non consentito: " + p.campo);
     const mod = rosModifica(c, p.campo, valore);
@@ -1070,27 +1109,28 @@ function renderRosario(){
   const num = $("#rosNum"); num.textContent = attesa.length; num.classList.toggle("hidden", !attesa.length);
   if(ui.view !== "rosario") return;
   $("#rosLbl").textContent = attesa.length ? `${attesa.length} da approvare` : "";
-  const pronte = attesa.filter(p => byId(p.clienteId) && p.id !== rosEdit.id);
+  const pronte = attesa.filter(p => (p.campo === "promemoria" || byId(p.clienteId)) && p.id !== rosEdit.id);
   $("#rosAllBtn").classList.toggle("hidden", pronte.length < 2);
   $("#rosAllBtn").textContent = `Approva tutte (${pronte.length})`;
 
   const card = p => {
     const c = byId(p.clienteId);
-    const label = ROS_CAMPI[p.campo] || p.campo;
-    const prima = rosAttuale(c, p.campo);
+    const label = ROS_LABEL[p.campo] || p.campo;
+    const isP = p.campo === "promemoria";
+    const prima = isP ? "" : rosAttuale(c, p.campo);
     const editing = rosEdit.id === p.id;
-    const sel = c ? "" : `<select class="input" data-ros-cli="${esc(p.id)}" aria-label="Scheda cliente"><option value="">Scegli la scheda cliente…</option>${
+    const sel = (c || isP) ? "" : `<select class="input" data-ros-cli="${esc(p.id)}" aria-label="Scheda cliente"><option value="">Scegli la scheda cliente…</option>${
       [...clienti].sort((a,b) => (a.nome||"").localeCompare(b.nome||"","it")).map(x => `<option value="${esc(x.id)}">${esc(x.nome)}${x.luogo ? " — " + esc(x.luogo) : ""}</option>`).join("")}</select>`;
     return `<li class="ros-card" data-id="${esc(p.id)}">
       <div class="ros-head">
-        <div>${c ? `<button class="link" type="button" data-ros-open="${esc(c.id)}">${esc(c.nome)}</button>` : `<b>${esc(p.clienteNome || "Cliente non riconosciuto")}</b>`}
+        <div>${c ? `<button class="link" type="button" data-ros-open="${esc(c.id)}">${esc(c.nome)}</button>` : `<b>${esc(p.clienteNome || (isP ? "Per te" : "Cliente non riconosciuto"))}</b>`}
           ${p.appuntamento ? `<span class="ros-ev">${esc(p.appuntamento)}</span>` : ""}</div>
         <span class="badge">${esc(label)}</span>
       </div>
       ${sel}
       ${editing
-        ? `<textarea class="input" data-ros-text rows="3" aria-label="Valore proposto">${esc(rosEdit.val)}</textarea>`
-        : `<div class="ros-diff">${prima ? `<s>${esc(prima)}</s> → ` : ""}<b>${esc(p.valoreProposto)}</b></div>`}
+        ? `<textarea class="input" data-ros-text rows="3" aria-label="Valore proposto">${esc(rosEdit.val)}</textarea>${isP ? `<input class="input" type="datetime-local" data-ros-when value="${esc(rosEdit.when)}" aria-label="Quando ricordarlo" style="margin-top:8px">` : ""}`
+        : `<div class="ros-diff">${isP ? `⏰ <b>${esc(p.valoreProposto)}</b><br><small>${esc(Number.isFinite(p.quandoTs) ? fmtTs(p.quandoTs) : (p.quando || ""))}</small>` : `${prima ? `<s>${esc(prima)}</s> → ` : ""}<b>${esc(p.valoreProposto)}</b>`}</div>`}
       ${p.motivo ? `<p class="ros-why">“${esc(p.motivo)}”</p>` : ""}
       <div class="ros-act">
         <button class="btn btn-danger" type="button" data-ros="no">Rifiuta</button>
@@ -1103,29 +1143,40 @@ function renderRosario(){
   $("#rosBody").innerHTML =
     (attesa.length ? `<ul class="list">${attesa.map(card).join("")}</ul>`
       : (rosCfg.attivo
-        ? `<p class="empty">Nessuna modifica da approvare. Dopo ogni appuntamento Rosario ti scrive su Telegram e le sue proposte compaiono qui.</p>`
+        ? `<p class="empty">Nessuna proposta da approvare. Dopo ogni appuntamento Rosario ti scrive su Telegram; puoi anche mandargli un vocale per un promemoria («ricordami stasera di…») o fargli una domanda.</p>`
         : `<p class="empty">Rosario non è ancora attivo. Tocca <b>Impostazioni</b> per collegare Telegram e il calendario.</p>`))
+    + (promemoria.length ? `<h2 class="sec">Promemoria programmati <small>${promemoria.length}</small></h2>${promemoria.map(p =>
+        `<div class="ros-done" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>⏰ <b>${esc(p.testo)}</b><br><small>${esc(fmtTs(p.quandoTs))}${p.clienteNome ? " · " + esc(p.clienteNome) : ""}</small></span><button class="chip-btn" type="button" data-prom-del="${esc(p.id)}" aria-label="Elimina promemoria">✕</button></div>`).join("")}` : "")
     + (fatte.length ? `<details style="margin-top:20px"><summary class="sec" style="cursor:pointer">Gestite di recente</summary>${fatte.map(p =>
-        `<div class="ros-done">${p.stato === "approvata" ? "✓" : "✕"} ${esc(p.clienteNome || "")} · ${esc(ROS_CAMPI[p.campo] || p.campo)}: ${esc(p.valoreApplicato || p.valoreProposto)}</div>`).join("")}</details>` : "");
+        `<div class="ros-done">${p.stato === "approvata" ? "✓" : "✕"} ${esc(p.clienteNome || "")} · ${esc(ROS_LABEL[p.campo] || p.campo)}: ${esc(p.valoreApplicato || p.valoreProposto)}</div>`).join("")}</details>` : "");
 }
 $("#rosBody").addEventListener("click", async e => {
   const open = e.target.closest("[data-ros-open]");
   if(open){ openDetail(open.dataset.rosOpen); return; }
+  const del = e.target.closest("[data-prom-del]");
+  if(del){
+    if(!confirm("Eliminare questo promemoria?")) return;
+    try { await deleteDoc(doc(rosPromCol(), del.dataset.promDel)); toast("Promemoria eliminato"); } catch(err){ fail(err); }
+    return;
+  }
   const b = e.target.closest("[data-ros]"); if(!b) return;
   const id = b.closest(".ros-card").dataset.id;
   const p = rosario.find(x => x.id === id);
   if(b.dataset.ros === "ok") { if(await rosApprova(id)) toast("Modifica applicata"); }
   else if(b.dataset.ros === "no") { await rosRifiuta(id); toast("Proposta rifiutata"); }
-  else { if(rosEdit.id === id) rosEdit.id = null; else { rosEdit.id = id; rosEdit.val = p.valoreProposto; } renderRosario(); }
+  else { if(rosEdit.id === id) rosEdit.id = null; else { rosEdit.id = id; rosEdit.val = p.valoreProposto; rosEdit.when = Number.isFinite(p.quandoTs) ? toLocalInput(p.quandoTs) : ""; } renderRosario(); }
 });
-$("#rosBody").addEventListener("input", e => { if(e.target.matches("[data-ros-text]")) rosEdit.val = e.target.value; });
+$("#rosBody").addEventListener("input", e => {
+  if(e.target.matches("[data-ros-text]")) rosEdit.val = e.target.value;
+  if(e.target.matches("[data-ros-when]")) rosEdit.when = e.target.value;
+});
 $("#rosBody").addEventListener("change", async e => {
   const s = e.target.closest("[data-ros-cli]"); if(!s || !s.value) return;
   const c = byId(s.value);
   try { await updateDoc(rosRef(s.dataset.rosCli), { clienteId: c.id, clienteNome: c.nome }); } catch(err){ fail(err); }
 });
 $("#rosAllBtn").addEventListener("click", async () => {
-  const lista = rosario.filter(p => p.stato === "in_attesa" && byId(p.clienteId) && p.id !== rosEdit.id);
+  const lista = rosario.filter(p => p.stato === "in_attesa" && (p.campo === "promemoria" || byId(p.clienteId)) && p.id !== rosEdit.id);
   if(!confirm(`Approvare ${lista.length} modifiche?`)) return;
   let ok = 0;
   for(const p of lista){ if(await rosApprova(p.id)) ok++; await new Promise(r => setTimeout(r, 80)); }
