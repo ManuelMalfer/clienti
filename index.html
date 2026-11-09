@@ -553,7 +553,7 @@ const ref = id => doc(col(), id);
 let clienti = [];
 let unsub = null;
 const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 0 : d - 1; })();
-const ui = { view: "clienti", q: "", stato: "", luogo: "", tipo: "", zone: [], zonePanel: false, giro: todayIdx, openId: null, editId: null };
+const ui = { view: "clienti", q: "", stato: "", luogo: "", tipo: "", zone: [], zonePanel: true, giro: todayIdx, openId: null, editId: null };
 
 /* ---------- login ---------- */
 function showLogin(){ $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
