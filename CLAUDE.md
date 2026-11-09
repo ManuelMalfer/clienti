@@ -69,12 +69,13 @@ Ogni cambio di stato aggiunge automaticamente una riga allo storico.
 Barra in basso: **Clienti, Mappa, Giro, Richiami, Riepilogo** + pulsante flottante **Nuovo**.
 
 - **Clienti**: ricerca multi-parola su tutti i campi, filtri per stato, località e tipologia.
-  Pulsante **Zone**: apre la mappa della provincia di Trento (SVG inline, nessuna richiesta di rete) divisa
-  nelle 16 zone = 15 comunità di valle + Territorio Val d'Adige ("Trento e dintorni"). Grigie di base, si
+  Pulsante **Zone**: apre la mappa delle zone di lavoro (SVG inline, nessuna richiesta di rete), divisa
+  in 17 zone = 15 comunità di valle + Territorio Val d'Adige ("Trento e dintorni") + la sponda veronese
+  "Malcesine e Brenzone" (comuni di Malcesine e Brenzone sul Garda). Grigie di base, si
   colorano quando le tocchi (selezione multipla) e filtrano l'elenco (`ui.zone`). Un locale appartiene alla zona
   del suo comune (`luogo`, tabella `ZONE_COMUNI`); se la località non è un comune (es. frazione) si usano le
   coordinate (`zonaDi`). I contorni (`ZONE_GEO`) sono ricavati dai confini comunali openpolis/geojson-italy,
-  uniti e semplificati (~100 m). Fuori provincia (es. Malcesine) = nessuna zona.
+  uniti e semplificati (~100 m). Locali fuori da queste zone = nessuna zona.
 - **Scheda cliente** (dialog): Chiama, WhatsApp (usa il cellulare; il fisso solo se inizia per 3),
   Email, Naviga (Google Maps); cambio stato rapido; "Richiama il" con data + ora, +1 settimana,
   +1 mese, Fatto, Aggiungi al calendario; posizione sulla mappa (Vedi / Correggi posizione);
