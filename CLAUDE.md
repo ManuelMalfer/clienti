@@ -87,7 +87,7 @@ Barra in basso: **Clienti, Mappa, Giro, Richiami, Riepilogo** + pulsante flottan
 - **Mappa** (Leaflet + OpenStreetMap, vista Satellite Esri): pallini verdi = Cliente, arancioni =
   Contattato, rossi = Da contattare, grigi = Non servibile (nascosti di default). Pulsante "La mia
   posizione". Bottone **Solo la mia zona** (attivo di default): la mappa resta a colori solo entro
-  5 km da ogni locale, fuori diventa in bianco e nero (canvas con `mix-blend-mode: saturation` +
+  1 km da ogni locale, fuori diventa in bianco e nero (canvas con `mix-blend-mode: saturation` +
   velo bianco, ritagliato con `destination-out`). All'apertura inquadra la zona principale ignorando i
   locali a più di 60 km dalla mediana.
   Geocoding automatico con Nominatim (max 1 richiesta/secondo): indirizzo+località → nome+località →

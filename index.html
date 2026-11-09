@@ -1313,7 +1313,7 @@ const MAP_GROUPS = [
 ];
 ui.mapOn = { attivi: true, contattato: true, dacontattare: true, nonservibile: false };
 ui.zona = true;            // colori solo nella zona di lavoro
-const ZONA_KM = 5;         // raggio attorno a ogni locale
+const ZONA_KM = 1;        // raggio attorno a ogni locale
 let map = null, markers = new Map(), fitted = false, meMarker = null;
 const groupOf = c => MAP_GROUPS.find(g => g.match(c)) || MAP_GROUPS[2];
 
@@ -1352,7 +1352,7 @@ function initMap(){
   });
   return true;
 }
-/* Zona di lavoro: fuori dai 5 km attorno ai locali la mappa diventa in bianco e nero */
+/* Zona di lavoro: fuori da 1 km attorno ai locali la mappa diventa in bianco e nero */
 let zonaLayer = null;
 function makeZonaLayer(){
   return L.Layer.extend({
