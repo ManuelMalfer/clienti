@@ -283,6 +283,16 @@ form h3:first-child{margin-top:4px}
 .ros-diff s{color:var(--muted)}
 .ros-diff b{color:var(--ink)}
 .ros-why{margin:8px 0 0;font-size:14px;color:var(--muted);font-style:italic}
+.rs-step{margin:18px 0 6px;font-family:var(--font-cond);font-weight:700;font-size:20px}
+.rs-state{font-size:14px;margin:0 0 10px;color:var(--muted)}
+.rs-state.ok{color:#2E7D4F;font-weight:600}
+.rs-state.bad{color:var(--danger);font-weight:600}
+#dlgRos details{margin:8px 0 12px;font-size:14px}
+#dlgRos summary{cursor:pointer;color:var(--accent);font-weight:600;padding:6px 0}
+#dlgRos ol{margin:6px 0 0;padding-left:20px}
+#dlgRos li{margin:4px 0}
+#dlgRos label.chk{display:flex;gap:10px;align-items:flex-start;margin:10px 0;font-size:14px}
+#dlgRos label.chk input{margin-top:3px;width:20px;height:20px;flex:0 0 auto}
 .ros-act{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
 .ros-act .btn{min-height:44px;padding:8px 16px}
 .ros-done{font-size:14px;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
@@ -362,7 +372,7 @@ form h3:first-child{margin-top:4px}
   </section>
 
   <section id="v-rosario" class="view-wrap hidden">
-    <header class="top"><div class="wrap"><div class="top-row"><h1>Rosario</h1><span class="count" id="rosLbl"></span></div>
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Rosario</h1><span class="count" id="rosLbl"></span><button class="chip-btn" type="button" id="rosSetBtn">Impostazioni</button></div>
       <button class="btn btn-primary hidden" type="button" id="rosAllBtn">Approva tutte</button>
     </div></header>
     <main class="wrap view" id="rosBody"></main>
@@ -472,6 +482,86 @@ form h3:first-child{margin-top:4px}
       <button class="btn btn-primary" type="submit">Salva</button>
     </div>
   </form>
+</dialog>
+
+<!-- IMPOSTAZIONI ROSARIO -->
+<dialog id="dlgRos" aria-labelledby="rsTitle">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="rsTitle">Impostazioni Rosario</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <p class="hint" style="margin:0 0 6px">Rosario è il tuo assistente su Telegram: ti scrive l'agenda del giorno e, dopo ogni appuntamento, ti chiede com'è andato. Rispondi con un messaggio vocale e lui prepara le modifiche alle schede cliente, che approvi tu.</p>
+
+      <h3 class="rs-step">1. Collega Telegram</h3>
+      <p class="rs-state" id="rsTg"></p>
+      <button class="btn btn-primary" type="button" id="rsTgBtn">Collega Telegram</button>
+      <details><summary>Come si fa, passo passo</summary>
+        <ol>
+          <li>Installa <b>Telegram</b> (App Store o Google Play) e registrati con il tuo numero, se non l'hai già.</li>
+          <li>Tocca <b>Collega Telegram</b> qui sopra: si apre la chat con il bot <b>@Rosarioilbot</b>.</li>
+          <li>Nella chat premi <b>Avvia</b> (Start). Rosario risponde "Collegato!".</li>
+          <li>Torna qui: compare la spunta verde.</li>
+          <li>Da ora ti scrive lì. Per rispondere <b>tieni premuto il microfono</b> accanto alla casella di testo e parla.</li>
+          <li>Per scollegarti scrivi <code>/stop</code> al bot.</li>
+        </ol>
+      </details>
+
+      <h3 class="rs-step">2. Collega il calendario</h3>
+      <p class="rs-state" id="rsCal"></p>
+      <label class="field"><span>Che calendario usi?</span>
+        <select class="input" id="rsCalTipo">
+          <option value="ics">Google, Outlook o altro: link iCal</option>
+          <option value="icloud">iCloud (Apple): password per app</option>
+        </select></label>
+
+      <div id="rsPanelIcs">
+        <label class="field"><span>Link iCal del calendario</span><input class="input" id="rsIcsUrl" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" autocomplete="off" inputmode="url"></label>
+        <details><summary>Dove trovo il link</summary>
+          <p style="margin:4px 0"><b>Google Calendar</b> (da computer, calendar.google.com):</p>
+          <ol>
+            <li>Ingranaggio in alto a destra → <b>Impostazioni</b>.</li>
+            <li>A sinistra, sotto "Impostazioni dei miei calendari", scegli il calendario di lavoro.</li>
+            <li>Scorri fino a <b>Integra il calendario</b>.</li>
+            <li>Copia <b>Indirizzo segreto in formato iCal</b> e incollalo qui sopra.</li>
+          </ol>
+          <p style="margin:8px 0 4px"><b>Outlook</b>: Impostazioni → Calendario → Calendari condivisi → Pubblica un calendario → "Può visualizzare tutti i dettagli" → <b>ICS</b>, e copia il link.</p>
+          <p style="margin:8px 0 0"><b>Attenzione:</b> chi ha il link può leggere il tuo calendario. Non condividerlo.</p>
+        </details>
+      </div>
+
+      <div id="rsPanelIc" class="hidden">
+        <div class="grid2">
+          <label class="field"><span>Apple ID</span><input class="input" id="rsIcUser" autocomplete="off" inputmode="email"></label>
+          <label class="field"><span>Nome del calendario</span><input class="input" id="rsIcNome" placeholder="Es. Lavoro (vuoto = tutti)" autocomplete="off"></label>
+        </div>
+        <label class="field"><span>Password specifica per app</span><input class="input" id="rsIcPass" type="password" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off"></label>
+        <details><summary>Come ottengo la password per app</summary>
+          <ol>
+            <li>Vai su <b>account.apple.com</b> e accedi.</li>
+            <li><b>Accesso e sicurezza</b> → <b>Password specifiche per app</b>.</li>
+            <li>Premi <b>+</b>, chiamala "Rosario" e copia la password che appare (si vede una volta sola).</li>
+            <li>Il calendario deve essere su <b>iCloud</b>, non "Sul mio Mac" o Exchange.</li>
+          </ol>
+        </details>
+      </div>
+      <p class="hint">Le credenziali vengono salvate in modo che il sito non possa più rileggerle: le usa solo Rosario, in sola lettura.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" type="button" id="rsCalSave">Salva calendario</button>
+        <button class="btn btn-danger" type="button" id="rsCalDel">Scollega</button>
+      </div>
+
+      <h3 class="rs-step">3. Preferenze</h3>
+      <div class="grid2">
+        <label class="field"><span>Agenda del mattino</span><select class="input" id="rsOra"></select></label>
+        <label class="field"><span>Domanda dopo l'appuntamento</span><select class="input" id="rsRit"></select></label>
+        <label class="field"><span>Silenzio dalle</span><select class="input" id="rsSilDa"></select></label>
+        <label class="field"><span>Silenzio fino alle</span><select class="input" id="rsSilA"></select></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="rsConsenso"><span>Ho capito che i miei messaggi vocali e i titoli degli appuntamenti vengono elaborati da <b>Google Gemini</b> (servizio gratuito: Google può usarli per migliorare i propri servizi). Evito di dire dati non necessari.</span></label>
+      <label class="chk"><input type="checkbox" id="rsAttivo"><span><b>Rosario attivo</b></span></label>
+      <button class="btn btn-primary" type="button" id="rsPrefSave">Salva preferenze</button>
+      <p class="hint" style="margin-top:10px">Rosario controlla il calendario ogni 15 minuti circa; le risposte ai tuoi vocali arrivano in 1–2 minuti.</p>
+    </div>
+  </div>
 </dialog>
 
 <datalist id="dlLuoghi"></datalist>
@@ -632,8 +722,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); subscribe(); subscribeRosario(); }
-    else { if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } rosario = []; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); subscribe(); subscribeRosario(); subscribeRosCfg(); }
+    else { if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -1012,7 +1102,9 @@ function renderRosario(){
   const fatte = rosario.filter(p => p.stato !== "in_attesa").slice(0, 10);
   $("#rosBody").innerHTML =
     (attesa.length ? `<ul class="list">${attesa.map(card).join("")}</ul>`
-      : `<p class="empty">Nessuna modifica da approvare. Dopo ogni appuntamento Rosario ti telefona e le sue proposte compaiono qui.</p>`)
+      : (rosCfg.attivo
+        ? `<p class="empty">Nessuna modifica da approvare. Dopo ogni appuntamento Rosario ti scrive su Telegram e le sue proposte compaiono qui.</p>`
+        : `<p class="empty">Rosario non è ancora attivo. Tocca <b>Impostazioni</b> per collegare Telegram e il calendario.</p>`))
     + (fatte.length ? `<details style="margin-top:20px"><summary class="sec" style="cursor:pointer">Gestite di recente</summary>${fatte.map(p =>
         `<div class="ros-done">${p.stato === "approvata" ? "✓" : "✕"} ${esc(p.clienteNome || "")} · ${esc(ROS_CAMPI[p.campo] || p.campo)}: ${esc(p.valoreApplicato || p.valoreProposto)}</div>`).join("")}</details>` : "");
 }
@@ -1038,6 +1130,119 @@ $("#rosAllBtn").addEventListener("click", async () => {
   let ok = 0;
   for(const p of lista){ if(await rosApprova(p.id)) ok++; await new Promise(r => setTimeout(r, 80)); }
   toast(`${ok} modifiche applicate`);
+});
+
+/* ---------- Impostazioni Rosario (per ogni utente) ----------
+   utenti/{uid}/rosario_config/{impostazioni|telegram|stato}: preferenze (le scrive l'utente) e stato (lo scrive Rosario).
+   rosario_segreti/{uid}: credenziali del calendario. Il sito può solo SCRIVERLE (regole Firestore), mai rileggerle.
+   rosario_collegamenti/{codice}: codice monouso per collegare Telegram (/start codice). */
+const ROS_BOT = "Rosarioilbot";
+let rosCfg = {}, rosTg = {}, rosStato = {};
+let unsubCfg = null;
+const rosCfgCol = () => collection(db, "utenti", uid, "rosario_config");
+const rosCfgRef = id => doc(rosCfgCol(), id);
+
+function subscribeRosCfg(){
+  if(unsubCfg) return;
+  unsubCfg = onSnapshot(rosCfgCol(), snap => {
+    snap.docs.forEach(d => { if(d.id === "impostazioni") rosCfg = d.data(); else if(d.id === "telegram") rosTg = d.data(); else if(d.id === "stato") rosStato = d.data(); });
+    renderRosStato(); renderRosario();
+  }, err => console.error(err));
+}
+
+function renderRosStato(){
+  const tg = $("#rsTg"), cal = $("#rsCal");
+  tg.textContent = rosTg.collegato ? "✓ Telegram collegato" : "Telegram non collegato";
+  tg.className = "rs-state " + (rosTg.collegato ? "ok" : "");
+  $("#rsTgBtn").textContent = rosTg.collegato ? "Ricollega Telegram" : "Collega Telegram";
+  let txt = "Nessun calendario collegato", cls = "";
+  if(rosCfg.calendarioCollegato){
+    if(rosStato.calendario === "ok"){ txt = `✓ Calendario collegato (${rosStato.eventi ?? 0} appuntamenti letti)`; cls = "ok"; }
+    else if(rosStato.calendario === "errore"){ txt = "⚠ Non riesco a leggere il calendario: " + (rosStato.messaggio || "controlla il link o la password"); cls = "bad"; }
+    else txt = "Calendario salvato: lo verifico entro pochi minuti";
+  }
+  cal.textContent = txt; cal.className = "rs-state " + cls;
+}
+
+const hoursOpts = (sel, extra = "") => { $(sel).innerHTML = extra + Array.from({length: 24}, (_, h) => `<option value="${h}">${String(h).padStart(2,"0")}:00</option>`).join(""); };
+function fillRosForm(){
+  hoursOpts("#rsOra", `<option value="-1">Nessuna</option>`);
+  $("#rsRit").innerHTML = [5,10,15,30,60,120].map(m => `<option value="${m}">${m < 60 ? m + " minuti" : m / 60 + (m === 60 ? " ora" : " ore")} dopo</option>`).join("");
+  hoursOpts("#rsSilDa"); hoursOpts("#rsSilA");
+  $("#rsOra").value = String(rosCfg.oraAgenda ?? 8);
+  $("#rsRit").value = String(rosCfg.ritardoMin ?? 15);
+  $("#rsSilDa").value = String(rosCfg.silenzioDa ?? 20);
+  $("#rsSilA").value = String(rosCfg.silenzioA ?? 8);
+  $("#rsConsenso").checked = !!rosCfg.consenso;
+  $("#rsAttivo").checked = !!rosCfg.attivo;
+  $("#rsCalTipo").value = rosCfg.calendarioTipo || "ics";
+  $("#rsIcsUrl").value = $("#rsIcUser").value = $("#rsIcPass").value = $("#rsIcNome").value = "";
+  rosPanel(); renderRosStato();
+}
+function rosPanel(){
+  const ic = $("#rsCalTipo").value === "icloud";
+  $("#rsPanelIcs").classList.toggle("hidden", ic); $("#rsPanelIc").classList.toggle("hidden", !ic);
+}
+$("#rosSetBtn").addEventListener("click", () => { fillRosForm(); $("#dlgRos").showModal(); });
+$("#rsCalTipo").addEventListener("change", rosPanel);
+
+function rosCode(n = 24){
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  return Array.from(crypto.getRandomValues(new Uint8Array(n)), b => abc[b % abc.length]).join("");
+}
+$("#rsTgBtn").addEventListener("click", async () => {
+  const code = rosCode();
+  try {
+    await setDoc(doc(db, "rosario_collegamenti", code), { uid, creato: nowISO() });
+    window.open(`https://t.me/${ROS_BOT}?start=${code}`, "_blank");
+    toast("Nella chat con Rosario premi Avvia");
+  } catch(err){ rosErr(err); }
+});
+
+function rosErr(err){
+  console.error(err);
+  toast(err.code === "permission-denied" ? "Mancano le regole Firestore per Rosario (vedi istruzioni)." : "Errore: " + (err.message || err));
+}
+
+$("#rsCalSave").addEventListener("click", async () => {
+  const tipo = $("#rsCalTipo").value;
+  let seg;
+  if(tipo === "ics"){
+    const url = $("#rsIcsUrl").value.trim();
+    if(!/^(https|webcal):\/\//i.test(url)) return toast("Incolla il link iCal completo (inizia con https://).");
+    seg = { tipo: "ics", url };
+  } else {
+    const user = $("#rsIcUser").value.trim(), password = $("#rsIcPass").value.trim();
+    if(!user || !password) return toast("Servono Apple ID e password per app.");
+    seg = { tipo: "icloud", user, password, calendari: $("#rsIcNome").value.trim() };
+  }
+  try {
+    await setDoc(doc(db, "rosario_segreti", uid), seg);
+    await setDoc(rosCfgRef("impostazioni"), { calendarioTipo: tipo, calendarioCollegato: true }, { merge: true });
+    await setDoc(rosCfgRef("stato"), { calendario: "", messaggio: "" }, { merge: true });
+    $("#rsIcsUrl").value = $("#rsIcPass").value = "";
+    toast("Calendario salvato");
+  } catch(err){ rosErr(err); }
+});
+$("#rsCalDel").addEventListener("click", async () => {
+  if(!confirm("Scollegare il calendario? Rosario smetterà di leggere i tuoi appuntamenti.")) return;
+  try {
+    await deleteDoc(doc(db, "rosario_segreti", uid));
+    await setDoc(rosCfgRef("impostazioni"), { calendarioCollegato: false }, { merge: true });
+    toast("Calendario scollegato");
+  } catch(err){ rosErr(err); }
+});
+$("#rsPrefSave").addEventListener("click", async () => {
+  const attivo = $("#rsAttivo").checked, consenso = $("#rsConsenso").checked;
+  if(attivo && !consenso) return toast("Per attivare Rosario spunta la casella sul trattamento dei dati.");
+  try {
+    await setDoc(rosCfgRef("impostazioni"), {
+      attivo, consenso,
+      oraAgenda: +$("#rsOra").value, ritardoMin: +$("#rsRit").value,
+      silenzioDa: +$("#rsSilDa").value, silenzioA: +$("#rsSilA").value
+    }, { merge: true });
+    toast("Preferenze salvate");
+  } catch(err){ rosErr(err); }
 });
 
 /* ---------- Riepilogo ---------- */

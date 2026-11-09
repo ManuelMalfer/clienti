@@ -143,10 +143,17 @@ da chiarire con Manuel se "N4" è un codice provvisorio o definitivo.
 
 ## Rosario (assistente vocale)
 
-Scheda **Rosario** nella barra in basso. Un servizio separato (repo/cartella "Rosario", su un server) legge il
-calendario iCloud di Manuel, gli telefona dopo gli appuntamenti e dalla conversazione scrive **proposte** in
-Firestore: `utenti/{uid}/rosario/{id}` con `stato` "in_attesa" | "approvata" | "rifiutata", `clienteId`,
-`clienteNome`, `campo`, `valoreProposto`, `motivo`, `appuntamento`, `creato`.
+Scheda **Rosario** nella barra in basso. Un servizio separato (repo `ManuelMalfer/rosario`, gira su GitHub Actions
++ una "sveglia" Cloudflare) è multiutente: per ogni utente legge il suo calendario (link iCal di Google/Outlook oppure
+iCloud con password per app), gli scrive su Telegram (bot @Rosarioilbot) l'agenda e, dopo gli appuntamenti, gli
+chiede com'è andato; dal vocale (Gemini) scrive **proposte** in Firestore: `utenti/{uid}/rosario/{id}` con `stato`
+"in_attesa" | "approvata" | "rifiutata", `clienteId`, `clienteNome`, `campo`, `valoreProposto`, `motivo`,
+`appuntamento`, `creato`.
+Il pulsante **Impostazioni** (nella scheda) apre il pannello `#dlgRos`: collega Telegram (codice monouso in
+`rosario_collegamenti/{codice}` → `t.me/Rosarioilbot?start=codice`), collega il calendario (credenziali scritte in
+`rosario_segreti/{uid}`, che il sito può solo SCRIVERE, mai leggere: regole Firestore dedicate) e preferenze in
+`utenti/{uid}/rosario_config/impostazioni`; lo stato (✓ calendario/Telegram) lo scrive ROSARIO in
+`rosario_config/stato` e `rosario_config/telegram`. Vedi `Rosario/docs/INTEGRAZIONE-SITO.md` per le regole.
 Nell'app le proposte si approvano, modificano o rifiutano; **solo "Approva" scrive sulla scheda cliente**
 (funzioni `rosModifica` / `rosApprova`, elenco campi consentiti `ROS_CAMPI`: deve coincidere con `CAMPI` del
 servizio). Ogni modifica approvata aggiunge una riga allo storico. Servono le regole Firestore anche per
