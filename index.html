@@ -324,6 +324,36 @@ html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:ma
 .ct-txt small{color:var(--muted);font-size:14px}
 .ct-empty{color:var(--muted);padding:40px 8px;text-align:center}
 .ct-empty .btn{margin-top:12px}
+/* Lettore PDF */
+.pdfv{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#22282a;color:var(--ink)}
+.pdfv.hidden{display:none}
+.pdfv-bar{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top,0px)) 8px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pdfv-title{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2;padding:0 4px}
+.pdfv-title b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfv-title small{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfv .icon-btn{text-decoration:none}
+.pdfv-search{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pdfv-search.hidden{display:none}
+.pdfv-search .input{flex:1;min-width:0;min-height:40px;padding:6px 10px}
+.pdfv-count{font-size:13px;color:var(--muted);white-space:nowrap;min-width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
+.pdfv-small{flex:0 0 auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--accent);padding:0}
+.pdfv-small:disabled{opacity:.4}
+.pdfv-scroll{flex:1;min-height:0;overflow:auto;position:relative;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.pdfv-pages{position:relative;width:max-content;min-width:100%;box-sizing:border-box;padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.pdfv-page{position:relative;flex:0 0 auto;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.pdfv-page canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.pdfv-hl{position:absolute;inset:0;pointer-events:none}
+.pdfv-hl i{position:absolute;background:rgba(255,214,0,.5);border-radius:2px;mix-blend-mode:multiply}
+.pdfv-hl i.on{background:rgba(255,140,0,.55);outline:2px solid #f08a00}
+.pdfv-n{position:absolute;right:6px;bottom:4px;font-size:11px;color:#8a969a;pointer-events:none}
+.pdfv-msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#e6edec;pointer-events:none}
+.pdfv-msg.hidden{display:none}
+.pdfv-msg .btn{pointer-events:auto;margin-top:12px}
+.pdfv-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line)}
+.pdfv-pg{display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.pdfv-pg input{width:54px;min-height:40px;padding:4px;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:16px}
+.pdfv-zoom{min-width:54px;width:auto;padding:0 6px;font-size:13px;font-weight:600}
+.pdfv-sep{width:1px;height:24px;background:var(--line);margin:0 2px}
 
 /* ---------- Preventivi ---------- */
 .tabs-inner{display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -599,6 +629,37 @@ body.pv-open{overflow:hidden}
   <button class="fab" id="fab" type="button">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo
   </button>
+
+  <!-- LETTORE PDF -->
+  <div class="pdfv hidden" id="pdfv" role="dialog" aria-modal="true" aria-label="Lettore catalogo">
+    <header class="pdfv-bar">
+      <button class="icon-btn" type="button" id="pdfvClose" aria-label="Chiudi il catalogo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+      <div class="pdfv-title"><b id="pdfvTitle"></b><small id="pdfvSub"></small></div>
+      <button class="icon-btn" type="button" id="pdfvSearchBtn" aria-label="Cerca nel catalogo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
+      <button class="icon-btn" type="button" id="pdfvShare" aria-label="Condividi il catalogo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg></button>
+      <a class="icon-btn" id="pdfvOpen" target="_blank" rel="noopener" aria-label="Apri il PDF originale"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></a>
+    </header>
+    <div class="pdfv-search hidden" id="pdfvSearch">
+      <input class="input" id="pdfvQ" type="search" placeholder="Cerca nel catalogo…" autocomplete="off" aria-label="Cerca nel testo del catalogo">
+      <span class="pdfv-count" id="pdfvCount"></span>
+      <button class="pdfv-small" type="button" id="pdfvPrevHit" aria-label="Risultato precedente" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
+      <button class="pdfv-small" type="button" id="pdfvNextHit" aria-label="Risultato successivo" disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    </div>
+    <div class="pdfv-scroll" id="pdfvScroll">
+      <div class="pdfv-pages" id="pdfvPages"></div>
+      <div class="pdfv-msg" id="pdfvMsg"></div>
+    </div>
+    <footer class="pdfv-foot">
+      <button class="pdfv-small" type="button" id="pdfvZoomOut" aria-label="Riduci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+      <button class="pdfv-small pdfv-zoom" type="button" id="pdfvZoomLbl" aria-label="Adatta alla larghezza">100%</button>
+      <button class="pdfv-small" type="button" id="pdfvZoomIn" aria-label="Ingrandisci"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <span class="pdfv-sep"></span>
+      <button class="pdfv-small" type="button" id="pdfvPrev" aria-label="Pagina precedente"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg></button>
+      <span class="pdfv-pg"><input id="pdfvPage" inputmode="numeric" pattern="[0-9]*" aria-label="Numero di pagina" value="1">/<span id="pdfvTot">1</span></span>
+      <button class="pdfv-small" type="button" id="pdfvNext" aria-label="Pagina successiva"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
+    </footer>
+  </div>
+  <!-- /LETTORE PDF -->
 
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
     <button data-view="clienti" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
@@ -1352,7 +1413,7 @@ function renderCataloghi(){
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno].filter(Boolean).join(" · ");
-      return `<li class="ct-item"><a class="ct-main" href="${esc(catUrl(x))}" target="_blank" rel="noopener"><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
+      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${esc(catUrl(x))}" target="_blank" rel="noopener"><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
     }).join("")}</ul>`;
     return `<section class="ct-group"><button type="button" class="ct-gh" data-grp="${esc(g)}" aria-expanded="${!!aperto}">${catFreccia}<span>${esc(g)}</span><span class="ct-n">${lista.length}</span></button>${voci}</section>`;
   }).join("");
@@ -1367,6 +1428,12 @@ $("#ctChips").addEventListener("click", e => {
   cat.cat = b.dataset.cat; renderCataloghi();
 });
 $("#ctBody").addEventListener("click", e => {
+  // tocco su un catalogo del sito: si apre nel lettore dell'app (con Ctrl/Cmd o tasto centrale si apre in una scheda)
+  const a = e.target.closest(".ct-main");
+  if(a && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0){
+    const x = catalogo[+a.dataset.i];
+    if(x && lpPossibile(x)){ e.preventDefault(); lpOpen(x); return; }
+  }
   const g = e.target.closest("[data-grp]");
   if(g){ const f = g.dataset.grp; cat.chiusi.has(f) ? cat.chiusi.delete(f) : cat.chiusi.add(f); renderCataloghi(); return; }
   if(e.target.closest("#ctToggleAll")){
@@ -1376,12 +1443,317 @@ $("#ctBody").addEventListener("click", e => {
   }
   if(e.target.closest("#ctRetry")){ catLoad(); return; }
   const s = e.target.closest("[data-share]");
-  if(s){
-    const x = catalogo[+s.dataset.share]; if(!x) return;
-    const url = new URL(catUrl(x), location.href).href;
-    if(navigator.share) navigator.share({ title: x.titolo, url }).catch(() => {});
-    else window.open("https://wa.me/?text=" + encodeURIComponent(x.titolo + " " + url), "_blank", "noopener");
+  if(s){ const x = catalogo[+s.dataset.share]; if(x) catShare(x); }
+});
+function catShare(x){
+  const url = new URL(catUrl(x), location.href).href;
+  if(navigator.share) navigator.share({ title: x.titolo, url }).catch(() => {});
+  else window.open("https://wa.me/?text=" + encodeURIComponent(x.titolo + " " + url), "_blank", "noopener");
+}
+
+/* ---------- Lettore PDF dei cataloghi ---------- */
+// Schermata a tutto schermo con pdf.js (la stessa libreria dei Preventivi): scorrimento continuo, zoom (pizzico,
+// doppio tocco, pulsanti, Ctrl+rotella), salto a pagina, ricerca nel testo con evidenziazione.
+// Si usa solo per i PDF del sito: i link esterni (https://…) restano un normale collegamento.
+// Le pagine si disegnano solo quando sono vicine alla schermata e si liberano quando si allontanano (cataloghi da 150 pagine).
+const LP_JS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+const LP_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const LP = { open: false, hist: false, tok: 0, doc: null, x: null, pages: [], ratio: 1.41, zoom: 1, fitW: 600, cur: 1, raf: 0, active: 0, queue: [],
+  pinch: null, tap: null, t0: null, lastTouch: 0, q: "", sTok: 0, hits: [], hit: -1, text: {}, hasText: false, focus: null, searching: false };
+const lpS = $("#pdfvScroll");
+const lpPossibile = x => !/^https?:\/\//i.test(x.file);
+const lpNorm = s => deaccent(s).toLowerCase();
+
+async function lpLib(){
+  if(!window.pdfjsLib) await loadScript(LP_JS);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = LP_WORKER;
+}
+function lpMsg(html){ const m = $("#pdfvMsg"); m.innerHTML = html || ""; m.classList.toggle("hidden", !html); }
+
+async function lpOpen(x){
+  const tok = ++LP.tok;
+  lpReset();
+  LP.x = x; LP.open = true;
+  $("#pdfv").classList.remove("hidden");
+  document.documentElement.style.overflow = "hidden";
+  $("#pdfvTitle").textContent = x.titolo; $("#pdfvSub").textContent = x.fornitore || "";
+  const url = new URL(catUrl(x), location.href).href;
+  $("#pdfvOpen").href = url;
+  lpMsg("Carico il catalogo…");
+  if(!LP.hist){ history.pushState({ lp: 1 }, ""); LP.hist = true; }   // il tasto Indietro chiude il lettore
+  try{
+    await lpLib();
+    if(tok !== LP.tok) return;
+    const task = pdfjsLib.getDocument({ url, disableAutoFetch: true, isEvalSupported: false });
+    task.onProgress = p => { if(tok === LP.tok && !LP.doc && p.total) lpMsg(`Carico il catalogo… ${Math.min(99, Math.round(p.loaded / p.total * 100))}%`); };
+    const doc = await task.promise;
+    if(tok !== LP.tok){ doc.destroy(); return; }
+    LP.doc = doc;
+    const p1 = await doc.getPage(1); const v1 = p1.getViewport({ scale: 1 }); p1.cleanup();
+    LP.ratio = v1.height / v1.width;
+    const box = $("#pdfvPages"); box.innerHTML = "";
+    LP.pages = [];
+    for(let n = 1; n <= doc.numPages; n++){
+      const el = document.createElement("div"); el.className = "pdfv-page"; el.dataset.n = n;
+      box.appendChild(el);
+      LP.pages.push({ n, el, ratio: LP.ratio, w: 0, rw: 0, rev: 0, canvas: null, hl: null, task: null, busy: false, vp: null });
+    }
+    $("#pdfvTot").textContent = doc.numPages;
+    $("#pdfvSub").textContent = [x.fornitore, doc.numPages + (doc.numPages === 1 ? " pagina" : " pagine")].filter(Boolean).join(" · ");
+    lpMsg("");
+    LP.zoom = 1; lpLayout(); lpS.scrollTo(0, 0); lpUpdate();
+  }catch(err){
+    if(tok !== LP.tok) return;
+    lpMsg(`Non riesco ad aprire il catalogo qui.<br><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Apri il PDF</a>`);
   }
+}
+
+function lpReset(){
+  LP.pages.forEach(pg => { try{ pg.task?.cancel(); }catch(e){} });
+  if(LP.doc){ try{ LP.doc.destroy(); }catch(e){} }
+  LP.doc = null; LP.pages = []; LP.text = {}; LP.hasText = false; LP.hits = []; LP.hit = -1; LP.q = ""; LP.sTok++; LP.searching = false;
+  LP.active = 0; LP.queue = []; LP.focus = null; LP.cur = 1; LP.zoom = 1; LP.pinch = null; LP.tap = null;
+  $("#pdfvPages").innerHTML = ""; $("#pdfvQ").value = ""; $("#pdfvSearch").classList.add("hidden");
+  $("#pdfvPage").value = 1; $("#pdfvTot").textContent = "1"; $("#pdfvZoomLbl").textContent = "100%";
+  lpLabel(); lpNav();
+}
+function lpClose(){
+  if(!LP.open) return;
+  LP.open = false; LP.tok++; lpReset();
+  $("#pdfv").classList.add("hidden");
+  document.documentElement.style.overflow = "";
+}
+
+/* misure: ogni pagina ha la larghezza dello schermo (max 980 px) per lo zoom */
+function lpLayout(){
+  LP.fitW = Math.max(220, Math.min(lpS.clientWidth - 24, 980));
+  const w = Math.round(LP.fitW * LP.zoom);
+  LP.pages.forEach(pg => { pg.w = w; pg.el.style.width = w + "px"; pg.el.style.height = Math.round(w * pg.ratio) + "px"; });
+  $("#pdfvZoomLbl").textContent = Math.round(LP.zoom * 100) + "%";
+}
+function lpSetZoom(z, cx, cy){
+  z = Math.max(.5, Math.min(4, z));
+  if(!LP.doc || Math.abs(z - LP.zoom) < .001) return;
+  if(cx == null){ cx = lpS.clientWidth / 2; cy = lpS.clientHeight / 2; }
+  const fx = (lpS.scrollLeft + cx) / lpS.scrollWidth, fy = (lpS.scrollTop + cy) / lpS.scrollHeight;
+  LP.zoom = z; lpLayout();
+  lpS.scrollLeft = fx * lpS.scrollWidth - cx; lpS.scrollTop = fy * lpS.scrollHeight - cy;
+  lpSchedule();
+}
+function lpGo(n){
+  if(!LP.doc) return;
+  n = Math.max(1, Math.min(LP.pages.length, n || 1));
+  lpS.scrollTo({ top: LP.pages[n - 1].el.offsetTop - 8, behavior: "auto" });
+}
+
+/* quali pagine disegnare: quelle vicine alla schermata; le lontane si liberano */
+function lpSchedule(){ if(!LP.raf) LP.raf = requestAnimationFrame(lpUpdate); }
+function lpUpdate(){
+  LP.raf = 0;
+  if(!LP.open || !LP.doc) return;
+  const top = lpS.scrollTop, h = lpS.clientHeight, pad = h * 1.1, mid = top + h * .35;
+  let cur = 0; const need = [], free = [];
+  for(const pg of LP.pages){
+    const t = pg.el.offsetTop, b = t + pg.el.offsetHeight;
+    if(!cur && b > mid) cur = pg.n;
+    if(b > top - pad && t < top + h + pad){
+      if(pg.rw !== pg.w && !pg.busy) need.push([Math.abs((t + b) / 2 - (top + h / 2)), pg]);
+    } else if(pg.canvas || pg.busy) free.push(pg);
+  }
+  free.forEach(lpRelease);
+  LP.cur = cur || LP.pages.length;
+  if(document.activeElement !== $("#pdfvPage")) $("#pdfvPage").value = LP.cur;
+  if(!LP.pinch){ need.sort((a, b) => a[0] - b[0]); LP.queue = need.map(x => x[1]); lpPump(); }
+}
+function lpRelease(pg){
+  pg.rev++;
+  if(pg.task){ try{ pg.task.cancel(); }catch(e){} }
+  if(pg.canvas){ pg.canvas.width = 0; pg.canvas.remove(); pg.canvas = null; }
+  if(pg.hl){ pg.hl.remove(); pg.hl = null; }
+  pg.rw = 0; pg.vp = null;
+}
+function lpPump(){
+  while(LP.active < 2 && LP.queue.length){
+    const pg = LP.queue.shift();
+    if(!pg.busy && pg.rw !== pg.w) lpRender(pg);
+  }
+}
+async function lpRender(pg){
+  const tok = LP.tok, doc = LP.doc, rev = pg.rev, w = pg.w;
+  LP.active++; pg.busy = true;
+  try{
+    const page = await doc.getPage(pg.n);
+    if(tok !== LP.tok || rev !== pg.rev) return;
+    const v1 = page.getViewport({ scale: 1 });
+    const nr = v1.height / v1.width;
+    if(Math.abs(nr - pg.ratio) > .004){                      // pagina di formato diverso dalla prima
+      const old = pg.el.offsetHeight; pg.ratio = nr; pg.el.style.height = Math.round(w * nr) + "px";
+      if(pg.el.offsetTop + old <= lpS.scrollTop) lpS.scrollTop += pg.el.offsetHeight - old;
+    }
+    const vp = page.getViewport({ scale: w / v1.width });
+    let os = Math.min(window.devicePixelRatio || 1, 3);
+    const px = vp.width * vp.height;
+    if(px * os * os > 9e6) os = Math.max(1, Math.sqrt(9e6 / px));  // limite di memoria dei telefoni
+    const cv = document.createElement("canvas");
+    cv.width = Math.floor(vp.width * os); cv.height = Math.floor(vp.height * os);
+    const task = page.render({ canvasContext: cv.getContext("2d"), viewport: vp, transform: os !== 1 ? [os, 0, 0, os, 0, 0] : null });
+    pg.task = task;
+    await task.promise;
+    if(tok !== LP.tok || rev !== pg.rev) { cv.width = 0; return; }
+    if(pg.w !== w){ cv.width = 0; return; }                    // nel frattempo lo zoom è cambiato: si rifà
+    if(pg.canvas) pg.canvas.remove();
+    pg.canvas = cv; pg.el.insertBefore(cv, pg.el.firstChild);
+    pg.rw = w; pg.vp = vp; page.cleanup();
+    lpDrawHL(pg);
+  }catch(err){
+    if(!(err && err.name === "RenderingCancelledException") && tok === LP.tok && rev === pg.rev) pg.rw = pg.w;  // errore: non riprovare all'infinito
+  }finally{
+    if(tok === LP.tok){ LP.active = Math.max(0, LP.active - 1); pg.busy = false; pg.task = null; lpSchedule(); }
+  }
+}
+
+/* ricerca nel testo */
+async function lpText(n){
+  if(LP.text[n]) return LP.text[n];
+  const doc = LP.doc;
+  const page = await doc.getPage(n);
+  const tc = await page.getTextContent();
+  const items = tc.items.filter(i => i.str && i.str.trim()).map(i => ({ l: lpNorm(i.str), t: i.transform, w: i.width }));
+  page.cleanup();
+  if(doc === LP.doc){ LP.text[n] = items; if(items.length) LP.hasText = true; }
+  return items;
+}
+function lpLabel(){
+  const n = LP.hits.length;
+  $("#pdfvCount").textContent = !LP.q ? "" : n ? `${LP.hit + 1}/${n}${LP.searching ? "+" : ""}` : (LP.searching ? "…" : "0");
+}
+function lpNav(){ $("#pdfvPrevHit").disabled = $("#pdfvNextHit").disabled = !LP.hits.length; }
+const lpWords = () => LP.q.split(" ").filter(Boolean);
+async function lpFind(raw){
+  const sTok = ++LP.sTok, doc = LP.doc;
+  LP.q = lpNorm(raw).trim().replace(/\s+/g, " "); LP.hits = []; LP.hit = -1; LP.focus = null; LP.searching = !!LP.q;
+  LP.pages.forEach(lpDrawHL); lpLabel(); lpNav();
+  if(!LP.q || !doc) return;
+  const words = lpWords();
+  for(let n = 1; n <= doc.numPages; n++){
+    const items = await lpText(n);
+    if(sTok !== LP.sTok || doc !== LP.doc) return;
+    let found = false;
+    items.forEach((it, i) => { if(words.every(w => it.l.includes(w))){ LP.hits.push({ n, i }); found = true; } });
+    if(found){
+      LP.pages[n - 1] && lpDrawHL(LP.pages[n - 1]);
+      if(LP.hit < 0) lpHit(0); else { lpLabel(); lpNav(); }
+    }
+  }
+  if(sTok !== LP.sTok) return;
+  LP.searching = false; lpLabel(); lpNav();
+  if(!LP.hits.length && !LP.hasText) toast("Questo catalogo è fatto di immagini: la ricerca nel testo non è disponibile");
+}
+function lpHit(k){
+  if(!LP.hits.length) return;
+  k = (k + LP.hits.length) % LP.hits.length;
+  LP.hit = k; LP.focus = LP.hits[k]; lpLabel(); lpNav();
+  const pg = LP.pages[LP.focus.n - 1];
+  LP.pages.forEach(p => { if(p.hl && p !== pg) lpDrawHL(p); });
+  if(pg.canvas && pg.vp) lpDrawHL(pg); else lpGo(LP.focus.n);     // la pagina si disegna e poi evidenzia da sola
+}
+function lpDrawHL(pg){
+  if(pg.hl){ pg.hl.remove(); pg.hl = null; }
+  if(!pg.vp || !LP.q) return;
+  const items = LP.text[pg.n]; if(!items) return;
+  const words = lpWords(), vp = pg.vp, act = LP.hit >= 0 ? LP.hits[LP.hit] : null;
+  let box = null, on = null;
+  items.forEach((it, i) => {
+    if(!words.every(w => it.l.includes(w))) return;
+    const tx = pdfjsLib.Util.transform(vp.transform, it.t);
+    const fh = Math.hypot(tx[2], tx[3]) || 10;
+    const x = tx[4], y = tx[5] - fh, wd = it.w * vp.scale, hh = fh * 1.2;
+    if(!box){ box = document.createElement("div"); box.className = "pdfv-hl"; }
+    const m = document.createElement("i");
+    m.style.cssText = `left:${(x / vp.width * 100).toFixed(2)}%;top:${(y / vp.height * 100).toFixed(2)}%;width:${(wd / vp.width * 100).toFixed(2)}%;height:${(hh / vp.height * 100).toFixed(2)}%`;
+    if(act && act.n === pg.n && act.i === i){ m.className = "on"; on = m; }
+    box.appendChild(m);
+  });
+  if(!box) return;
+  pg.hl = box; pg.el.appendChild(box);
+  if(on && LP.focus && LP.focus.n === pg.n){ on.scrollIntoView({ block: "center", inline: "center" }); LP.focus = null; }
+}
+function lpToggleSearch(on){
+  const b = $("#pdfvSearch"), show = on ?? b.classList.contains("hidden");
+  b.classList.toggle("hidden", !show);
+  if(show){ $("#pdfvQ").focus(); $("#pdfvQ").select(); }
+  else { $("#pdfvQ").value = ""; lpFind(""); }
+}
+
+/* comandi */
+$("#pdfvClose").addEventListener("click", () => { if(LP.hist) history.back(); else lpClose(); });
+addEventListener("popstate", () => { if(LP.open){ LP.hist = false; lpClose(); } });
+$("#pdfvShare").addEventListener("click", () => { if(LP.x) catShare(LP.x); });
+$("#pdfvSearchBtn").addEventListener("click", () => lpToggleSearch());
+$("#pdfvZoomIn").addEventListener("click", () => lpSetZoom(LP.zoom * 1.25));
+$("#pdfvZoomOut").addEventListener("click", () => lpSetZoom(LP.zoom / 1.25));
+$("#pdfvZoomLbl").addEventListener("click", () => lpSetZoom(1));
+$("#pdfvPrev").addEventListener("click", () => lpGo(LP.cur - 1));
+$("#pdfvNext").addEventListener("click", () => lpGo(LP.cur + 1));
+$("#pdfvPrevHit").addEventListener("click", () => lpHit(LP.hit - 1));
+$("#pdfvNextHit").addEventListener("click", () => lpHit(LP.hit + 1));
+const lpPg = $("#pdfvPage");
+lpPg.addEventListener("focus", () => lpPg.select());
+lpPg.addEventListener("change", () => lpGo(parseInt(lpPg.value, 10)));
+lpPg.addEventListener("keydown", e => { if(e.key === "Enter") lpPg.blur(); });
+let lpDeb = 0;
+$("#pdfvQ").addEventListener("input", e => { clearTimeout(lpDeb); const v = e.target.value; lpDeb = setTimeout(() => lpFind(v), 350); });
+$("#pdfvQ").addEventListener("keydown", e => {
+  if(e.key === "Enter"){ e.preventDefault(); clearTimeout(lpDeb); if(LP.hits.length && lpNorm(e.target.value).trim() === LP.q) lpHit(LP.hit + (e.shiftKey ? -1 : 1)); else lpFind(e.target.value); }
+});
+
+lpS.addEventListener("scroll", lpSchedule, { passive: true });
+addEventListener("resize", () => { if(LP.open && LP.doc){ lpLayout(); lpSchedule(); } });
+
+/* zoom con due dita, doppio tocco, Ctrl+rotella */
+const lpDist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+lpS.addEventListener("touchstart", e => {
+  if(e.touches.length === 2){
+    const r = lpS.getBoundingClientRect();
+    LP.pinch = { d: lpDist(e.touches), z: LP.zoom, cx: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, cy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top };
+    LP.t0 = null;
+  } else if(e.touches.length === 1) LP.t0 = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+lpS.addEventListener("touchmove", e => {
+  if(LP.pinch && e.touches.length === 2){ e.preventDefault(); lpSetZoom(LP.pinch.z * lpDist(e.touches) / LP.pinch.d, LP.pinch.cx, LP.pinch.cy); }
+}, { passive: false });
+lpS.addEventListener("touchend", e => {
+  LP.lastTouch = Date.now();
+  if(LP.pinch){ if(e.touches.length < 2){ LP.pinch = null; lpSchedule(); } return; }
+  if(e.changedTouches.length !== 1 || e.touches.length || !LP.t0) return;
+  const t = e.changedTouches[0], now = Date.now(), p = LP.tap;
+  if(Math.hypot(t.clientX - LP.t0.x, t.clientY - LP.t0.y) > 10){ LP.tap = null; return; }   // era uno scorrimento
+  if(p && now - p.t < 320 && Math.hypot(t.clientX - p.x, t.clientY - p.y) < 28){
+    LP.tap = null; const r = lpS.getBoundingClientRect();
+    lpSetZoom(LP.zoom > 1.2 ? 1 : 2.5, t.clientX - r.left, t.clientY - r.top);
+  } else LP.tap = { t: now, x: t.clientX, y: t.clientY };
+}, { passive: true });
+lpS.addEventListener("dblclick", e => {
+  if(Date.now() - LP.lastTouch < 700) return;
+  const r = lpS.getBoundingClientRect();
+  lpSetZoom(LP.zoom > 1.2 ? 1 : 2.5, e.clientX - r.left, e.clientY - r.top);
+});
+lpS.addEventListener("wheel", e => {
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  const r = lpS.getBoundingClientRect();
+  lpSetZoom(LP.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12), e.clientX - r.left, e.clientY - r.top);
+}, { passive: false });
+addEventListener("keydown", e => {
+  if(!LP.open) return;
+  if(e.key === "Escape"){ if(!$("#pdfvSearch").classList.contains("hidden")) lpToggleSearch(false); else $("#pdfvClose").click(); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f"){ e.preventDefault(); lpToggleSearch(true); return; }
+  if(e.target.closest && e.target.closest("input")) return;
+  if(e.key === "+" || e.key === "=") lpSetZoom(LP.zoom * 1.25);
+  else if(e.key === "-") lpSetZoom(LP.zoom / 1.25);
+  else if(e.key === "0") lpSetZoom(1);
+  else if(e.key === "ArrowRight" && LP.zoom <= 1.05) lpGo(LP.cur + 1);
+  else if(e.key === "ArrowLeft" && LP.zoom <= 1.05) lpGo(LP.cur - 1);
 });
 
 /* ---------- Giro ---------- */

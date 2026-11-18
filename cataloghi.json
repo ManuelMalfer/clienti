@@ -58,11 +58,27 @@
    ]
   },
   {
-   "titolo": "Demetra - Catalogo",
+   "titolo": "Demetra - Catalogo generale 27",
    "fornitore": "Demetra",
+   "categoria": "Patate e verdure",
    "file": "cataloghi/demetra-catalogo-2026.pdf",
-   "desc": "Catalogo generale, 152 pagine",
-   "anno": "2026"
+   "desc": "Funghi, carciofi, ortaggi, condimenti, frutta, dessert",
+   "anno": "2026",
+   "tag": [
+    "verdure",
+    "patate",
+    "funghi",
+    "carciofi",
+    "ortaggi",
+    "legumi",
+    "condimenti",
+    "sughi",
+    "frutti di mare",
+    "frutti di bosco",
+    "dessert",
+    "catalogo generale",
+    "wiberg"
+   ]
   },
   {
    "titolo": "Brochure Carni",

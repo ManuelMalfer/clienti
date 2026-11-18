@@ -151,7 +151,7 @@ Su telefono non entrano tutte: la barra scorre in orizzontale e porta al centro 
 
 Scheda **Cataloghi** nella barra in basso: i cataloghi PDF dei fornitori e di Marchi, con barra di ricerca,
 etichette per **categoria** e elenco **raggruppato per categoria** (gruppi che si aprono/chiudono, "Chiudi tutte").
-Ogni riga: titolo, fornitore, breve descrizione, anno; si apre il PDF in una nuova scheda; il pulsante di
+Ogni riga: titolo, fornitore, breve descrizione, anno; si apre nel **lettore PDF** dell'app (sotto); il pulsante di
 condivisione usa la condivisione del telefono (o WhatsApp Web sul PC).
 
 - **Ricerca**: per inizio parola (non per pezzi dentro le parole: "gelato" non trova "surgelato"), ignora l'ultima
@@ -172,7 +172,26 @@ condivisione usa la condivisione del telefono (o WhatsApp Web sul PC).
   a Claude, che li inserisce e propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato a mano).
 - Il 18/11/2026 sono stati caricati 57 PDF (~220 MB). Fornitore di ostriche, caviale, alghe, cozze e di tutto il
   pesce fresco = **Ittica Center** (confermato da Manuel). **Demetra** è un fornitore (non un marchio Marchi): il suo
-  catalogo 2026 (152 pagine di sole immagini, mai letto) sta in "Altri cataloghi" finché non si sa cosa fornisce.
+  "Catalogo generale 27" (152 pagine di sole immagini) copre funghi, carciofi, ortaggi, condimenti, frutti di mare,
+  frutta e dessert; sta in "Patate e verdure".
+
+### Lettore PDF dei cataloghi
+
+Toccando un catalogo del sito (percorso locale `cataloghi/…`) si apre un lettore a tutto schermo (`#pdfv`, codice
+`lp*`/`LP` in `index.html`) con **pdf.js 3.11.174** (stesso script dei Preventivi, caricato solo al bisogno da cdnjs):
+scorrimento continuo, zoom 50–400% (pizzico, doppio tocco, pulsanti −/+, Ctrl+rotella; il numero % riporta a 100%),
+numero di pagina modificabile con avanti/indietro, **ricerca nel testo** con evidenziazione in giallo e risultato
+attivo in arancione (nei PDF fatti solo di immagini, come Demetra, la ricerca non è possibile e l'app avvisa),
+condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettore (`history.pushState`).
+
+- Le pagine si disegnano solo se vicine alla schermata (circa 1 schermata sopra e sotto) e si liberano quando si
+  allontanano: così reggono anche i cataloghi da 150 pagine. Canvas limitati a ~9 milioni di pixel (memoria iPhone).
+- Il PDF si scarica a pezzi (range requests, `disableAutoFetch`): GitHub Pages li supporta, quindi la prima pagina
+  compare subito anche con file da 20 MB.
+- I link esterni (`https://…`, es. Drive) NON usano il lettore (CORS): restano un normale collegamento. Se pdf.js
+  non si carica (offline) compare "Non riesco ad aprire il catalogo qui" con il pulsante "Apri il PDF".
+- Per provarlo in locale senza login: servire la cartella con un piccolo server che supporti `Range`, nascondere
+  `#login`, mostrare `#app` (tenendolo forzato: l'app senza accesso torna al login dopo pochi secondi).
 
 ## Come lavorare su questo progetto
 
