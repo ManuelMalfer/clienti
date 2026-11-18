@@ -850,6 +850,24 @@
     "stampa",
     "scatole"
    ]
+  },
+  {
+   "titolo": "Marchi Carni edited",
+   "file": "cataloghi/marchi-carni-edited.pdf.enc",
+   "fornitore": "Marchi",
+   "categoria": "Marchi S.p.A.",
+   "desc": "Carne, costata, selezioni",
+   "anno": "2026",
+   "tag": [
+    "carne",
+    "costata",
+    "fiorentina",
+    "amaranta",
+    "greenland",
+    "theangus",
+    "redkrowa",
+    "marchi s.p.a."
+   ]
   }
  ]
 }
