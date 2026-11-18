@@ -732,6 +732,7 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
 .giro-leg .v{background:var(--giro-v)}
 .giro-leg .g{background:var(--giro-g)}
 .giro-sum{margin:8px 0 0;font-weight:600;font-size:15px}
+.giro-nota{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .giro-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .giro-chips span{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;background:color-mix(in srgb,var(--giro-v) 16%,transparent);font-size:13.5px;font-weight:600}
 .giro-chips b{color:var(--giro-v);font-variant-numeric:tabular-nums}
@@ -2405,12 +2406,13 @@ const ordineFatto = (c, iso) => (c.ordiniFatti || []).includes(iso);
 
 function renderGiro(){
   $("#daysStrip").innerHTML = DAY_SHORT.map((d,i) => {
-    const n = clienti.filter(c => (c.giorniConsegna||[]).includes(DAYS[i])).length;
-    return `<button type="button" data-day="${i}" aria-pressed="${i === ui.giro}" class="${i === todayIdx ? "today" : ""}">${d}<span class="n">${n} cons.</span></button>`;
+    const n = clienti.filter(c => (c.giorniOrdine||[]).includes(DAYS[i])).length;
+    return `<button type="button" data-day="${i}" aria-pressed="${i === ui.giro}" class="${i === todayIdx ? "today" : ""}">${d}<span class="n">${n} ord.</span></button>`;
   }).join("");
   const day = DAYS[ui.giro], iso = giroData(ui.giro);
   const byPlace = (a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it");
-  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(day));
+  const giornoCons = DAYS[(ui.giro + 1) % DAYS.length];     // gli ordini raccolti oggi si consegnano il giorno dopo (sabato -> lunedì)
+  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(giornoCons));
   const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day)).sort(byPlace);
   $("#giroLbl").textContent = day;
 
@@ -2423,12 +2425,13 @@ function renderGiro(){
   const paths = ZONE_NOMI.map(z => `<path d="${g.d[z]}" class="${perZona[z] ? "gz-v" : "gz-g"}" fill-rule="evenodd"><title>${esc(z)}: ${perZona[z] ? quante(perZona[z]) : "nessuna consegna"}</title></path>`).join("");
   const riga = cons.length
     ? `${quante(cons.length)} in ${verdi.length} ${verdi.length === 1 ? "zona" : "zone"}${fuori ? ` · ${fuori} fuori zona` : ""}`
-    : `Nessuna consegna il ${day.toLowerCase()}`;
+    : `Nessuna consegna il ${giornoCons.toLowerCase()}`;
   const mappa = `<aside class="giro-map" aria-label="Zone di consegna"><div class="giro-map-card">
-    <div class="giro-map-head"><b>Dove si consegna</b><small>${esc(day)}</small></div>
+    <div class="giro-map-head"><b>Dove si consegna</b><small>${esc(giornoCons)}</small></div>
     <svg viewBox="${g.vb}" role="img" aria-label="${esc(riga)}">${paths}</svg>
     <div class="giro-leg"><span><i class="v"></i>In consegna</span><span><i class="g"></i>Non si consegna</span></div>
     <p class="giro-sum">${esc(riga)}</p>
+    <p class="giro-nota">Gli ordini di ${esc(day.toLowerCase())} si consegnano ${esc(giornoCons.toLowerCase())}.</p>
     ${verdi.length ? `<div class="giro-chips">${verdi.map(z => `<span>${esc(z)} <b>${perZona[z]}</b></span>`).join("")}</div>` : ""}
   </div></aside>`;
 
@@ -2859,7 +2862,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.1 (v3.1)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.2 (v3.2)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
