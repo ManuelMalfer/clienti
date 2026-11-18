@@ -170,9 +170,9 @@ condivisione usa la condivisione del telefono (o WhatsApp Web sul PC).
   Non food e monouso.
 - Aggiungere un catalogo = copiare il PDF in `cataloghi/` + una voce in `cataloghi.json` + push. Manuel manda i PDF
   a Claude, che li inserisce e propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato a mano).
-- Il 18/11/2026 sono stati caricati 57 PDF (~220 MB). Da verificare con Manuel: "Demetra - Catalogo" (152 pagine di
-  sole immagini, classificato tra i materiali Marchi senza averlo potuto leggere) e il fornitore dei cataloghi di
-  ostriche, caviale, alghe e cozze (non scritto nei PDF, lasciato vuoto).
+- Il 18/11/2026 sono stati caricati 57 PDF (~220 MB). Fornitore di ostriche, caviale, alghe, cozze e di tutto il
+  pesce fresco = **Ittica Center** (confermato da Manuel). **Demetra** è un fornitore (non un marchio Marchi): il suo
+  catalogo 2026 (152 pagine di sole immagini, mai letto) sta in "Altri cataloghi" finché non si sa cosa fornisce.
 
 ## Come lavorare su questo progetto
 

@@ -60,14 +60,9 @@
   {
    "titolo": "Demetra - Catalogo",
    "fornitore": "Demetra",
-   "categoria": "Marchi S.p.A.",
    "file": "cataloghi/demetra-catalogo-2026.pdf",
    "desc": "Catalogo generale, 152 pagine",
-   "anno": "2026",
-   "tag": [
-    "marchi",
-    "aziendale"
-   ]
+   "anno": "2026"
   },
   {
    "titolo": "Brochure Carni",
@@ -162,6 +157,7 @@
   },
   {
    "titolo": "Catalogo ostriche",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/catalogo-ostriche.pdf",
    "desc": "Origini, giorni di ordine e consegna",
@@ -176,6 +172,7 @@
   },
   {
    "titolo": "Ostriche special baby",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/ostriche-baby.pdf",
    "desc": "Speciale appetizer, ostrica di Goro",
@@ -189,6 +186,7 @@
   },
   {
    "titolo": "Ostriche - Codici e calibri",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/ostriche-codici.pdf",
    "desc": "Codici, calibri e confezioni",
@@ -202,6 +200,7 @@
   },
   {
    "titolo": "Cozza atlantica di Bouchot",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/cozza-atlantica-di-bouchot.pdf",
    "desc": "Offerta di inizio stagione",
@@ -216,6 +215,7 @@
   },
   {
    "titolo": "Catalogo caviale",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/catalogo-caviale.pdf",
    "desc": "Storione Beluga, Asetra e altri",
@@ -230,6 +230,7 @@
   },
   {
    "titolo": "Catalogo alghe",
+   "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/catalogo-alghe.pdf",
    "desc": "Alghe per la cucina",
@@ -242,7 +243,7 @@
   },
   {
    "titolo": "Loch Duart - Salmone e branzino Ikejime",
-   "fornitore": "Loch Duart",
+   "fornitore": "Ittica Center (Loch Duart)",
    "categoria": "Pesce e frutti di mare",
    "file": "cataloghi/ikejime-loch-duart.pdf",
    "desc": "Metodo giapponese Ikejime",
