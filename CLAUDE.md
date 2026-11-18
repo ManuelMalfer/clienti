@@ -66,7 +66,8 @@ Ogni cambio di stato aggiunge automaticamente una riga allo storico.
 
 ## Funzioni presenti
 
-Barra in basso: **Clienti, Mappa, Giro, Richiami, Riepilogo** + pulsante flottante **Nuovo**.
+Barra in basso (5 voci): **Clienti, Richiami, Cataloghi, Riepilogo, Altro**; in **Altro** (griglia di riquadri) stanno **Mappa, Giro,
+Preventivi, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo preventivo). Vedi "Interfaccia" più sotto.
 
 - **Clienti**: ricerca multi-parola su tutti i campi, filtri per stato, località e tipologia.
   Pulsante **Zone**: apre la mappa delle zone di lavoro (SVG inline, nessuna richiesta di rete), divisa
@@ -144,8 +145,7 @@ GitHub controlla che contenga anche queste funzioni**, altrimenti spariscono di 
 - **Import contatti dal gestionale**: l'importazione Excel riconosce anche l'export contatti del gestionale
   (colonne COD_CONTO, RAG_SOCIALE, LOCALITA…) oltre al foglio DATABASE.
 
-La barra in basso ha 8 schede: Clienti, Mappa, Giro, Richiami, Cataloghi, Preventivi, Rosario, Riepilogo.
-Su telefono non entrano tutte: la barra scorre in orizzontale e porta al centro la scheda attiva.
+Le schede sono 8 (Clienti, Richiami, Cataloghi, Riepilogo + Mappa, Giro, Preventivi, Rosario in "Altro").
 
 ## Cataloghi
 
@@ -252,6 +252,43 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
   con piccoli moduli finti (utente sempre collegato, Firestore in `localStorage`), cifrare 3-4 PDF di prova con lo
   strumento (`CATALOGHI_SENZA_APPUNTI=1`) e servire la cartella con un server che supporti `Range` e dia `text/javascript`
   ai `.js`. Così si prova anche "Attiva i cataloghi" senza toccare il vero account.
+
+## Versioni dell'app (tag Git)
+
+- **v1** = interfaccia precedente al rinnovo (barra in basso con 8 schede a scorrimento, elenco clienti a righe, categorie dei
+  cataloghi come etichette). Tag Git `v1`.
+- **v2** = rinnovo dell'interfaccia del 18/11/2026 (sezione "Interfaccia" qui sotto). Tag Git `v2`. In Riepilogo, sotto l'email
+  dell'account, compare "App versione 2 (v2)" (utile per capire se il telefono mostra ancora la versione vecchia).
+- **Tornare alla v1** (se Manuel lo chiede): senza riscrivere la cronologia, con `git revert --no-edit <commit-di-v2>` (il commit
+  a cui punta il tag `v2`) e push su `main`; il sito torna com'era e i dati non cambiano. Attenzione: i cataloghi aggiunti dall'app
+  (commit "Cataloghi: aggiunto…") e le modifiche a `cataloghi.json` NON vanno persi, perché stanno in file diversi da quelli del
+  rinnovo; verificare comunque con `git diff v1 HEAD --stat` prima del push. Per rivedere la v1 senza toccare nulla:
+  `git checkout v1` (poi `git checkout main`).
+- Per ogni nuovo grande cambio di aspetto o struttura: creare un tag (`v3`, …) *prima* di pubblicare.
+
+## Interfaccia (rinnovata il 18/11/2026)
+
+Obiettivo: stile **pulito e moderno alla iOS**, che entri bene su iPhone (provato a 375 px e 320 px, tema chiaro e scuro, nessuno
+scorrimento laterale). Lo stile nuovo sta in un blocco CSS a fondo `<style>` delimitato da `/* ===== Aspetto moderno ===== */`
+(sovrascrive le regole più vecchie sopra); variabili `--r-sm/--r-md/--r-lg` (raggi), `--sh1/--sh2` (ombre), `--glass`, `--tabbar`.
+
+- **Barra in basso a 5 voci** con vetro sfocato e indicatore a pillola sulla voce attiva. La voce **Altro** (`data-view="altro"`,
+  vista `#v-altro`) resta accesa quando sei in Mappa, Giro, Preventivi o Rosario; toccarla torna alla griglia. I riquadri hanno
+  `data-go="vista"`. Il numero di proposte di Rosario compare sul riquadro (`#rosNum`) e sulla voce Altro (`#altroNum`);
+  il numero dei richiami scaduti sulla voce Richiami (`#richNum`).
+- **Clienti**: intestazione fissa solo con titolo, "Azzera" e ricerca; sotto, che scorre con l'elenco: **pillole dello stato** con
+  conteggi (`#fStatoPills`; il vecchio `<select id="fStato">` resta nascosto per il resto del codice), filtri Località / Tipologia / Zone,
+  mappa delle zone **compatta** (~130 px, chip su due righe che scorrono). Ogni cliente è una **scheda** (`rowHTML`): avatar con le
+  iniziali colorato per stato, nome (fino a 2 righe), "Località · Tipologia", pillola dello stato e chip del richiamo con orologio
+  (rosso se scaduto). Giro e Richiami usano lo stesso `rowHTML` (con `side` per l'orario).
+- **Scheda cliente** (dialog): foglio arrotondato con maniglia su telefono, azioni a riquadri colorati (Chiama verde, WhatsApp,
+  Email, Naviga), stato in barra, dati in un riquadro, richiami e storico.
+- **Cataloghi**: prima schermata = **griglia di riquadri per categoria** con icona e colore (funzione `catStile`: la categoria si
+  riconosce dalle parole del nome; categorie nuove → cartella grigia), più "Tutti i cataloghi". Dentro una categoria: titolo grande e
+  tasto **‹ Categorie** per tornare. Scrivendo nella ricerca si vedono i risultati di tutte le categorie. Stato in `cat`
+  (`cat.cat`, `cat.tutti`, `cat.q`).
+- Provato con una copia dell'app con finto Firebase e 28 clienti inventati (vedi "Per provarlo in locale senza login"); altre schermate
+  (Mappa, Riepilogo, Preventivi, Rosario) non sono state ridisegnate: solo ereditano intestazione, bottoni e campi nuovi.
 
 ## Come lavorare su questo progetto
 

@@ -358,10 +358,6 @@ html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:ma
 .pdfv-sep{width:1px;height:24px;background:var(--line);margin:0 2px}
 
 /* ---------- Preventivi ---------- */
-.tabs-inner{display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.tabs-inner::-webkit-scrollbar{display:none}
-.tabs button{flex:1 0 66px;font-size:11.5px;min-width:0;padding:0 2px}
-@media (max-width:480px){.tabs button{font-size:11px}}
 .pv-li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
 .pv-li .row{border-bottom:0}
 .pv-trash{flex:0 0 44px;height:44px;border:0;background:none;color:var(--muted);border-radius:10px;display:grid;place-items:center}
@@ -519,6 +515,128 @@ body.pv-open{overflow:hidden}
 .gbox-prev label input{margin-top:3px;width:18px;height:18px;flex:none}
 .gbox-prev small{display:block;color:var(--muted);font-size:13px}
 .gbox-prev .gbox-row{margin-top:6px}
+/* ===== Aspetto moderno ===== */
+:root{--r-sm:12px;--r-md:16px;--r-lg:22px;--glass:color-mix(in srgb,var(--bg) 80%,transparent);--sh1:0 1px 2px rgba(16,32,36,.06);--sh2:0 8px 24px rgba(16,32,36,.12);--tabbar:62px}
+@media (prefers-color-scheme:dark){:root{--sh1:0 1px 2px rgba(0,0,0,.4);--sh2:0 10px 28px rgba(0,0,0,.45)}}
+
+/* intestazioni vetrate e titoli grandi */
+header.top{background:var(--glass);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent);padding:12px 0 10px}
+.top h1{font-size:34px;letter-spacing:-.015em}
+.top .count{font-size:15px;font-weight:500}
+.search input{background:var(--surface-2);border-color:transparent;border-radius:14px;min-height:46px;padding-left:42px}
+.search input:focus{background:var(--surface);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search svg{left:15px}
+.input,select.input,textarea.input{border-radius:var(--r-sm)}
+.btn{border-radius:var(--r-sm);box-shadow:var(--sh1)}
+.btn-primary{box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 32%,transparent)}
+.link{font-weight:600}
+.empty{padding:56px 12px}
+
+/* filtri: pillole per lo stato + tre controlli compatti */
+.pills{display:flex;gap:8px;margin:12px -16px 0;padding:2px 16px 4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:6px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:15px;font-weight:600;color:var(--ink);box-shadow:var(--sh1)}
+.pill i{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted))}
+.pill small{font-size:13px;color:var(--muted);font-weight:600}
+.pill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.pill[aria-pressed="true"] small{color:inherit;opacity:.7}
+.filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;margin-top:10px;overflow:visible;padding:0}
+.filters select{min-width:0;width:100%;min-height:42px;font-size:15px;background-color:var(--surface);border-radius:var(--r-sm);padding:8px 10px}
+.filters .zone-btn{min-height:42px;border-radius:var(--r-sm);box-shadow:var(--sh1)}
+
+/* mappa delle zone più compatta: non deve mangiare la schermata */
+.zone-panel{padding:10px 12px 12px;border-radius:var(--r-md);box-shadow:var(--sh1);margin:12px 0}
+.zone-panel svg{max-height:128px}
+.zone-chips{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;gap:6px;overflow-x:auto;margin:10px -12px 0;padding:0 12px 4px;scrollbar-width:none}
+.zone-chips::-webkit-scrollbar{display:none}
+.zone-chips button{white-space:nowrap}
+.zone-hint{display:none}
+
+/* elenco: ogni cliente è una scheda con avatar colorato per stato */
+.list{display:flex;flex-direction:column;gap:8px;padding-top:2px}
+.row{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);padding:12px 14px;min-height:68px;box-shadow:var(--sh1);transition:transform .1s}
+.row:hover{background:var(--surface)}
+.row:active{transform:scale(.985)}
+.av{flex:0 0 44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-cond);font-weight:700;font-size:18px;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent);color:var(--c,var(--muted))}
+.row-name{font-size:17px;font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
+.row-main .flag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:2px 9px;border-radius:99px;background:color-mix(in srgb,var(--st-contattato) 15%,transparent);color:var(--st-contattato);font-size:12.5px;font-weight:700}
+.row-main .flag.late{background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger)}
+.row-sub{margin-top:1px}
+.row-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.st-pill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:color-mix(in srgb,var(--c,var(--muted)) 15%,transparent);color:var(--c,var(--muted));white-space:nowrap}
+.flag{font-size:12.5px}
+.giro-li{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);box-shadow:var(--sh1);padding-right:8px;margin:0}
+.giro-li .row{background:none;border:0;box-shadow:none;border-radius:var(--r-md) 0 0 var(--r-md)}
+
+/* barra in basso: 5 voci, vetro, indicatore a pillola sulla voce attiva */
+nav.tabs{background:color-mix(in srgb,var(--surface) 86%,transparent);-webkit-backdrop-filter:saturate(1.8) blur(20px);backdrop-filter:saturate(1.8) blur(20px);border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.tabs-inner{display:grid;grid-template-columns:repeat(5,1fr);height:var(--tabbar);max-width:640px}
+.tabs button{position:relative;gap:3px;font-size:11px;font-weight:600;letter-spacing:.01em;color:var(--muted);min-width:0;padding:6px 0 4px;transition:color .15s}
+.tabs button::before{content:"";position:absolute;top:5px;left:50%;width:58px;height:32px;margin-left:-29px;border-radius:16px;background:var(--accent-soft);opacity:0;transform:scale(.7);transition:opacity .18s,transform .18s}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.tabs button[aria-current="page"]::before{opacity:1;transform:none}
+.tabs button svg{position:relative;width:24px;height:24px}
+.tabs .num{top:3px;left:calc(50% + 6px);margin:0;min-width:16px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
+.fab{width:58px;height:58px;padding:0;justify-content:center;gap:0;font-size:0;border-radius:50%;box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 40%,transparent)}
+.fab svg{width:26px;height:26px}
+
+/* sezione "Altro" */
+.alt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.alt-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:18px 16px;min-height:132px;border-radius:var(--r-lg);background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:var(--sh1);text-align:left;transition:transform .12s}
+.alt-tile:active{transform:scale(.97)}
+.alt-ico{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.alt-tile b{font-family:var(--font-cond);font-size:21px;font-weight:600;line-height:1.1}
+.alt-tile small{color:var(--muted);font-size:13.5px;line-height:1.3}
+.alt-tile .num{position:absolute;top:12px;right:12px;background:var(--danger);color:#fff;border-radius:99px;font-size:12px;font-weight:700;padding:1px 8px}
+@media (min-width:560px){.alt-grid{grid-template-columns:repeat(4,1fr)}}
+
+/* cataloghi: griglia di categorie */
+.ct-back{display:inline-flex;align-items:center;gap:4px;min-height:38px;padding:4px 14px 4px 8px;border:0;border-radius:99px;background:var(--surface-2);color:var(--accent);font-weight:600;font-size:15px}
+.ct-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:14px}
+.ct-tile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:16px;min-height:132px;border-radius:var(--r-lg);background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:var(--sh1);text-align:left;transition:transform .12s}
+.ct-tile:active{transform:scale(.97)}
+.ct-tile b{font-family:var(--font-cond);font-size:19px;line-height:1.15;font-weight:600}
+.ct-tile small{color:var(--muted);font-size:13px;margin-top:auto}
+.ct-ti{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;flex:0 0 auto;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c)}
+.ct-tile.wide{grid-column:1/-1;flex-direction:row;align-items:center;min-height:0;padding:14px 16px;gap:14px}
+.ct-tile.wide .ct-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.ct-tile.wide small{margin-top:2px}
+.ct-num{font-family:var(--font-cond);font-weight:700;font-size:28px;color:var(--c)}
+.ct-cathead{display:flex;align-items:center;gap:14px;margin:14px 0 8px}
+.ct-cathead b{display:block;font-family:var(--font-cond);font-size:27px;line-height:1.1;font-weight:700}
+.ct-cathead small{color:var(--muted);font-size:14px}
+.ct-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.ct-item{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);box-shadow:var(--sh1);padding-right:8px}
+.ct-main{padding:12px 4px 12px 12px;min-height:66px;border-radius:var(--r-md) 0 0 var(--r-md)}
+.ct-main:hover{background:none}
+.ct-gh{border-bottom:0;padding:6px 4px}
+@media (min-width:560px){.ct-grid{grid-template-columns:repeat(3,1fr)}}
+
+/* scheda cliente e finestre: foglio arrotondato con maniglia */
+dialog{border-radius:var(--r-lg)}
+@media (max-width:640px){
+  dialog{border-radius:26px 26px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+  .dlg::before{content:"";display:block;flex:0 0 auto;width:38px;height:5px;border-radius:3px;background:color-mix(in srgb,var(--muted) 35%,transparent);margin:8px auto 0}
+}
+dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.dlg-head{padding:12px 18px 12px;border-bottom:0}
+.dlg-head h2{font-size:28px;letter-spacing:-.01em}
+.dlg-foot{border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.actions{gap:10px;margin:6px 0 16px}
+.actions a,.actions span{background:var(--surface-2);color:var(--ink);padding:12px 4px 10px;border-radius:16px;font-size:12.5px;gap:6px}
+.actions svg{width:26px;height:26px;color:var(--ac,var(--accent))}
+.actions > :nth-child(1){--ac:var(--st-cliente)}
+.actions > :nth-child(2){--ac:#25A244}
+.actions > :nth-child(3){--ac:var(--accent)}
+.actions > :nth-child(4){--ac:var(--st-contattato)}
+.stato-pick{background:var(--surface-2);border-radius:var(--r-md);padding:8px 12px;margin-bottom:14px}
+.stato-pick select{border:0;background:transparent;font-weight:600;padding-left:0}
+.stato-pick .dot{flex:0 0 12px;height:12px}
+.info{background:var(--surface-2);border-radius:var(--r-md);padding:14px;gap:9px 14px}
+.richiamo{border-radius:var(--r-md)}
+.chip-btn{background:var(--surface)}
+.storico li{padding:10px 0}
+/* ===== /Aspetto moderno ===== */
 </style>
 </head>
 <body>
@@ -543,20 +661,20 @@ body.pv-open{overflow:hidden}
 
   <section id="v-clienti" class="view-wrap">
     <header class="top"><div class="wrap">
-      <div class="top-row"><h1>Clienti</h1><span class="count" id="countLbl"></span></div>
+      <div class="top-row"><h1>Clienti</h1><span class="ct-head"><span class="count" id="countLbl"></span><button class="link hidden" id="fReset" type="button">Azzera</button></span></div>
       <div class="search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <input class="input" id="q" type="search" placeholder="Cerca nome, località, telefono, P.IVA…" autocomplete="off" aria-label="Cerca">
       </div>
+    </div></header>
+    <main class="wrap view">
+      <div class="pills" id="fStatoPills" role="group" aria-label="Filtra per stato"></div>
       <div class="filters">
-        <select class="input" id="fStato" aria-label="Filtra per stato"></select>
+        <select class="input hidden" id="fStato" aria-label="Filtra per stato"></select>
         <select class="input" id="fLuogo" aria-label="Filtra per località"></select>
         <select class="input" id="fTipo" aria-label="Filtra per tipologia"></select>
         <button class="zone-btn" id="zoneBtn" type="button" aria-pressed="false">Zone<b id="zoneNum" class="hidden"></b></button>
-        <button class="link hidden" id="fReset" type="button">Azzera</button>
       </div>
-    </div></header>
-    <main class="wrap view">
       <div class="zone-panel hidden" id="zonePanel">
         <svg id="zoneSvg" viewBox="0 0 100 100" role="group" aria-label="Mappa delle zone di lavoro"></svg>
         <div class="zone-chips" id="zoneChips"></div>
@@ -627,6 +745,18 @@ body.pv-open{overflow:hidden}
     </div></header>
     <main class="wrap view" id="ctBody"></main>
   </section>
+
+  <!-- ALTRO -->
+  <section id="v-altro" class="view-wrap hidden">
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Altro</h1></div></div></header>
+    <main class="wrap view"><div class="alt-grid">
+      <button class="alt-tile" type="button" data-go="mappa" style="--c:#2B8FA8"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span><b>Mappa</b><small>I tuoi locali sulla mappa e la zona che copri</small></button>
+      <button class="alt-tile" type="button" data-go="giro" style="--c:#D39A1F"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg></span><b>Giro</b><small>Consegne e ordini da raccogliere, giorno per giorno</small></button>
+      <button class="alt-tile" type="button" data-go="preventivi" style="--c:#CC5E9E"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><b>Preventivi</b><small>Le offerte per i clienti, anche in PDF</small></button>
+      <button class="alt-tile" type="button" data-go="rosario" style="--c:#3F9A55"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Rosario</b><small>L'assistente vocale: proposte e promemoria</small><span class="num hidden" id="rosNum"></span></button>
+    </div></main>
+  </section>
+  <!-- /ALTRO -->
 
   <button class="fab" id="fab" type="button">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo
@@ -700,14 +830,11 @@ body.pv-open{overflow:hidden}
   <!-- /LETTORE PDF -->
 
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
-    <button data-view="clienti" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
-    <button data-view="mappa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
-    <button data-view="giro"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
-    <button data-view="richiami"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
-    <button data-view="cataloghi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
-    <button data-view="preventivi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Preventivi</button>
-    <button data-view="rosario"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNum"></span></button>
-    <button data-view="riepilogo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
+    <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
+    <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
+    <button data-view="cataloghi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
+    <button data-view="riepilogo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
+    <button data-view="altro"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg>Altro<span class="num hidden" id="altroNum"></span></button>
   </div></nav>
 </div>
 
@@ -1213,15 +1340,16 @@ async function migraExClienti(){
 
 /* ---------- navigazione ---------- */
 $$(".tabs button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if(g) go(g.dataset.go); });
 function go(view){
   ui.view = view;
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
-  $$(".tabs button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
+  $$(".tabs button").forEach(b => b.dataset.view === voce ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro");
   if(view !== "mappa") stopPick();
   renderAll();
-  $('.tabs button[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   if(view === "cataloghi"){ catLoad(); catPing(); }
 }
 
@@ -1251,9 +1379,10 @@ function renderOptions(){
   $("#dlFornitori").innerHTML = forn.map(x => `<option value="${esc(x)}">`).join("");
   const count = (k, v) => clienti.filter(c => c[k] === v).length;
   $("#fStato").innerHTML = `<option value="">Tutti gli stati</option>` + STATI.map(([v,l]) => `<option value="${v}">${l} (${count("stato", v)})</option>`).join("");
-  $("#fLuogo").innerHTML = `<option value="">Tutte le località</option>` + luoghi.map(l => `<option value="${esc(l)}">${esc(l)} (${count("luogo", l)})</option>`).join("");
-  $("#fTipo").innerHTML = `<option value="">Tutte le tipologie</option>` + uniq(clienti.map(c => c.tipologia)).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  $("#fLuogo").innerHTML = `<option value="">Località</option>` + luoghi.map(l => `<option value="${esc(l)}">${esc(l)} (${count("luogo", l)})</option>`).join("");
+  $("#fTipo").innerHTML = `<option value="">Tipologia</option>` + uniq(clienti.map(c => c.tipologia)).map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
   $("#fStato").value = ui.stato; $("#fLuogo").value = ui.luogo; $("#fTipo").value = ui.tipo;
+  renderPills();
 }
 
 function filtered(){
@@ -1274,16 +1403,32 @@ function filtered(){
 function richiamoTag(c){
   if(!c.ricontattare) return "";
   const late = c.ricontattare < localISO();
-  return `<span class="flag ${late ? "late" : ""}">Richiama ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
+  return `<span class="flag riga-richiamo ${late ? "late" : ""}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Richiama ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
 }
+const inizialiDi = n => {
+  const p = String(n || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(w => w && !/^(il|lo|la|le|l|da|di|del|dei|al|alla|e|&)$/i.test(w));
+  return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase();
+};
 function rowHTML(c, side = ""){
-  const sub = [c.luogo, c.indirizzo].filter(Boolean).join(", ");
-  return `<button class="row" data-open="${c.id}">
-    <span class="dot ${statoCls(c.stato)}" title="${esc(statoLabel(c.stato))}"></span>
-    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span></span>
-    <span class="row-side">${side || `${esc(statoLabel(c.stato))}<br>${richiamoTag(c)}`}</span>
+  const sub = [c.luogo, c.tipologia].filter(Boolean).join(" · ") || c.indirizzo || "";
+  return `<button class="row ${statoCls(c.stato)}" data-open="${c.id}">
+    <span class="av" aria-hidden="true">${esc(inizialiDi(c.nome))}</span>
+    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${side ? "" : richiamoTag(c)}</span>
+    <span class="row-side">${side || `<span class="st-pill">${esc(statoLabel(c.stato))}</span>`}</span>
   </button>`;
 }
+
+/* pillole dello stato (al posto del menu a tendina, che resta nascosto per il resto del codice) */
+function renderPills(){
+  const box = $("#fStatoPills"); if(!box) return;
+  const conta = v => clienti.filter(c => (c.stato || "DA CONTATTARE") === v).length;
+  box.innerHTML = [["", "Tutti", clienti.length], ...STATI.map(([v, l]) => [v, l, conta(v)])]
+    .map(([v, l, n]) => `<button type="button" class="pill ${v ? statoCls(v) : ""}" data-pst="${esc(v)}" aria-pressed="${ui.stato === v}">${v ? "<i></i>" : ""}${esc(l)}<small>${n}</small></button>`).join("");
+}
+$("#fStatoPills").addEventListener("click", e => {
+  const b = e.target.closest("[data-pst]"); if(!b) return;
+  ui.stato = b.dataset.pst; $("#fStato").value = ui.stato; renderList(); renderPills();
+});
 
 function renderList(){
   renderZone();
@@ -1385,7 +1530,7 @@ const CAT_SERVIZIO = "https://cataloghi.webmalfer.workers.dev";
 let catalogo = [], catOrdine = [], catStato = "idle";   // idle | carico | ok | errore
 let catPuoCaricare = false, catPingFatto = false;
 const catPend = [];                                     // cataloghi caricati in questa sessione e non ancora online per gli altri
-const cat = { q: "", cat: "", chiusi: new Set() };
+const cat = { q: "", cat: "", tutti: false, chiusi: new Set() };
 
 async function catLoad(){
   if(catStato === "carico") return;
@@ -1508,6 +1653,31 @@ const catShareIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
 
 // Ricerca per inizio parola: "gelato" non trova "surgelato"; l'ultima lettera si ignora (mozzarella = mozzarelle).
 const catTok = s => deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+const CAT_ICONE = {
+  marchi: '<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',
+  carni: '<path d="M5 14c0-4 3-8 8-8s6 3 6 6-3 6-7 6-7-1-7-4Z"/><circle cx="14" cy="11" r="2"/>',
+  pesce: '<path d="M3 12c3-5 9-6 13-3l5-2-1 5 1 5-5-2c-4 3-10 2-13-3Z"/><circle cx="8" cy="11" r=".8"/>',
+  pasta: '<path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 11c0-3 2-4 2-6M13 11c0-3 2-4 2-6"/>',
+  farine: '<path d="M12 21 4 6a15 15 0 0 1 16 0Z"/><circle cx="10" cy="10" r="1"/><circle cx="14" cy="12" r="1"/><circle cx="12" cy="16" r=".8"/>',
+  verdure: '<path d="M5 19c0-9 5-14 14-14 0 9-5 14-14 14Z"/><path d="M5 19 13 11"/>',
+  latte: '<path d="M12 3c4 0 6 6 6 10a6 6 0 0 1-12 0c0-4 2-10 6-10Z"/>',
+  surgelati: '<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/><path d="m9 4 3 2 3-2M9 20l3-2 3 2"/>',
+  dolci: '<path d="M7 11a5 5 0 0 1 10 0"/><path d="M7 11h10l-5 10Z"/>',
+  spezie: '<path d="M9 3h6v3H9zM8 6h8l1 4v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-9Z"/><path d="M10 13h4"/>',
+  nonfood: '<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+  altri: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
+  tutti: '<path d="M4 6h16M4 12h16M4 18h10"/>'
+};
+const CAT_COLORI = { marchi: "var(--accent)", carni: "#C0504A", pesce: "#2B8FA8", pasta: "#D39A1F", farine: "#B9803A", verdure: "#3F9A55", latte: "#5B84B8", surgelati: "#4DA3D6", dolci: "#CC5E9E", spezie: "#C86A33", nonfood: "#6F8087", altri: "#8A969A", tutti: "var(--accent)" };
+function catStile(nome){
+  const n = norm(nome);
+  const t = n === "tutti" ? "tutti" : n.includes("marchi") ? "marchi" : /carn|salum/.test(n) ? "carni" : /pesc|mare/.test(n) ? "pesce" : /past/.test(n) ? "pasta"
+    : /farin|pizz/.test(n) ? "farine" : /patat|verdur/.test(n) ? "verdure" : /latt|pann|uov/.test(n) ? "latte" : /surgel|gastron/.test(n) ? "surgelati"
+    : /dolc|color|gelat/.test(n) ? "dolci" : /spezi|sale|condim/.test(n) ? "spezie" : /food|monouso/.test(n) ? "nonfood" : "altri";
+  return { colore: CAT_COLORI[t], svg: (px = 24) => `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ICONE[t]}</svg>` };
+}
+const catIndietro = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>`;
+
 function catFiltrati(){
   const words = catTok(cat.q).map(w => w.length > 5 ? w.slice(0, -1) : w);
   return catalogo.filter(x => {
@@ -1524,10 +1694,10 @@ function renderCataloghi(){
   const categorie = uniq(catalogo.map(catGrp)).sort((a, b) => catPos(a) - catPos(b) || a.localeCompare(b, "it"));
   if(cat.cat && !categorie.includes(cat.cat)) cat.cat = "";
 
-  // etichette: una per categoria, con il numero di cataloghi
-  $("#ctChips").classList.toggle("hidden", categorie.length < 2);
-  $("#ctChips").innerHTML = [["", "Tutti", catalogo.length], ...categorie.map(c => [c, c, catalogo.filter(x => catGrp(x) === c).length])]
-    .map(([v, l, n]) => `<button type="button" data-cat="${esc(v)}" aria-pressed="${cat.cat === v}">${esc(l)}<small>${n}</small></button>`).join("");
+  // dentro una categoria (o in "Tutti") compare il tasto per tornare alla griglia delle categorie
+  const dentro = !!(cat.cat || cat.tutti);
+  $("#ctChips").classList.toggle("hidden", !dentro);
+  $("#ctChips").innerHTML = dentro ? `<button type="button" class="ct-back" data-cat="">${catIndietro}Categorie</button>` : "";
 
   if(!catalogo.length){
     $("#ctLbl").textContent = "";
@@ -1539,9 +1709,21 @@ function renderCataloghi(){
     return;
   }
 
+  // schermata iniziale: tutte le categorie come riquadri
+  if(!cat.q.trim() && !cat.cat && !cat.tutti){
+    $("#ctLbl").textContent = `${catalogo.length} cataloghi`;
+    const t = catStile("tutti");
+    body.innerHTML = `<div class="ct-grid">
+      <button type="button" class="ct-tile wide" data-cat="__tutti" style="--c:${t.colore}"><span class="ct-ti">${t.svg(26)}</span><span class="ct-tx"><b>Tutti i cataloghi</b><small>Elenco completo, diviso per categoria</small></span><span class="ct-num">${catalogo.length}</span></button>
+      ${categorie.map(g => { const s = catStile(g), n = catalogo.filter(x => catGrp(x) === g).length;
+        return `<button type="button" class="ct-tile" data-cat="${esc(g)}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(g)}</b><small>${n} ${n === 1 ? "catalogo" : "cataloghi"}</small></button>`; }).join("")}
+    </div>`;
+    return;
+  }
+
   const rows = catFiltrati();
   const attivo = cat.q.trim() || cat.cat;
-  $("#ctLbl").textContent = attivo ? `${rows.length} di ${catalogo.length}` : `${catalogo.length} cataloghi`;
+  $("#ctLbl").textContent = cat.q.trim() ? `${rows.length} di ${catalogo.length}` : `${rows.length} ${rows.length === 1 ? "catalogo" : "cataloghi"}`;
   if(!rows.length){ body.innerHTML = `<div class="ct-empty">Nessun catalogo con questa ricerca.</div>`; return; }
 
   // raggruppa per categoria; dentro, in ordine di fornitore
@@ -1556,6 +1738,10 @@ function renderCataloghi(){
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno, x._nuovo ? "In pubblicazione…" : ""].filter(Boolean).join(" · ");
       return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
     }).join("")}</ul>`;
+    if(cat.cat && !cat.q.trim()){      // dentro una categoria: titolo grande invece dell'intestazione a comparsa
+      const s = catStile(g);
+      return `<div class="ct-cathead" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><div><b>${esc(g)}</b><small>${lista.length} ${lista.length === 1 ? "catalogo" : "cataloghi"}</small></div></div>${voci}`;
+    }
     return `<section class="ct-group"><button type="button" class="ct-gh" data-grp="${esc(g)}" aria-expanded="${!!aperto}">${catFreccia}<span>${esc(g)}</span><span class="ct-n">${lista.length}</span></button>${voci}</section>`;
   }).join("");
   const tools = !attivo && nomi.length > 2
@@ -1566,9 +1752,15 @@ function renderCataloghi(){
 $("#ctQ").addEventListener("input", e => { cat.q = e.target.value; renderCataloghi(); });
 $("#ctChips").addEventListener("click", e => {
   const b = e.target.closest("[data-cat]"); if(!b) return;
-  cat.cat = b.dataset.cat; renderCataloghi();
+  cat.cat = ""; cat.tutti = false; cat.q = ""; $("#ctQ").value = ""; renderCataloghi(); window.scrollTo(0, 0);
 });
 $("#ctBody").addEventListener("click", e => {
+  const tile = e.target.closest(".ct-tile");
+  if(tile){
+    const v = tile.dataset.cat;
+    if(v === "__tutti"){ cat.cat = ""; cat.tutti = true; } else { cat.cat = v; cat.tutti = false; }
+    renderCataloghi(); window.scrollTo(0, 0); return;
+  }
   // tocco su un catalogo del sito: si apre nel lettore dell'app (con Ctrl/Cmd o tasto centrale si apre in una scheda)
   const a = e.target.closest(".ct-main");
   if(a){
@@ -2220,6 +2412,7 @@ async function rosRifiuta(id){
 function renderRosario(){
   const attesa = rosario.filter(p => p.stato === "in_attesa");
   const num = $("#rosNum"); num.textContent = attesa.length; num.classList.toggle("hidden", !attesa.length);
+  const altroNum = $("#altroNum"); if(altroNum){ altroNum.textContent = attesa.length; altroNum.classList.toggle("hidden", !attesa.length); }
   if(ui.view !== "rosario") return;
   $("#rosLbl").textContent = attesa.length ? `${attesa.length} da approvare` : "";
   const pronte = attesa.filter(p => (p.campo === "promemoria" || byId(p.clienteId)) && p.id !== rosEdit.id);
@@ -2477,7 +2670,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 2 (v2)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
