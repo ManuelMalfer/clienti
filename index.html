@@ -716,6 +716,57 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   #v-clienti .top-row,#v-richiami .top-row,#v-giro .top-row,#v-preventivi .top-row{padding-right:150px}
 }
 /* ===== /Versione PC ===== */
+/* ===== Giro ===== */
+:root{--giro-v:#3FA55B;--giro-g:#F2C230}
+.giro-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:6px}
+.giro-map-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-lg);padding:14px 16px 16px;box-shadow:var(--sh1)}
+.giro-map-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.giro-map-head b{font-family:var(--font-cond);font-size:21px;font-weight:600}
+.giro-map-head small{color:var(--muted);font-size:14px}
+.giro-map svg{display:block;width:100%;max-height:170px;margin:8px 0 6px}
+.giro-map path{stroke:var(--surface);stroke-width:.8;stroke-linejoin:round}
+.gz-v{fill:var(--giro-v)}
+.gz-g{fill:var(--giro-g);fill-opacity:.9}
+.giro-leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--muted)}
+.giro-leg i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+.giro-leg .v{background:var(--giro-v)}
+.giro-leg .g{background:var(--giro-g)}
+.giro-sum{margin:8px 0 0;font-weight:600;font-size:15px}
+.giro-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.giro-chips span{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;background:color-mix(in srgb,var(--giro-v) 16%,transparent);font-size:13.5px;font-weight:600}
+.giro-chips b{color:var(--giro-v);font-variant-numeric:tabular-nums}
+.giro-tip{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
+h2.sec small{font-variant-numeric:tabular-nums}
+
+/* ordini: il cerchio del cliente è una spunta */
+.giro-ord .av-chk{cursor:pointer;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c,var(--muted)) 45%,transparent);transition:background .15s,color .15s,transform .1s}
+.giro-ord .av-chk:hover{transform:scale(1.07)}
+.giro-ord .av-chk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.giro-li.fatto .row-main,.giro-li.fatto .row-side,.giro-li.fatto .icon-btn{opacity:.38}
+.giro-li.fatto .row-name,.giro-li.fatto .row-sub{text-decoration:line-through;text-decoration-thickness:2px}
+.giro-li.fatto .av-chk{background:var(--giro-v);color:#fff;box-shadow:none}
+
+@media (max-width:699px){
+  .giro-map-card{padding:12px 14px 14px}
+  .giro-map svg{max-height:128px;margin:4px 0 4px}
+  .giro-sum{margin-top:6px}
+  .giro-chips{flex-wrap:nowrap;overflow-x:auto;margin:8px -14px 0;padding:0 14px 2px;scrollbar-width:none}
+  .giro-chips::-webkit-scrollbar{display:none}
+  .giro-chips span{flex:0 0 auto}
+}
+@media (min-width:700px){
+  .giro-grid{grid-template-columns:minmax(0,1fr) minmax(300px,400px);align-items:start;gap:20px}
+  .giro-ord{grid-column:1;grid-row:1}
+  .giro-map{grid-column:2;grid-row:1;position:sticky;top:calc(env(safe-area-inset-top,0px) + 150px)}
+  .giro-map svg{max-height:330px}
+}
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){
+  .giro-grid{grid-template-columns:minmax(0,1fr) 460px;gap:32px}
+  .giro-map{top:190px}
+  .giro-map svg{max-height:360px}
+  .giro-ord .list{grid-template-columns:minmax(0,1fr)}
+}
+/* ===== /Giro ===== */
 </style>
 </head>
 <body>
@@ -1499,10 +1550,10 @@ const inizialiDi = n => {
   const p = String(n || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(w => w && !/^(il|lo|la|le|l|da|di|del|dei|al|alla|e|&)$/i.test(w));
   return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase();
 };
-function rowHTML(c, side = ""){
+function rowHTML(c, side = "", av = ""){
   const sub = [c.luogo, c.tipologia].filter(Boolean).join(" · ") || c.indirizzo || "";
   return `<button class="row ${statoCls(c.stato)}" data-open="${c.id}">
-    <span class="av" aria-hidden="true">${esc(inizialiDi(c.nome))}</span>
+    ${av || `<span class="av" aria-hidden="true">${esc(inizialiDi(c.nome))}</span>`}
     <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${side ? "" : richiamoTag(c)}</span>
     <span class="row-side">${side || `<span class="st-pill">${esc(statoLabel(c.stato))}</span>`}</span>
   </button>`;
@@ -1573,23 +1624,27 @@ function zonaDi(c){
 }
 
 let zoneDisegnata = false;
-function disegnaZone(){
+let zoneGeoCache = null;
+function zoneGeometria(){
+  if(zoneGeoCache) return zoneGeoCache;
   let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
   for(const z of ZONE_NOMI) for(const r of ZONE_GEO[z]) for(let i = 0; i < r.length; i += 2){
     minX = Math.min(minX, r[i]); maxX = Math.max(maxX, r[i]); minY = Math.min(minY, r[i+1]); maxY = Math.max(maxY, r[i+1]);
   }
   const k = Math.cos(46.05 * Math.PI / 180) * 0.5; // la longitudine è "più stretta" della latitudine
   const X = v => ((v - minX) * k).toFixed(1), Y = v => ((maxY - v) * 0.5).toFixed(1);
-  const svg = $("#zoneSvg");
-  svg.setAttribute("viewBox", `-2 -2 ${((maxX - minX) * k + 4).toFixed(1)} ${((maxY - minY) * 0.5 + 4).toFixed(1)}`);
-  svg.innerHTML = ZONE_NOMI.map(z => {
-    const d = ZONE_GEO[z].map(r => {
-      let s = "";
-      for(let i = 0; i < r.length; i += 2) s += (i ? "L" : "M") + X(r[i]) + "," + Y(r[i+1]);
-      return s + "Z";
-    }).join("");
-    return `<path d="${d}" data-zona="${esc(z)}" style="--zc:${zoneColore(z)}" fill-rule="evenodd"><title>${esc(z)}</title></path>`;
+  const d = {};
+  for(const z of ZONE_NOMI) d[z] = ZONE_GEO[z].map(r => {
+    let s = "";
+    for(let i = 0; i < r.length; i += 2) s += (i ? "L" : "M") + X(r[i]) + "," + Y(r[i+1]);
+    return s + "Z";
   }).join("");
+  return zoneGeoCache = { vb: `-2 -2 ${((maxX - minX) * k + 4).toFixed(1)} ${((maxY - minY) * 0.5 + 4).toFixed(1)}`, d };
+}
+function disegnaZone(){
+  const g = zoneGeometria(), svg = $("#zoneSvg");
+  svg.setAttribute("viewBox", g.vb);
+  svg.innerHTML = ZONE_NOMI.map(z => `<path d="${g.d[z]}" data-zona="${esc(z)}" style="--zc:${zoneColore(z)}" fill-rule="evenodd"><title>${esc(z)}</title></path>`).join("");
   zoneDisegnata = true;
 }
 function renderZone(){
@@ -2343,29 +2398,73 @@ addEventListener("keydown", e => {
 });
 
 /* ---------- Giro ---------- */
+// data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
+const giroData = i => addDays((new Date().getDay() === 0 ? 1 : 1 - new Date().getDay()) + i);
+const giroCheck = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>`;
+const ordineFatto = (c, iso) => (c.ordiniFatti || []).includes(iso);
+
 function renderGiro(){
   $("#daysStrip").innerHTML = DAY_SHORT.map((d,i) => {
     const n = clienti.filter(c => (c.giorniConsegna||[]).includes(DAYS[i])).length;
     return `<button type="button" data-day="${i}" aria-pressed="${i === ui.giro}" class="${i === todayIdx ? "today" : ""}">${d}<span class="n">${n} cons.</span></button>`;
   }).join("");
-  const day = DAYS[ui.giro];
+  const day = DAYS[ui.giro], iso = giroData(ui.giro);
   const byPlace = (a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it");
-  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(day)).sort(byPlace);
+  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(day));
   const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day)).sort(byPlace);
   $("#giroLbl").textContent = day;
-  const giroRow = (c, orario) => {
+
+  // mappa: verde dove quel giorno si consegna, giallo dove no (segue il giorno scelto, di base oggi)
+  const g = zoneGeometria();
+  const perZona = {}; let fuori = 0;
+  cons.forEach(c => { const z = zonaDi(c); if(z) perZona[z] = (perZona[z] || 0) + 1; else fuori++; });
+  const verdi = ZONE_NOMI.filter(z => perZona[z]).sort((x, y) => perZona[y] - perZona[x] || x.localeCompare(y, "it"));
+  const quante = n => n + (n === 1 ? " consegna" : " consegne");
+  const paths = ZONE_NOMI.map(z => `<path d="${g.d[z]}" class="${perZona[z] ? "gz-v" : "gz-g"}" fill-rule="evenodd"><title>${esc(z)}: ${perZona[z] ? quante(perZona[z]) : "nessuna consegna"}</title></path>`).join("");
+  const riga = cons.length
+    ? `${quante(cons.length)} in ${verdi.length} ${verdi.length === 1 ? "zona" : "zone"}${fuori ? ` · ${fuori} fuori zona` : ""}`
+    : `Nessuna consegna il ${day.toLowerCase()}`;
+  const mappa = `<aside class="giro-map" aria-label="Zone di consegna"><div class="giro-map-card">
+    <div class="giro-map-head"><b>Dove si consegna</b><small>${esc(day)}</small></div>
+    <svg viewBox="${g.vb}" role="img" aria-label="${esc(riga)}">${paths}</svg>
+    <div class="giro-leg"><span><i class="v"></i>In consegna</span><span><i class="g"></i>Non si consegna</span></div>
+    <p class="giro-sum">${esc(riga)}</p>
+    ${verdi.length ? `<div class="giro-chips">${verdi.map(z => `<span>${esc(z)} <b>${perZona[z]}</b></span>`).join("")}</div>` : ""}
+  </div></aside>`;
+
+  // ordini da raccogliere: il cerchio del cliente è una spunta (salvata nella scheda: ordiniFatti, elenco di date)
+  const fatti = ord.filter(c => ordineFatto(c, iso)).length;
+  const ordRow = c => {
+    const fatto = ordineFatto(c, iso);
     const tel = firstPhone(c.tel) || firstPhone(c.cellulare);
-    return `<li class="giro-li">
-      <div class="giro-main">${rowHTML(c, esc(orario || ""))}</div>
+    const av = `<span class="av av-chk" role="checkbox" aria-checked="${fatto}" tabindex="0" data-fatto="${c.id}" data-giorno="${iso}" aria-label="Ordine raccolto: ${esc(c.nome)}">${fatto ? giroCheck : esc(inizialiDi(c.nome))}</span>`;
+    return `<li class="giro-li${fatto ? " fatto" : ""}">
+      <div class="giro-main">${rowHTML(c, esc(c.orarioOrdine || ""), av)}</div>
       ${tel ? `<a class="icon-btn" href="tel:${tel}" aria-label="Chiama ${esc(c.nome)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></a>` : ""}
     </li>`;
   };
-  $("#giroBody").innerHTML = `
-    <h2 class="sec">Consegne <small>${cons.length}</small></h2>
-    <ul class="list">${cons.map(c => giroRow(c, c.orarioConsegna)).join("") || `<li class="empty">Nessuna consegna il ${day.toLowerCase()}.</li>`}</ul>
-    <h2 class="sec">Ordini da raccogliere <small>${ord.length}</small></h2>
-    <ul class="list">${ord.map(c => giroRow(c, c.orarioOrdine)).join("") || `<li class="empty">Nessun ordine da raccogliere il ${day.toLowerCase()}.</li>`}</ul>`;
+  $("#giroBody").innerHTML = `<div class="giro-grid">${mappa}<section class="giro-ord">
+    <h2 class="sec">Ordini da raccogliere <small>${ord.length ? fatti + " di " + ord.length : "0"}</small></h2>
+    ${ord.length ? `<p class="giro-tip">Tocca il cerchio del cliente per segnare l'ordine come raccolto.</p>` : ""}
+    <ul class="list">${ord.map(ordRow).join("") || `<li class="empty">Nessun ordine da raccogliere il ${day.toLowerCase()}.</li>`}</ul>
+  </section></div>`;
 }
+function giroSegna(id, iso){
+  const c = byId(id); if(!c) return;
+  const att = c.ordiniFatti || [];
+  const nuovo = att.includes(iso) ? att.filter(d => d !== iso) : [...att, iso];
+  const limite = addDays(-21);                       // si tengono solo le ultime 3 settimane
+  update(id, { ordiniFatti: nuovo.filter(d => d >= limite) });
+}
+$("#giroBody").addEventListener("click", e => {
+  const a = e.target.closest("[data-fatto]"); if(!a) return;
+  e.preventDefault(); e.stopPropagation();           // non apre la scheda del cliente
+  giroSegna(a.dataset.fatto, a.dataset.giorno);
+});
+$("#giroBody").addEventListener("keydown", e => {
+  const a = e.target.closest("[data-fatto]");
+  if(a && (e.key === " " || e.key === "Enter")){ e.preventDefault(); giroSegna(a.dataset.fatto, a.dataset.giorno); }
+});
 $("#daysStrip").addEventListener("click", e => { const b = e.target.closest("[data-day]"); if(b){ ui.giro = +b.dataset.day; renderGiro(); } });
 
 /* ---------- Richiami ---------- */
@@ -2760,7 +2859,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3 (v3)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.1 (v3.1)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

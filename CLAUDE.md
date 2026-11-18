@@ -54,7 +54,7 @@ Campi: `nome` (insegna del locale), `ragioneSociale`, `codice` (codice cliente a
 `tipologia`, `piva`, `codiceFiscale`, `codiceUnivoco` (SDI), `pagamento`,
 `fornitori` (array), `giorniOrdine` e `giorniConsegna` (array di "Lunedì"…"Sabato"),
 `orarioOrdine`, `orarioConsegna`, `stato`, `ricontattare` (YYYY-MM-DD), `ricontattareOra` (HH:MM),
-`note`, `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
+`note`, `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
 centro paese), `geoFail`, `creato`, `aggiornato` (ISO).
 
 Stati: `DA CONTATTARE`, `CONTATTATO`, `CLIENTE`, `NON SERVIBILE`.
@@ -95,7 +95,14 @@ Preventivi, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo p
   Geocoding automatico con Nominatim (max 1 richiesta/secondo): indirizzo+località → nome+località →
   sola via → centro paese (`approx: true`, bordo tratteggiato). Le coordinate vengono salvate; se cambia
   l'indirizzo vengono azzerate e ricalcolate.
-- **Giro**: per ogni giorno Lun–Sab, consegne e ordini da raccogliere con orari e pulsante chiama.
+- **Giro**: per ogni giorno Lun–Sab (di base oggi). Una **mappa delle zone** (le stesse 17 dei Clienti, `zoneGeometria()`) a lato (sopra su
+  telefono): **verde** le zone dove quel giorno ci sono consegne (cliente con quel giorno in `giorniConsegna`, zona da `zonaDi`), **gialla**
+  le altre; sotto "N consegne in M zone" e le zone verdi con il numero. L'elenco delle consegne NON si mostra più (restano i conteggi
+  "N cons." nella barra dei giorni). **Ordini da raccogliere** (`giorniOrdine`): il cerchio con le iniziali del cliente è una **spunta**
+  (`data-fatto`): toccandolo la riga diventa trasparente con nome e località sbarrati e il cerchio verde con il segno di spunta;
+  si annulla ripremendolo. Lo stato sta nel documento del cliente, campo `ordiniFatti` (array di date `YYYY-MM-DD`: la spunta vale
+  solo per quel giorno e su tutti i dispositivi; si tengono solo le ultime 3 settimane). `giroData(i)` calcola la data del giorno scelto
+  (la domenica si guarda già la settimana dopo).
 - **Richiami**: scaduti / oggi / prossimi 7 giorni / più avanti, ordinati per data e ora; badge rosso
   sulla tab con i richiami scaduti o di oggi. Pulsante **Aggiungi al calendario** che genera un file
   `.ics` con tutti i richiami da oggi in avanti (evento di 30 min con avviso 15 min prima se c'è l'ora,
@@ -258,8 +265,9 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v1** = interfaccia precedente al rinnovo (barra in basso con 8 schede a scorrimento, elenco clienti a righe, categorie dei
   cataloghi come etichette). Tag Git `v1`.
 - **v2** = rinnovo dell'interfaccia del 18/11/2026 (sezione "Interfaccia" qui sotto). Tag Git `v2`.
-- **v3** = v2 + mappa delle zone più grande su iPad/iPhone + **versione per PC** (sezione "Versione per PC"). Tag Git `v3`. In Riepilogo, sotto
-  l'email dell'account, compare "App versione 3 (v3)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
+- **v3** = v2 + mappa delle zone più grande su iPad/iPhone + **versione per PC** (sezione "Versione per PC"). Tag Git `v3`.
+- **v3.1** = v3 + nuovo **Giro** (mappa verde/gialla, niente elenco consegne, ordini con spunta). Tag Git `v3.1`. In Riepilogo, sotto
+  l'email dell'account, compare "App versione 3.1 (v3.1)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
 - **Tornare alla v2** (solo senza la parte PC): `git revert --no-edit <commit-di-v3>`. **Tornare alla v1** (se Manuel lo chiede): senza riscrivere la cronologia, con `git revert --no-edit <commit-di-v2>` (il commit
   a cui punta il tag `v2`) e push su `main`; il sito torna com'era e i dati non cambiano. Attenzione: i cataloghi aggiunti dall'app
