@@ -166,7 +166,7 @@ condivisione manda il PDF vero (decifrato) con la condivisione del telefono, opp
 - Categorie attuali: Marchi S.p.A., Carni e salumi, Pesce e frutti di mare, Pasta e pasta fresca, Farine e pizzeria,
   Patate e verdure, Latte panna e uova, Surgelati e gastronomia, Dolci colazione e gelati, Spezie sale e condimenti,
   Non food e monouso.
-- Aggiungere un catalogo: copiare il PDF in `cataloghi-originali/`, lanciare `node strumenti/cifra-cataloghi.mjs`
+- Aggiungere un catalogo **dall'app**: pulsante "+ Aggiungi" (sezione sotto). Oppure dal PC: copiare il PDF in `cataloghi-originali/`, lanciare `node strumenti/cifra-cataloghi.mjs`
   (crea `cataloghi/nome.pdf.enc`), aggiungere la voce in `cataloghi.json` con `file: "cataloghi/nome.pdf.enc"` e fare push.
   Manuel manda i PDF a Claude, che propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato
   a mano, per esempio aprendolo nel lettore).
@@ -201,6 +201,36 @@ nell'app. Siccome il repository e GitHub Pages sono pubblici, i PDF sono cifrati
   non più referenziati, tramite l'indirizzo completo dei vecchi commit (es. raw.githubusercontent.com/…/<sha di 40 caratteri>/…).
   Per eliminarli del tutto: chiedere a GitHub Support di rimuovere i dati sensibili / far girare la pulizia, oppure
   ricreare il repository. **Non rimettere mai PDF in chiaro in `cataloghi/`** (usare sempre `cataloghi-originali/` + lo strumento).
+
+### Aggiungere cataloghi dall'app (servizio Cloudflare)
+
+Pulsante **+ Aggiungi** nell'intestazione di Cataloghi: si sceglie un PDF (max 50 MB), titolo, fornitore, categoria
+(esistente o nuova), descrizione, anno, parole di ricerca. L'app **cifra il PDF nel telefono** (stessa chiave degli altri, AES-GCM)
+e lo manda al servizio; il catalogo compare subito qui ("In pubblicazione…", si apre dalla memoria) e agli altri dopo 1-2 minuti
+(tempo di pubblicazione di GitHub Pages).
+
+- **Perché un servizio**: il sito è statico e non può ricevere file; scrivere su GitHub richiede una chiave (token) che
+  NON deve stare nell'app. Il **Cloudflare Worker** `strumenti/worker-cataloghi.js` tiene la chiave GitHub come segreto,
+  controlla il login Firebase di chi chiama (firma RS256 di Google, scadenza, progetto) e che l'email sia in `ALLOWED_EMAILS`,
+  poi scrive `cataloghi/<nome>.pdf.enc` e aggiunge la voce a `cataloghi.json` (con ripetizione se l'elenco cambia nel frattempo).
+  Non vede mai il PDF in chiaro. CORS: solo `https://clienti.malfer.it`.
+- **Percorsi**: `GET /ping` (l'app lo chiama aprendo Cataloghi: se risponde 200 mostra "+ Aggiungi"; per gli altri account
+  resta nascosto), `PUT /file/<nome>.pdf.enc` (corpo = JSON dell'API GitHub `{message, content}`, inoltrato in streaming con
+  `FixedLengthStream`), `POST /elenco` (voce validata: titolo, fornitore, categoria, desc, anno, tag; `file` deve essere
+  `cataloghi/[a-z0-9-]+.pdf.enc` e già presente nel repository).
+- **Impostazioni del Worker** (pannello Cloudflare > Worker > Settings > Variables and Secrets): `GITHUB_TOKEN` (Secret: token
+  fine-grained solo per il repository `clienti`, permesso Contents: Read and write), `ALLOWED_EMAILS` (Secret: email dell'app,
+  separate da virgola), `GITHUB_REPO` = `ManuelMalfer/clienti`, `GITHUB_BRANCH` = `main`, `FIREBASE_PROJECT` = `clienti-malfer`,
+  `ALLOWED_ORIGINS` = `https://clienti.malfer.it` (facoltativa). Il token GitHub scade (scelta alla creazione): quando scade, solo
+  l'upload dall'app smette di funzionare; si rigenera e si aggiorna il Secret.
+- **Nell'app**: la costante `CAT_SERVIZIO` (in `index.html`, blocco Cataloghi) contiene l'indirizzo del Worker, oggi
+  `https://cataloghi.webmalfer.workers.dev` (Worker `cataloghi` nell'account Cloudflare di Manuel, Workers & Pages); vuota =
+  funzione spenta e pulsante nascosto.
+- Prove fatte in locale: il vero codice del Worker con un finto GitHub (43 casi: login scaduto/falso/di altro progetto,
+  email non abilitata, nomi file non validi, doppioni, troppo grande, conflitti sull'elenco, nessun segreto nelle risposte) e
+  l'app completa con finto Firebase: caricamento, voce nell'elenco, file decifrabile, riapertura dal "sito", PDF finto rifiutato,
+  titolo doppio (suffisso `-2`), account non autorizzato (nessun pulsante), servizio spento (messaggio e "Riprova").
+- Non c'è ancora modifica/eliminazione di un catalogo dall'app: si fa dal PC (`cataloghi.json` + file) o chiedendo a Claude.
 
 ### Lettore PDF dei cataloghi
 

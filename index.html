@@ -324,6 +324,8 @@ html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:ma
 .ct-txt small{color:var(--muted);font-size:14px}
 .ct-empty{color:var(--muted);padding:40px 8px;text-align:center}
 .ct-empty .btn{margin-top:12px}
+.ct-head{display:flex;align-items:baseline;gap:14px}
+.ct-head .link{padding:4px 0;font-size:15px;font-weight:600}
 /* Lettore PDF */
 .pdfv{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:#22282a;color:var(--ink)}
 .pdfv.hidden{display:none}
@@ -616,7 +618,7 @@ body.pv-open{overflow:hidden}
 
   <section id="v-cataloghi" class="view-wrap hidden">
     <header class="top"><div class="wrap">
-      <div class="top-row"><h1>Cataloghi</h1><span class="count" id="ctLbl"></span></div>
+      <div class="top-row"><h1>Cataloghi</h1><span class="ct-head"><span class="count" id="ctLbl"></span><button class="link hidden" id="ctAdd" type="button">+ Aggiungi</button></span></div>
       <div class="search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <input class="input" id="ctQ" type="search" placeholder="Cerca catalogo, fornitore, categoria…" autocomplete="off" aria-label="Cerca nei cataloghi">
@@ -643,6 +645,28 @@ body.pv-open{overflow:hidden}
     </form>
   </dialog>
   <!-- /PASSWORD CATALOGHI -->
+
+  <!-- AGGIUNGI CATALOGO -->
+  <dialog id="dlgCatAdd" aria-labelledby="catAddT">
+    <form class="dlg" id="catAddForm" novalidate>
+      <div class="dlg-head"><h2 id="catAddT">Aggiungi un catalogo</h2><button class="close" type="button" id="catAddX" aria-label="Chiudi">×</button></div>
+      <div class="dlg-body">
+        <label class="field"><span>File PDF *</span><input class="input" id="catAddFile" type="file" accept="application/pdf,.pdf"></label>
+        <label class="field"><span>Titolo *</span><input class="input" id="catAddTitolo" maxlength="120" autocomplete="off"></label>
+        <label class="field"><span>Fornitore</span><input class="input" id="catAddForn" list="catAddFornList" maxlength="80" autocomplete="off"><datalist id="catAddFornList"></datalist></label>
+        <label class="field"><span>Categoria *</span><select class="input" id="catAddCat"></select></label>
+        <label class="field hidden" id="catAddCatNuovaBox"><span>Nome della nuova categoria</span><input class="input" id="catAddCatNuova" maxlength="60" autocomplete="off"></label>
+        <label class="field"><span>Descrizione</span><input class="input" id="catAddDesc" maxlength="160" autocomplete="off" placeholder="Es. Tortellini, cappellacci, bauletti"></label>
+        <label class="field"><span>Anno</span><input class="input" id="catAddAnno" maxlength="20" autocomplete="off"></label>
+        <label class="field"><span>Parole utili per la ricerca</span><input class="input" id="catAddTag" autocomplete="off" placeholder="separate da virgola: pasta, ravioli"></label>
+        <p class="hint">Il PDF viene cifrato nel tuo telefono prima di partire (massimo 50 MB). Per gli altri compare dopo 1-2 minuti.</p>
+        <span class="bar hidden" id="catAddBar"><i id="catAddProg" style="width:0%"></i></span>
+        <p class="hint hidden" id="catAddMsg" role="alert" style="color:var(--danger);margin-top:10px"></p>
+      </div>
+      <div class="dlg-foot"><button class="btn" type="button" id="catAddNo">Annulla</button><button class="btn btn-primary" type="submit" id="catAddOk">Carica</button></div>
+    </form>
+  </dialog>
+  <!-- /AGGIUNGI CATALOGO -->
 
   <!-- LETTORE PDF -->
   <div class="pdfv hidden" id="pdfv" role="dialog" aria-modal="true" aria-label="Lettore catalogo">
@@ -1198,7 +1222,7 @@ function go(view){
   if(view !== "mappa") stopPick();
   renderAll();
   $('.tabs button[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  if(view === "cataloghi") catLoad();
+  if(view === "cataloghi"){ catLoad(); catPing(); }
 }
 
 /* ---------- render ---------- */
@@ -1355,7 +1379,12 @@ $("#zonePanel").addEventListener("click", e => {
 // L'elenco sta in cataloghi.json (stessa cartella di index.html); i PDF in cataloghi/.
 // { "categorie": [ordine delle categorie], "cataloghi": [ { titolo, fornitore, categoria, anno, desc, file, tag: [] } ] }
 // "file" può essere un percorso (cataloghi/xxx.pdf) oppure un indirizzo completo (https://…).
+// Indirizzo del servizio Cloudflare che carica i cataloghi cifrati su GitHub (strumenti/worker-cataloghi.js).
+// Vuoto = la funzione "Aggiungi" è spenta. Esempio: "https://cataloghi.NOME.workers.dev"
+const CAT_SERVIZIO = "https://cataloghi.webmalfer.workers.dev";
 let catalogo = [], catOrdine = [], catStato = "idle";   // idle | carico | ok | errore
+let catPuoCaricare = false, catPingFatto = false;
+const catPend = [];                                     // cataloghi caricati in questa sessione e non ancora online per gli altri
 const cat = { q: "", cat: "", chiusi: new Set() };
 
 async function catLoad(){
@@ -1368,6 +1397,12 @@ async function catLoad(){
     catalogo = (Array.isArray(j) ? j : (j.cataloghi || [])).filter(x => x && x.titolo && x.file);
     catOrdine = Array.isArray(j.categorie) ? j.categorie : [];
     catStato = "ok";
+    // cataloghi appena caricati da qui e non ancora pubblicati dal sito (1-2 minuti): si tengono in elenco
+    const ora = Date.now();
+    for(let i = catPend.length - 1; i >= 0; i--){
+      const p = catPend[i];
+      if(catalogo.some(x => x.file === p.file) || ora - p._nuovo > 15 * 60e3) catPend.splice(i, 1); else catalogo.push(p);
+    }
   }catch(err){ catStato = "errore"; }
   if(catStato === "ok" && catalogo.some(catCifrato)){
     try{ const m = await fetch("cataloghi/cifratura.json", { cache: "no-cache" }); catMeta = m.ok ? await m.json() : null; }catch(err){ catMeta = null; }
@@ -1392,7 +1427,7 @@ async function catImportaChiave(testo){
   if(!catMeta || !crypto?.subtle) return null;
   let raw; try{ raw = catB64(pulito); }catch(err){ return null; }
   if(raw.length !== 32) return null;
-  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt", "encrypt"]);
   try{
     const v = await crypto.subtle.decrypt({ name: "AES-GCM", iv: catB64(catMeta.verifica.iv) }, key, catB64(catMeta.verifica.ct));
     return new TextDecoder().decode(v) === "catalogo-ok" ? { key, testo: pulito } : null;
@@ -1432,7 +1467,8 @@ $("#catPwNo").addEventListener("click", () => catPwFine(null));
 $("#dlgCatPw").addEventListener("cancel", e => { e.preventDefault(); catPwFine(null); });
 // all'uscita dall'account (e se il lettore è aperto) si dimentica tutto
 function catLock(){
-  catKey = null; catBlobs.clear();
+  catKey = null; catBlobs.clear(); catPuoCaricare = false; catPingFatto = false; catPend.length = 0;
+  const b = $("#ctAdd"); if(b) b.classList.add("hidden");
   if(typeof LP !== "undefined" && LP.open){ if(LP.hist) history.back(); else lpClose(); }
 }
 
@@ -1517,7 +1553,7 @@ function renderCataloghi(){
     const aperto = attivo || !cat.chiusi.has(g);
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
-      const meta = [dentro ? "" : x.fornitore, x.desc, x.anno].filter(Boolean).join(" · ");
+      const meta = [dentro ? "" : x.fornitore, x.desc, x.anno, x._nuovo ? "In pubblicazione…" : ""].filter(Boolean).join(" · ");
       return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
     }).join("")}</ul>`;
     return `<section class="ct-group"><button type="button" class="ct-gh" data-grp="${esc(g)}" aria-expanded="${!!aperto}">${catFreccia}<span>${esc(g)}</span><span class="ct-n">${lista.length}</span></button>${voci}</section>`;
@@ -1575,6 +1611,134 @@ async function catShare(x){
     toast(err && err.message === "decifratura" ? "Non riesco a decifrare il catalogo" : "Non riesco a preparare il catalogo");
   }
 }
+
+/* ---------- Aggiungere un catalogo dall'app ---------- */
+// Il PDF si cifra qui, nel telefono, con la stessa chiave degli altri; poi parte verso il servizio Cloudflare
+// (strumenti/worker-cataloghi.js) che controlla il login, lo scrive su GitHub e aggiorna cataloghi.json.
+// Il servizio non vede mai il PDF in chiaro. Il pulsante "+ Aggiungi" compare solo agli account autorizzati.
+const CAT_MAX_MB = 50;
+
+async function catPing(){
+  if(!CAT_SERVIZIO || catPingFatto) return;
+  catPingFatto = true;
+  try{
+    const r = await fetch(CAT_SERVIZIO + "/ping", { headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken() } });
+    catPuoCaricare = r.ok;
+  }catch(err){ catPuoCaricare = false; catPingFatto = false; }       // offline: si riprova alla prossima apertura
+  $("#ctAdd").classList.toggle("hidden", !catPuoCaricare);
+}
+
+function catB64Da(u8){
+  let s = "";
+  for(let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function catNomeUnico(titolo){
+  const base = deaccent(titolo).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "") || "catalogo";
+  const usati = new Set(catalogo.map(x => x.file));
+  let nome = base, n = 2;
+  while(usati.has("cataloghi/" + nome + ".pdf.enc")) nome = base + "-" + (n++);
+  return nome;
+}
+function catPut(url, tk, corpo, avanza){
+  return new Promise((ok, ko) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", url);
+    x.setRequestHeader("Authorization", "Bearer " + tk);
+    x.setRequestHeader("Content-Type", "application/json");
+    x.upload.onprogress = e => { if(e.lengthComputable) avanza(Math.round(e.loaded / e.total * 100)); };
+    x.onload = () => {
+      if(x.status >= 200 && x.status < 300) return ok();
+      let m = ""; try{ m = JSON.parse(x.responseText).errore; }catch(e){}
+      ko(new Error(m || ("Errore " + x.status)));
+    };
+    x.onerror = () => ko(new Error("Connessione interrotta. Controlla la rete e riprova."));
+    x.ontimeout = () => ko(new Error("Il caricamento ha impiegato troppo. Riprova con una rete migliore."));
+    x.send(corpo);
+  });
+}
+
+function catAddApri(){
+  const cats = uniq(catalogo.map(catGrp)).sort((a, b) => catPos(a) - catPos(b) || a.localeCompare(b, "it"));
+  $("#catAddCat").innerHTML = `<option value="">Scegli…</option>` + cats.map(c => `<option>${esc(c)}</option>`).join("") + `<option value="__nuova">+ Nuova categoria…</option>`;
+  $("#catAddFornList").innerHTML = uniq(catalogo.map(x => x.fornitore)).map(f => `<option value="${esc(f)}">`).join("");
+  for(const id of ["File", "Titolo", "Forn", "CatNuova", "Desc", "Anno", "Tag"]) $("#catAdd" + id).value = "";
+  $("#catAddCat").value = ""; $("#catAddCatNuovaBox").classList.add("hidden");
+  $("#catAddMsg").classList.add("hidden"); $("#catAddBar").classList.add("hidden");
+  $("#catAddOk").disabled = false; $("#catAddOk").textContent = "Carica"; catAddResto = null;
+  $("#dlgCatAdd").showModal();
+}
+$("#ctAdd").addEventListener("click", catAddApri);
+$("#catAddX").addEventListener("click", () => { if(!catAddInCorso) $("#dlgCatAdd").close(); });
+$("#catAddNo").addEventListener("click", () => { if(!catAddInCorso) $("#dlgCatAdd").close(); });
+$("#dlgCatAdd").addEventListener("cancel", e => { if(catAddInCorso) e.preventDefault(); });
+$("#catAddFile").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if(f && !$("#catAddTitolo").value.trim()) $("#catAddTitolo").value = f.name.replace(/\.pdf$/i, "").replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
+});
+$("#catAddCat").addEventListener("change", e => {
+  const nuova = e.target.value === "__nuova";
+  $("#catAddCatNuovaBox").classList.toggle("hidden", !nuova);
+  if(nuova) $("#catAddCatNuova").focus();
+});
+
+let catAddInCorso = false;
+let catAddResto = null;      // file già su GitHub ma elenco non aggiornato: "Riprova" rifà solo l'elenco
+$("#catAddForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(catAddInCorso) return;
+  const msg = t => { const m = $("#catAddMsg"); m.textContent = t || ""; m.classList.toggle("hidden", !t); };
+  const stato = (t, pct) => { $("#catAddOk").textContent = t; $("#catAddBar").classList.remove("hidden"); $("#catAddProg").style.width = Math.max(0, Math.min(100, pct)) + "%"; };
+  const f = $("#catAddFile").files[0];
+  const titolo = $("#catAddTitolo").value.trim().replace(/\s+/g, " ");
+  const categoria = ($("#catAddCat").value === "__nuova" ? $("#catAddCatNuova").value : $("#catAddCat").value).trim();
+  if(!f) return msg("Scegli il file PDF.");
+  if(!titolo) return msg("Scrivi il titolo del catalogo.");
+  if(!categoria) return msg("Scegli la categoria (o creane una nuova).");
+  if(f.size > CAT_MAX_MB * 1048576) return msg(`Il file è troppo grande: il massimo è ${CAT_MAX_MB} MB.`);
+  msg(""); catAddInCorso = true; $("#catAddOk").disabled = true;
+  try{
+    if(!(await catEnsureKey())) throw new Error("Serve il codice di sicurezza dei cataloghi per cifrare il file.");
+    const tk = await auth.currentUser.getIdToken();
+    let buf, file;
+    if(catAddResto){ buf = catAddResto.buf; file = catAddResto.file; }
+    else {
+      stato("Cifro…", 5);
+      buf = new Uint8Array(await f.arrayBuffer());
+      if(new TextDecoder().decode(buf.subarray(0, 5)) !== "%PDF-") throw new Error("Questo file non sembra un PDF.");
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, catKey, buf));
+      const cifrato = new Uint8Array(12 + ct.length); cifrato.set(iv); cifrato.set(ct, 12);
+      const nome = catNomeUnico(titolo); file = "cataloghi/" + nome + ".pdf.enc";
+      const corpo = JSON.stringify({ message: "Cataloghi: aggiunto «" + titolo + "» (da app)", content: catB64Da(cifrato) });
+      stato("Carico… 0%", 10);
+      await catPut(CAT_SERVIZIO + "/file/" + nome + ".pdf.enc", tk, corpo, p => stato(`Carico… ${p}%`, 10 + p * .8));
+      catAddResto = { buf, file };
+    }
+    stato("Aggiorno l'elenco…", 93);
+    const voce = { titolo, file };
+    const fornitore = $("#catAddForn").value.trim(), desc = $("#catAddDesc").value.trim(), anno = $("#catAddAnno").value.trim();
+    if(fornitore) voce.fornitore = fornitore;
+    voce.categoria = categoria;
+    if(desc) voce.desc = desc;
+    if(anno) voce.anno = anno;
+    voce.tag = [...new Set([...$("#catAddTag").value.split(","), categoria].map(t => t.trim().toLowerCase()).filter(Boolean))];
+    const r = await fetch(CAT_SERVIZIO + "/elenco", { method: "POST", headers: { Authorization: "Bearer " + tk, "Content-Type": "application/json" }, body: JSON.stringify(voce) });
+    if(!r.ok){ let m = ""; try{ m = (await r.json()).errore; }catch(err){} throw new Error(m || "Il file è stato caricato ma non sono riuscito ad aggiornare l'elenco. Riprova."); }
+    // subito visibile e apribile qui; per gli altri compare quando il sito si aggiorna (1-2 minuti)
+    catAddResto = null;
+    const nuovo = { ...voce, _nuovo: Date.now() };
+    catPend.push(nuovo); catalogo.push(nuovo);
+    catBlobs.set(file, new Blob([buf], { type: "application/pdf" }));
+    while(catBlobs.size > 2) catBlobs.delete(catBlobs.keys().next().value);
+    $("#dlgCatAdd").close();
+    renderCataloghi();
+    toast("Catalogo caricato. Agli altri compare tra 1-2 minuti.");
+  }catch(err){
+    msg(err && err.message ? err.message : "Non sono riuscito a caricare il catalogo.");
+    $("#catAddBar").classList.add("hidden"); $("#catAddOk").disabled = false; $("#catAddOk").textContent = "Riprova";
+  }finally{ catAddInCorso = false; }
+});
 
 /* ---------- Lettore PDF dei cataloghi ---------- */
 // Schermata a tutto schermo con pdf.js (la stessa libreria dei Preventivi): scorrimento continuo, zoom (pizzico,
