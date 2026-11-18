@@ -301,10 +301,35 @@ form h3:first-child{margin-top:4px}
 /* iPhone/iPad: niente zoom con il doppio tap (resta lo zoom con due dita) */
 html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:manipulation}
 
+/* Cataloghi */
+.ct-chips{display:flex;gap:8px;overflow-x:auto;margin-top:8px;padding-bottom:2px;scrollbar-width:none}
+.ct-chips::-webkit-scrollbar{display:none}
+.ct-chips button{flex:0 0 auto;min-height:38px;padding:4px 14px;border:1px solid var(--line);border-radius:99px;background:var(--surface);font-size:14px;font-weight:500;white-space:nowrap}
+.ct-chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ct-chips small{opacity:.7;margin-left:4px;font-weight:500}
+.ct-tools{display:flex;justify-content:flex-end;margin:6px 0 0}
+.ct-tools .link{padding:6px 0;font-size:14px}
+.ct-group{margin-top:10px}
+.ct-gh{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 2px;background:none;border:0;border-bottom:2px solid var(--line);text-align:left;font-family:var(--font-cond);font-weight:600;font-size:20px}
+.ct-gh svg{flex:0 0 auto;color:var(--muted);transition:transform .15s}
+.ct-gh[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.ct-n{margin-left:auto;font-family:var(--font);font-size:13px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:1px 10px}
+.ct-list{list-style:none;margin:0;padding:0}
+.ct-item{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+.ct-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 2px;min-height:64px;color:inherit;text-decoration:none}
+.ct-main:hover{background:var(--surface-2)}
+.ct-ico{flex:0 0 42px;height:42px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+.ct-txt{min-width:0;display:flex;flex-direction:column}
+.ct-txt b{font-weight:600;overflow-wrap:anywhere}
+.ct-txt small{color:var(--muted);font-size:14px}
+.ct-empty{color:var(--muted);padding:40px 8px;text-align:center}
+.ct-empty .btn{margin-top:12px}
+
 /* ---------- Preventivi ---------- */
-.tabs-inner{grid-template-columns:repeat(7,1fr)}
-.tabs button{font-size:11.5px;min-width:0;padding:0 1px}
-@media (max-width:480px){.tabs button{font-size:10.5px;letter-spacing:-.01em}}
+.tabs-inner{display:flex;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs-inner::-webkit-scrollbar{display:none}
+.tabs button{flex:1 0 66px;font-size:11.5px;min-width:0;padding:0 2px}
+@media (max-width:480px){.tabs button{font-size:11px}}
 .pv-li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
 .pv-li .row{border-bottom:0}
 .pv-trash{flex:0 0 44px;height:44px;border:0;background:none;color:var(--muted);border-radius:10px;display:grid;place-items:center}
@@ -559,6 +584,18 @@ body.pv-open{overflow:hidden}
     <main class="wrap view"><ul class="list" id="pvList"></ul></main>
   </section>
 
+  <section id="v-cataloghi" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Cataloghi</h1><span class="count" id="ctLbl"></span></div>
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input class="input" id="ctQ" type="search" placeholder="Cerca catalogo, fornitore, categoria…" autocomplete="off" aria-label="Cerca nei cataloghi">
+      </div>
+      <div class="ct-chips" id="ctChips"></div>
+    </div></header>
+    <main class="wrap view" id="ctBody"></main>
+  </section>
+
   <button class="fab" id="fab" type="button">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo
   </button>
@@ -568,6 +605,7 @@ body.pv-open{overflow:hidden}
     <button data-view="mappa"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
     <button data-view="giro"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
     <button data-view="richiami"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
+    <button data-view="cataloghi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
     <button data-view="preventivi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Preventivi</button>
     <button data-view="rosario"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNum"></span></button>
     <button data-view="riepilogo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
@@ -1081,9 +1119,11 @@ function go(view){
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
   $$(".tabs button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi");
   if(view !== "mappa") stopPick();
   renderAll();
+  $('.tabs button[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  if(view === "cataloghi") catLoad();
 }
 
 /* ---------- render ---------- */
@@ -1097,6 +1137,7 @@ function renderAll(){
   if(ui.view === "riepilogo") renderRiepilogo();
   if(ui.view === "mappa") renderMap();
   if(ui.view === "preventivi") pvRenderList();
+  if(ui.view === "cataloghi") renderCataloghi();
   renderRichiami();
   renderRosario();
   if($("#dlgDetail").open && ui.openId) renderDetail();
@@ -1233,6 +1274,114 @@ $("#zonePanel").addEventListener("click", e => {
   const z = el.dataset.zona;
   ui.zone = ui.zone.includes(z) ? ui.zone.filter(x => x !== z) : [...ui.zone, z];
   renderList();
+});
+
+/* ---------- Cataloghi ---------- */
+// L'elenco sta in cataloghi.json (stessa cartella di index.html); i PDF in cataloghi/.
+// { "categorie": [ordine delle categorie], "cataloghi": [ { titolo, fornitore, categoria, anno, desc, file, tag: [] } ] }
+// "file" può essere un percorso (cataloghi/xxx.pdf) oppure un indirizzo completo (https://…).
+let catalogo = [], catOrdine = [], catStato = "idle";   // idle | carico | ok | errore
+const cat = { q: "", cat: "", chiusi: new Set() };
+
+async function catLoad(){
+  if(catStato === "carico") return;
+  catStato = "carico"; renderCataloghi();
+  try{
+    const r = await fetch("cataloghi.json", { cache: "no-cache" });
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    catalogo = (Array.isArray(j) ? j : (j.cataloghi || [])).filter(x => x && x.titolo && x.file);
+    catOrdine = Array.isArray(j.categorie) ? j.categorie : [];
+    catStato = "ok";
+  }catch(err){ catStato = "errore"; }
+  renderCataloghi();
+}
+
+const catUrl = x => /^https?:\/\//i.test(x.file) ? x.file : encodeURI(x.file);
+const catGrp = x => (x.categoria || "").trim() || "Altri cataloghi";
+const catPos = c => { const i = catOrdine.indexOf(c); return i < 0 ? 999 : i; };
+const catIcona = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>`;
+const catFreccia = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+const catShareIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>`;
+
+// Ricerca per inizio parola: "gelato" non trova "surgelato"; l'ultima lettera si ignora (mozzarella = mozzarelle).
+const catTok = s => deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+function catFiltrati(){
+  const words = catTok(cat.q).map(w => w.length > 5 ? w.slice(0, -1) : w);
+  return catalogo.filter(x => {
+    if(cat.cat && catGrp(x) !== cat.cat) return false;
+    if(!words.length) return true;
+    const toks = catTok([x.titolo, x.fornitore, x.desc, x.anno, (x.tag || []).join(" ")].join(" "));
+    return words.every(w => toks.some(t => t.startsWith(w)));
+  });
+}
+
+function renderCataloghi(){
+  if(ui.view !== "cataloghi") return;
+  const body = $("#ctBody");
+  const categorie = uniq(catalogo.map(catGrp)).sort((a, b) => catPos(a) - catPos(b) || a.localeCompare(b, "it"));
+  if(cat.cat && !categorie.includes(cat.cat)) cat.cat = "";
+
+  // etichette: una per categoria, con il numero di cataloghi
+  $("#ctChips").classList.toggle("hidden", categorie.length < 2);
+  $("#ctChips").innerHTML = [["", "Tutti", catalogo.length], ...categorie.map(c => [c, c, catalogo.filter(x => catGrp(x) === c).length])]
+    .map(([v, l, n]) => `<button type="button" data-cat="${esc(v)}" aria-pressed="${cat.cat === v}">${esc(l)}<small>${n}</small></button>`).join("");
+
+  if(!catalogo.length){
+    $("#ctLbl").textContent = "";
+    body.innerHTML = catStato === "errore"
+      ? `<div class="ct-empty">Non riesco a caricare l'elenco dei cataloghi. Controlla la connessione.<br><button class="btn" type="button" id="ctRetry">Riprova</button></div>`
+      : catStato === "ok"
+        ? `<div class="ct-empty">Ancora nessun catalogo. Qui compariranno i cataloghi, divisi per categoria.</div>`
+        : `<div class="ct-empty">Carico i cataloghi…</div>`;
+    return;
+  }
+
+  const rows = catFiltrati();
+  const attivo = cat.q.trim() || cat.cat;
+  $("#ctLbl").textContent = attivo ? `${rows.length} di ${catalogo.length}` : `${catalogo.length} cataloghi`;
+  if(!rows.length){ body.innerHTML = `<div class="ct-empty">Nessun catalogo con questa ricerca.</div>`; return; }
+
+  // raggruppa per categoria; dentro, in ordine di fornitore
+  const gruppi = new Map();
+  rows.forEach(x => { const g = catGrp(x); if(!gruppi.has(g)) gruppi.set(g, []); gruppi.get(g).push(x); });
+  const nomi = [...gruppi.keys()].sort((a, b) => catPos(a) - catPos(b) || a.localeCompare(b, "it"));
+  const html = nomi.map(g => {
+    const lista = gruppi.get(g).sort((a, b) => (!a.fornitore - !b.fornitore) || (a.fornitore || "").localeCompare(b.fornitore || "", "it") || a.titolo.localeCompare(b.titolo, "it"));
+    const aperto = attivo || !cat.chiusi.has(g);
+    const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
+      const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
+      const meta = [dentro ? "" : x.fornitore, x.desc, x.anno].filter(Boolean).join(" · ");
+      return `<li class="ct-item"><a class="ct-main" href="${esc(catUrl(x))}" target="_blank" rel="noopener"><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
+    }).join("")}</ul>`;
+    return `<section class="ct-group"><button type="button" class="ct-gh" data-grp="${esc(g)}" aria-expanded="${!!aperto}">${catFreccia}<span>${esc(g)}</span><span class="ct-n">${lista.length}</span></button>${voci}</section>`;
+  }).join("");
+  const tools = !attivo && nomi.length > 2
+    ? `<div class="ct-tools"><button type="button" class="link" id="ctToggleAll">${cat.chiusi.size ? "Apri tutte" : "Chiudi tutte"}</button></div>` : "";
+  body.innerHTML = tools + html;
+}
+
+$("#ctQ").addEventListener("input", e => { cat.q = e.target.value; renderCataloghi(); });
+$("#ctChips").addEventListener("click", e => {
+  const b = e.target.closest("[data-cat]"); if(!b) return;
+  cat.cat = b.dataset.cat; renderCataloghi();
+});
+$("#ctBody").addEventListener("click", e => {
+  const g = e.target.closest("[data-grp]");
+  if(g){ const f = g.dataset.grp; cat.chiusi.has(f) ? cat.chiusi.delete(f) : cat.chiusi.add(f); renderCataloghi(); return; }
+  if(e.target.closest("#ctToggleAll")){
+    if(cat.chiusi.size) cat.chiusi.clear();
+    else catalogo.forEach(x => cat.chiusi.add(catGrp(x)));
+    renderCataloghi(); return;
+  }
+  if(e.target.closest("#ctRetry")){ catLoad(); return; }
+  const s = e.target.closest("[data-share]");
+  if(s){
+    const x = catalogo[+s.dataset.share]; if(!x) return;
+    const url = new URL(catUrl(x), location.href).href;
+    if(navigator.share) navigator.share({ title: x.titolo, url }).catch(() => {});
+    else window.open("https://wa.me/?text=" + encodeURIComponent(x.titolo + " " + url), "_blank", "noopener");
+  }
 });
 
 /* ---------- Giro ---------- */

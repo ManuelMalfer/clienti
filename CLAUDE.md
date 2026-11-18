@@ -144,7 +144,35 @@ GitHub controlla che contenga anche queste funzioni**, altrimenti spariscono di 
 - **Import contatti dal gestionale**: l'importazione Excel riconosce anche l'export contatti del gestionale
   (colonne COD_CONTO, RAG_SOCIALE, LOCALITA…) oltre al foglio DATABASE.
 
-La barra in basso ha quindi 7 schede: Clienti, Mappa, Giro, Richiami, Preventivi, Rosario, Riepilogo.
+La barra in basso ha 8 schede: Clienti, Mappa, Giro, Richiami, Cataloghi, Preventivi, Rosario, Riepilogo.
+Su telefono non entrano tutte: la barra scorre in orizzontale e porta al centro la scheda attiva.
+
+## Cataloghi
+
+Scheda **Cataloghi** nella barra in basso: i cataloghi PDF dei fornitori e di Marchi, con barra di ricerca,
+etichette per **categoria** e elenco **raggruppato per categoria** (gruppi che si aprono/chiudono, "Chiudi tutte").
+Ogni riga: titolo, fornitore, breve descrizione, anno; si apre il PDF in una nuova scheda; il pulsante di
+condivisione usa la condivisione del telefono (o WhatsApp Web sul PC).
+
+- **Ricerca**: per inizio parola (non per pezzi dentro le parole: "gelato" non trova "surgelato"), ignora l'ultima
+  lettera (mozzarella = mozzarelle). Cerca in titolo, fornitore, descrizione, anno e `tag`; NON nel nome della
+  categoria, perciò ogni voce ha nei `tag` le parole generiche della sua categoria (pesce, carne, dolci…).
+- I file stanno **nel repository** (pubblico!), cartella `cataloghi/`, scelta di Manuel (niente account né Firebase
+  Storage). Il sito è nascosto ai motori di ricerca ma i PDF sono raggiungibili da chi ha il link: non metterci
+  documenti riservati (listini con condizioni speciali per singoli clienti, ecc.). Nomi file in minuscolo, senza
+  spazi né accenti.
+- L'elenco è `cataloghi.json` (letto a ogni apertura della scheda, `cache: "no-cache"`):
+  `{ "categorie": [ordine di categorie e gruppi], "cataloghi": [ { "titolo", "fornitore", "categoria", "desc", "anno", "file", "tag": [] } ] }`.
+  `file` è un percorso (`cataloghi/nome.pdf`) o un indirizzo completo (`https://…`). `fornitore` può mancare.
+  Categorie non elencate in `categorie` vanno in fondo; senza categoria = "Altri cataloghi".
+- Categorie attuali: Marchi S.p.A., Carni e salumi, Pesce e frutti di mare, Pasta e pasta fresca, Farine e pizzeria,
+  Patate e verdure, Latte panna e uova, Surgelati e gastronomia, Dolci colazione e gelati, Spezie sale e condimenti,
+  Non food e monouso.
+- Aggiungere un catalogo = copiare il PDF in `cataloghi/` + una voce in `cataloghi.json` + push. Manuel manda i PDF
+  a Claude, che li inserisce e propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato a mano).
+- Il 18/11/2026 sono stati caricati 57 PDF (~220 MB). Da verificare con Manuel: "Demetra - Catalogo" (152 pagine di
+  sole immagini, classificato tra i materiali Marchi senza averlo potuto leggere) e il fornitore dei cataloghi di
+  ostriche, caviale, alghe e cozze (non scritto nei PDF, lasciato vuoto).
 
 ## Come lavorare su questo progetto
 
