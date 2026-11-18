@@ -630,6 +630,20 @@ body.pv-open{overflow:hidden}
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nuovo
   </button>
 
+  <!-- PASSWORD CATALOGHI -->
+  <dialog id="dlgCatPw" aria-labelledby="catPwT">
+    <form class="dlg" id="catPwForm" novalidate>
+      <div class="dlg-head"><h2 id="catPwT">Attiva i cataloghi</h2></div>
+      <div class="dlg-body">
+        <p id="catPwMsg" style="margin:0 0 12px;color:var(--muted)"></p>
+        <label class="field"><span>Codice di sicurezza</span><input class="input" id="catPwIn" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="catPwErr"></label>
+        <p class="hint hidden" id="catPwErr" role="alert" style="color:var(--danger);margin:8px 0 0">Codice non valido. Controlla di averlo copiato per intero.</p>
+      </div>
+      <div class="dlg-foot"><button class="btn" type="button" id="catPwNo">Annulla</button><button class="btn btn-primary" type="submit" id="catPwOk">Attiva</button></div>
+    </form>
+  </dialog>
+  <!-- /PASSWORD CATALOGHI -->
+
   <!-- LETTORE PDF -->
   <div class="pdfv hidden" id="pdfv" role="dialog" aria-modal="true" aria-label="Lettore catalogo">
     <header class="pdfv-bar">
@@ -1103,7 +1117,7 @@ const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 0 : d 
 const ui = { view: "clienti", q: "", stato: "", luogo: "", tipo: "", zone: [], zonePanel: true, rpTutti: false, giro: todayIdx, openId: null, editId: null };
 
 /* ---------- login ---------- */
-function showLogin(){ $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
+function showLogin(){ try{ catLock(); }catch(e){} $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
 function showApp(){ $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); }
 const authMsg = code => ({
   "auth/invalid-credential": "Email o password non corrette.",
@@ -1355,7 +1369,98 @@ async function catLoad(){
     catOrdine = Array.isArray(j.categorie) ? j.categorie : [];
     catStato = "ok";
   }catch(err){ catStato = "errore"; }
+  if(catStato === "ok" && catalogo.some(catCifrato)){
+    try{ const m = await fetch("cataloghi/cifratura.json", { cache: "no-cache" }); catMeta = m.ok ? await m.json() : null; }catch(err){ catMeta = null; }
+  }
   renderCataloghi();
+}
+
+/* Protezione dei PDF: su GitHub sono file .enc (AES-256-GCM), illeggibili per chi ha solo il link diretto.
+   La chiave sta nel tuo account Firebase (utenti/{uid}/impostazioni/cataloghi, campo "chiave"), protetta dal login come
+   i dati dei clienti: dopo l'accesso l'app la legge da sola e decifra, senza chiedere nulla. Solo la PRIMA volta su un
+   account va incollata (la crea strumenti/cifra-cataloghi.mjs). Uscendo dall'account la chiave si dimentica. */
+let catMeta = null, catKey = null, catPwRes = null;
+const catBlobs = new Map();                       // ultimi cataloghi decifrati (memoria), al massimo 2
+const catCifrato = x => /\.enc$/i.test(x.file);
+const catNomeFile = x => (x.titolo || "catalogo").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim() + ".pdf";
+const catB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const catRefChiave = () => doc(db, "utenti", uid, "impostazioni", "cataloghi");
+
+// controlla che il codice sia la chiave giusta (decifrando il sigillo di cifratura.json) e ne fa una chiave utilizzabile
+async function catImportaChiave(testo){
+  const pulito = String(testo || "").replace(/\s+/g, "");
+  if(!catMeta || !crypto?.subtle) return null;
+  let raw; try{ raw = catB64(pulito); }catch(err){ return null; }
+  if(raw.length !== 32) return null;
+  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+  try{
+    const v = await crypto.subtle.decrypt({ name: "AES-GCM", iv: catB64(catMeta.verifica.iv) }, key, catB64(catMeta.verifica.ct));
+    return new TextDecoder().decode(v) === "catalogo-ok" ? { key, testo: pulito } : null;
+  }catch(err){ return null; }
+}
+async function catEnsureKey(){
+  if(catKey) return catKey;
+  if(!catMeta){ toast("Non riesco a leggere la protezione dei cataloghi. Controlla la connessione."); return null; }
+  let trovata = false;
+  try{                                              // 1) la chiave è già nel tuo account: nessuna domanda
+    const s = await getDoc(catRefChiave());
+    const t = s.exists() ? s.data().chiave : "";
+    if(t){ trovata = true; const r = await catImportaChiave(t); if(r){ catKey = r.key; return catKey; } }
+  }catch(err){ toast("Non riesco a leggere la chiave dei cataloghi. Controlla la connessione."); return null; }
+  return new Promise(ok => {                        // 2) prima volta su questo account (o chiave cambiata): si incolla il codice
+    catPwRes = ok;
+    $("#catPwIn").value = ""; $("#catPwErr").classList.add("hidden");
+    $("#catPwOk").disabled = false; $("#catPwOk").textContent = "Attiva";
+    $("#catPwMsg").textContent = trovata
+      ? "La chiave salvata nel tuo account non è più valida (i cataloghi sono stati cifrati di nuovo). Incolla il nuovo codice di sicurezza: serve una volta sola."
+      : "Questi cataloghi sono protetti. Su questo account serve attivarli una sola volta: incolla il codice di sicurezza creato quando hai cifrato i cataloghi (sul PC, nel file cataloghi-originali/chiave-cataloghi.txt). Poi l'app lo ricorda e non chiede più nulla.";
+    $("#dlgCatPw").showModal(); $("#catPwIn").focus();
+  });
+}
+function catPwFine(key){ const f = catPwRes; catPwRes = null; if($("#dlgCatPw").open) $("#dlgCatPw").close(); if(f) f(key); }
+$("#catPwForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const ok = $("#catPwOk"); ok.disabled = true; ok.textContent = "Verifico…";
+  let r = null;
+  try{ r = await catImportaChiave($("#catPwIn").value); }catch(err){ r = null; }
+  if(r){
+    try{ await setDoc(catRefChiave(), { chiave: r.testo }); }catch(err){ toast("Codice valido, ma non riesco a salvarlo nel tuo account: ti verrà richiesto di nuovo"); }
+    catKey = r.key; catPwFine(r.key);
+  } else { ok.disabled = false; ok.textContent = "Attiva"; $("#catPwErr").classList.remove("hidden"); $("#catPwIn").select(); }
+});
+$("#catPwNo").addEventListener("click", () => catPwFine(null));
+$("#dlgCatPw").addEventListener("cancel", e => { e.preventDefault(); catPwFine(null); });
+// all'uscita dall'account (e se il lettore è aperto) si dimentica tutto
+function catLock(){
+  catKey = null; catBlobs.clear();
+  if(typeof LP !== "undefined" && LP.open){ if(LP.hist) history.back(); else lpClose(); }
+}
+
+// scarica e decifra un catalogo; restituisce un Blob PDF (pct = avanzamento 0-100)
+async function catBlob(x, pct){
+  if(catBlobs.has(x.file)){ const b = catBlobs.get(x.file); catBlobs.delete(x.file); catBlobs.set(x.file, b); return b; }
+  const key = await catEnsureKey();
+  if(!key) throw new Error("annullato");
+  const r = await fetch(encodeURI(x.file));
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const tot = +r.headers.get("content-length") || 0, parti = [];
+  let letti = 0;
+  if(r.body && r.body.getReader){
+    const rd = r.body.getReader();
+    for(;;){ const { done, value } = await rd.read(); if(done) break; parti.push(value); letti += value.length; if(pct && tot) pct(Math.min(99, Math.round(letti / tot * 100))); }
+  } else { parti.push(new Uint8Array(await r.arrayBuffer())); letti = parti[0].length; }
+  const buf = new Uint8Array(letti); let o = 0; for(const p of parti){ buf.set(p, o); o += p.length; }
+  let chiaro;
+  try{ chiaro = await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.subarray(0, 12) }, key, buf.subarray(12)); }
+  catch(err){ throw new Error("decifratura"); }
+  const blob = new Blob([chiaro], { type: "application/pdf" });
+  catBlobs.set(x.file, blob);
+  while(catBlobs.size > 2) catBlobs.delete(catBlobs.keys().next().value);
+  return blob;
+}
+async function catApri(x){
+  if(catCifrato(x) && !(await catEnsureKey())) return;
+  lpOpen(x);
 }
 
 const catUrl = x => /^https?:\/\//i.test(x.file) ? x.file : encodeURI(x.file);
@@ -1413,7 +1518,7 @@ function renderCataloghi(){
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno].filter(Boolean).join(" · ");
-      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${esc(catUrl(x))}" target="_blank" rel="noopener"><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
+      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
     }).join("")}</ul>`;
     return `<section class="ct-group"><button type="button" class="ct-gh" data-grp="${esc(g)}" aria-expanded="${!!aperto}">${catFreccia}<span>${esc(g)}</span><span class="ct-n">${lista.length}</span></button>${voci}</section>`;
   }).join("");
@@ -1430,9 +1535,10 @@ $("#ctChips").addEventListener("click", e => {
 $("#ctBody").addEventListener("click", e => {
   // tocco su un catalogo del sito: si apre nel lettore dell'app (con Ctrl/Cmd o tasto centrale si apre in una scheda)
   const a = e.target.closest(".ct-main");
-  if(a && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0){
+  if(a){
     const x = catalogo[+a.dataset.i];
-    if(x && lpPossibile(x)){ e.preventDefault(); lpOpen(x); return; }
+    if(x && catCifrato(x)){ e.preventDefault(); catApri(x); return; }          // cifrati: sempre nel lettore
+    if(x && lpPossibile(x) && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.button === 0){ e.preventDefault(); catApri(x); return; }
   }
   const g = e.target.closest("[data-grp]");
   if(g){ const f = g.dataset.grp; cat.chiusi.has(f) ? cat.chiusi.delete(f) : cat.chiusi.add(f); renderCataloghi(); return; }
@@ -1445,10 +1551,29 @@ $("#ctBody").addEventListener("click", e => {
   const s = e.target.closest("[data-share]");
   if(s){ const x = catalogo[+s.dataset.share]; if(x) catShare(x); }
 });
-function catShare(x){
-  const url = new URL(catUrl(x), location.href).href;
-  if(navigator.share) navigator.share({ title: x.titolo, url }).catch(() => {});
-  else window.open("https://wa.me/?text=" + encodeURIComponent(x.titolo + " " + url), "_blank", "noopener");
+async function catShare(x){
+  if(!catCifrato(x)){
+    const url = new URL(catUrl(x), location.href).href;
+    if(navigator.share) navigator.share({ title: x.titolo, url }).catch(() => {});
+    else window.open("https://wa.me/?text=" + encodeURIComponent(x.titolo + " " + url), "_blank", "noopener");
+    return;
+  }
+  // cifrato: si condivide il PDF vero (decifrato nel telefono), non il link, che non servirebbe a nessuno
+  try{
+    if(!catKey && !(await catEnsureKey())) return;
+    toast("Preparo il catalogo…");
+    const blob = await catBlob(x);
+    const file = new File([blob], catNomeFile(x), { type: "application/pdf" });
+    if(navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: x.titolo });
+    else {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = catNomeFile(x);
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 20000);
+      toast("Catalogo scaricato");
+    }
+  }catch(err){
+    if(err && (err.name === "AbortError" || err.message === "annullato")) return;
+    toast(err && err.message === "decifratura" ? "Non riesco a decifrare il catalogo" : "Non riesco a preparare il catalogo");
+  }
 }
 
 /* ---------- Lettore PDF dei cataloghi ---------- */
@@ -1458,7 +1583,7 @@ function catShare(x){
 // Le pagine si disegnano solo quando sono vicine alla schermata e si liberano quando si allontanano (cataloghi da 150 pagine).
 const LP_JS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
 const LP_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const LP = { open: false, hist: false, tok: 0, doc: null, x: null, pages: [], ratio: 1.41, zoom: 1, fitW: 600, cur: 1, raf: 0, active: 0, queue: [],
+const LP = { open: false, hist: false, tok: 0, doc: null, x: null, blobUrl: "", pages: [], ratio: 1.41, zoom: 1, fitW: 600, cur: 1, raf: 0, active: 0, queue: [],
   pinch: null, tap: null, t0: null, lastTouch: 0, q: "", sTok: 0, hits: [], hit: -1, text: {}, hasText: false, focus: null, searching: false };
 const lpS = $("#pdfvScroll");
 const lpPossibile = x => !/^https?:\/\//i.test(x.file);
@@ -1477,15 +1602,26 @@ async function lpOpen(x){
   $("#pdfv").classList.remove("hidden");
   document.documentElement.style.overflow = "hidden";
   $("#pdfvTitle").textContent = x.titolo; $("#pdfvSub").textContent = x.fornitore || "";
-  const url = new URL(catUrl(x), location.href).href;
-  $("#pdfvOpen").href = url;
+  const cifrato = catCifrato(x);
+  const url = cifrato ? "" : new URL(catUrl(x), location.href).href;
+  $("#pdfvOpen").href = cifrato ? "#" : url;
   lpMsg("Carico il catalogo…");
   if(!LP.hist){ history.pushState({ lp: 1 }, ""); LP.hist = true; }   // il tasto Indietro chiude il lettore
   try{
     await lpLib();
     if(tok !== LP.tok) return;
-    const task = pdfjsLib.getDocument({ url, disableAutoFetch: true, isEvalSupported: false });
-    task.onProgress = p => { if(tok === LP.tok && !LP.doc && p.total) lpMsg(`Carico il catalogo… ${Math.min(99, Math.round(p.loaded / p.total * 100))}%`); };
+    let sorgente;
+    if(cifrato){
+      // scarica il file cifrato, lo decifra nel telefono e lo passa a pdf.js (resta tutto in memoria)
+      const blob = await catBlob(x, p => { if(tok === LP.tok) lpMsg(`Carico il catalogo… ${p}%`); });
+      if(tok !== LP.tok) return;
+      LP.blobUrl = URL.createObjectURL(blob);
+      $("#pdfvOpen").href = LP.blobUrl;
+      sorgente = { data: new Uint8Array(await blob.arrayBuffer()) };
+    } else sorgente = { url, disableAutoFetch: true };
+    if(tok !== LP.tok) return;
+    const task = pdfjsLib.getDocument({ ...sorgente, isEvalSupported: false });
+    task.onProgress = p => { if(tok === LP.tok && !LP.doc && !cifrato && p.total) lpMsg(`Carico il catalogo… ${Math.min(99, Math.round(p.loaded / p.total * 100))}%`); };
     const doc = await task.promise;
     if(tok !== LP.tok){ doc.destroy(); return; }
     LP.doc = doc;
@@ -1504,11 +1640,15 @@ async function lpOpen(x){
     LP.zoom = 1; lpLayout(); lpS.scrollTo(0, 0); lpUpdate();
   }catch(err){
     if(tok !== LP.tok) return;
-    lpMsg(`Non riesco ad aprire il catalogo qui.<br><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Apri il PDF</a>`);
+    if(cifrato) lpMsg(err && err.message === "decifratura"
+      ? "Non riesco a decifrare questo catalogo.<br>Forse è stato cifrato con una chiave diversa: aggiornalo dal PC."
+      : "Non riesco ad aprire il catalogo.<br>Controlla la connessione e riprova.");
+    else lpMsg(`Non riesco ad aprire il catalogo qui.<br><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Apri il PDF</a>`);
   }
 }
 
 function lpReset(){
+  if(LP.blobUrl){ URL.revokeObjectURL(LP.blobUrl); LP.blobUrl = ""; }
   LP.pages.forEach(pg => { try{ pg.task?.cancel(); }catch(e){} });
   if(LP.doc){ try{ LP.doc.destroy(); }catch(e){} }
   LP.doc = null; LP.pages = []; LP.text = {}; LP.hasText = false; LP.hits = []; LP.hit = -1; LP.q = ""; LP.sTok++; LP.searching = false;

@@ -1,0 +1,4 @@
+# PDF originali (in chiaro): restano solo sul computer, su GitHub vanno solo i file cifrati cataloghi/*.pdf.enc
+cataloghi-originali/
+# regole Firestore con le email abilitate (repository pubblico)
+firestore.rules

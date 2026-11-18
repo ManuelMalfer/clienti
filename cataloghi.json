@@ -17,7 +17,7 @@
    "titolo": "Company profile Marchi",
    "fornitore": "Marchi S.p.A.",
    "categoria": "Marchi S.p.A.",
-   "file": "cataloghi/company-profile.pdf",
+   "file": "cataloghi/company-profile.pdf.enc",
    "desc": "Presentazione aziendale per gli chef",
    "tag": [
     "marchi",
@@ -31,7 +31,7 @@
    "titolo": "Catalogo Eventi",
    "fornitore": "Marchi S.p.A.",
    "categoria": "Marchi S.p.A.",
-   "file": "cataloghi/catalogo-eventi-marchi.pdf",
+   "file": "cataloghi/catalogo-eventi-marchi.pdf.enc",
    "desc": "Prodotti per sagre, feste ed eventi",
    "tag": [
     "marchi",
@@ -45,7 +45,7 @@
    "titolo": "Le delizie del Natale",
    "fornitore": "Marchi S.p.A.",
    "categoria": "Marchi S.p.A.",
-   "file": "cataloghi/catalogo-natale-2026.pdf",
+   "file": "cataloghi/catalogo-natale-2026.pdf.enc",
    "desc": "Antipasti e articoli di stagione",
    "anno": "2026",
    "tag": [
@@ -61,7 +61,7 @@
    "titolo": "Demetra - Catalogo generale 27",
    "fornitore": "Demetra",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/demetra-catalogo-2026.pdf",
+   "file": "cataloghi/demetra-catalogo-2026.pdf.enc",
    "desc": "Funghi, carciofi, ortaggi, condimenti, frutta, dessert",
    "anno": "2026",
    "tag": [
@@ -84,7 +84,7 @@
    "titolo": "Brochure Carni",
    "fornitore": "Marchi S.p.A.",
    "categoria": "Carni e salumi",
-   "file": "cataloghi/brochure-carni.pdf",
+   "file": "cataloghi/brochure-carni.pdf.enc",
    "desc": "Lavorazione e frollatura dry aged",
    "tag": [
     "carne",
@@ -99,7 +99,7 @@
    "titolo": "Coati - Presentazione",
    "fornitore": "Coati",
    "categoria": "Carni e salumi",
-   "file": "cataloghi/coati-presentazione.pdf",
+   "file": "cataloghi/coati-presentazione.pdf.enc",
    "desc": "Prosciutto cotto e salumi",
    "tag": [
     "carne",
@@ -112,7 +112,7 @@
    "titolo": "Coati - Catalogo pizzeria",
    "fornitore": "Coati",
    "categoria": "Carni e salumi",
-   "file": "cataloghi/coati-pizzeria-catalogo.pdf",
+   "file": "cataloghi/coati-pizzeria-catalogo.pdf.enc",
    "desc": "Topping, cubetti e razioni",
    "tag": [
     "carne",
@@ -128,7 +128,7 @@
    "titolo": "Luxury Tapas",
    "fornitore": "Luxury Tapas",
    "categoria": "Carni e salumi",
-   "file": "cataloghi/luxury-tapas-catalogo.pdf",
+   "file": "cataloghi/luxury-tapas-catalogo.pdf.enc",
    "desc": "Carni cotte a bassa temperatura, sottovuoto",
    "tag": [
     "carne",
@@ -144,7 +144,7 @@
    "titolo": "Ittica Center - Catalogo generale",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/catalogo-generale-articoli-ic.pdf",
+   "file": "cataloghi/catalogo-generale-articoli-ic.pdf.enc",
    "desc": "Molluschi e pesce fresco",
    "tag": [
     "pesce",
@@ -161,7 +161,7 @@
    "titolo": "Ittica Center - Filoni di tonno",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/filoni-di-tonno-ic.pdf",
+   "file": "cataloghi/filoni-di-tonno-ic.pdf.enc",
    "desc": "Tonno pinne gialle (agg. 12/08/2025)",
    "tag": [
     "pesce",
@@ -175,7 +175,7 @@
    "titolo": "Catalogo ostriche",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/catalogo-ostriche.pdf",
+   "file": "cataloghi/catalogo-ostriche.pdf.enc",
    "desc": "Origini, giorni di ordine e consegna",
    "tag": [
     "pesce",
@@ -190,7 +190,7 @@
    "titolo": "Ostriche special baby",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/ostriche-baby.pdf",
+   "file": "cataloghi/ostriche-baby.pdf.enc",
    "desc": "Speciale appetizer, ostrica di Goro",
    "tag": [
     "pesce",
@@ -204,7 +204,7 @@
    "titolo": "Ostriche - Codici e calibri",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/ostriche-codici.pdf",
+   "file": "cataloghi/ostriche-codici.pdf.enc",
    "desc": "Codici, calibri e confezioni",
    "tag": [
     "pesce",
@@ -218,7 +218,7 @@
    "titolo": "Cozza atlantica di Bouchot",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/cozza-atlantica-di-bouchot.pdf",
+   "file": "cataloghi/cozza-atlantica-di-bouchot.pdf.enc",
    "desc": "Offerta di inizio stagione",
    "tag": [
     "pesce",
@@ -233,7 +233,7 @@
    "titolo": "Catalogo caviale",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/catalogo-caviale.pdf",
+   "file": "cataloghi/catalogo-caviale.pdf.enc",
    "desc": "Storione Beluga, Asetra e altri",
    "tag": [
     "pesce",
@@ -248,7 +248,7 @@
    "titolo": "Catalogo alghe",
    "fornitore": "Ittica Center",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/catalogo-alghe.pdf",
+   "file": "cataloghi/catalogo-alghe.pdf.enc",
    "desc": "Alghe per la cucina",
    "tag": [
     "pesce",
@@ -261,7 +261,7 @@
    "titolo": "Loch Duart - Salmone e branzino Ikejime",
    "fornitore": "Ittica Center (Loch Duart)",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/ikejime-loch-duart.pdf",
+   "file": "cataloghi/ikejime-loch-duart.pdf.enc",
    "desc": "Metodo giapponese Ikejime",
    "tag": [
     "pesce",
@@ -276,7 +276,7 @@
    "titolo": "CDM Compagnia del Mare",
    "fornitore": "Compagnia del Mare",
    "categoria": "Pesce e frutti di mare",
-   "file": "cataloghi/cdm-compagnia-del-mare-catalogo.pdf",
+   "file": "cataloghi/cdm-compagnia-del-mare-catalogo.pdf.enc",
    "desc": "Piatti di pesce pronti, surgelati",
    "tag": [
     "pesce",
@@ -291,7 +291,7 @@
    "titolo": "La Molisana - Catalogo",
    "fornitore": "La Molisana",
    "categoria": "Pasta e pasta fresca",
-   "file": "cataloghi/la-molisana-catalogo.pdf",
+   "file": "cataloghi/la-molisana-catalogo.pdf.enc",
    "desc": "Pasta di grano 100% italiano",
    "tag": [
     "pasta",
@@ -304,7 +304,7 @@
    "titolo": "Iozzino - Pasta di Gragnano IGP",
    "fornitore": "Iozzino",
    "categoria": "Pasta e pasta fresca",
-   "file": "cataloghi/pasta-gragnano-igp-iozzino-catalogo.pdf",
+   "file": "cataloghi/pasta-gragnano-igp-iozzino-catalogo.pdf.enc",
    "desc": "Listino pasta corta e lunga",
    "tag": [
     "pasta",
@@ -318,7 +318,7 @@
    "titolo": "Checco il Pastaio - Pasta fresca",
    "fornitore": "Checco il Pastaio",
    "categoria": "Pasta e pasta fresca",
-   "file": "cataloghi/checco-il-pastaio-catalogo.pdf",
+   "file": "cataloghi/checco-il-pastaio-catalogo.pdf.enc",
    "desc": "Pasta fresca surgelata",
    "tag": [
     "pasta",
@@ -331,7 +331,7 @@
    "titolo": "Surgital - Pasta fresca italiana",
    "fornitore": "Surgital",
    "categoria": "Pasta e pasta fresca",
-   "file": "cataloghi/surgital-catalogo.pdf",
+   "file": "cataloghi/surgital-catalogo.pdf.enc",
    "desc": "Tortellini, cappellacci, bauletti, bigoli",
    "tag": [
     "pasta",
@@ -346,7 +346,7 @@
    "titolo": "Nonna Rina - Pasta fresca",
    "fornitore": "Nonna Rina",
    "categoria": "Pasta e pasta fresca",
-   "file": "cataloghi/nonna-rina-catalogo.pdf",
+   "file": "cataloghi/nonna-rina-catalogo.pdf.enc",
    "desc": "Gnocchi e chicche (Pastificio Pinton)",
    "tag": [
     "pasta",
@@ -359,7 +359,7 @@
    "titolo": "Agugiaro - Farine",
    "fornitore": "Agugiaro",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/agugiaro-catalogo.pdf",
+   "file": "cataloghi/agugiaro-catalogo.pdf.enc",
    "desc": "Farine e preparati per pizza",
    "tag": [
     "farine",
@@ -373,7 +373,7 @@
    "titolo": "Molino Vigevano - Farine",
    "fornitore": "Molino Vigevano",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/molino-vigevano-catalogo.pdf",
+   "file": "cataloghi/molino-vigevano-catalogo.pdf.enc",
    "desc": "Farine professionali",
    "tag": [
     "farine",
@@ -386,7 +386,7 @@
    "titolo": "Petra - Farine",
    "fornitore": "Petra",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/petra-catalogo.pdf",
+   "file": "cataloghi/petra-catalogo.pdf.enc",
    "desc": "Farine professionali",
    "tag": [
     "farine",
@@ -400,7 +400,7 @@
    "titolo": "DoGusto - Le farine",
    "fornitore": "DoGusto",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/catalogo-dogusto.pdf",
+   "file": "cataloghi/catalogo-dogusto.pdf.enc",
    "desc": "Farine con germe di grano per pizza",
    "tag": [
     "farine",
@@ -415,7 +415,7 @@
    "titolo": "Molino Spadoni - Prodotti da forno surgelati",
    "fornitore": "Molino Spadoni",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/molino-spadoni-catalogo.pdf",
+   "file": "cataloghi/molino-spadoni-catalogo.pdf.enc",
    "desc": "Biga, pasta madre, lunga lievitazione",
    "tag": [
     "farine",
@@ -431,7 +431,7 @@
    "titolo": "Molino Spadoni - Ricettario palline",
    "fornitore": "Molino Spadoni",
    "categoria": "Farine e pizzeria",
-   "file": "cataloghi/molino-spadoni-ricettario-palline-surgelate.pdf",
+   "file": "cataloghi/molino-spadoni-ricettario-palline-surgelate.pdf.enc",
    "desc": "Ricettario per le palline surgelate",
    "tag": [
     "farine",
@@ -447,7 +447,7 @@
    "titolo": "Lamb Weston - Patate",
    "fornitore": "Lamb Weston",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/lamb-weston-catalogo.pdf",
+   "file": "cataloghi/lamb-weston-catalogo.pdf.enc",
    "desc": "Patate surgelate: cubetti, spicchi, chips",
    "tag": [
     "verdure",
@@ -460,7 +460,7 @@
    "titolo": "Pizzoli - Patate",
    "fornitore": "Pizzoli",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/pizzoli-patate.pdf",
+   "file": "cataloghi/pizzoli-patate.pdf.enc",
    "desc": "Linee al naturale, lavorati e professional",
    "tag": [
     "verdure",
@@ -471,7 +471,7 @@
    "titolo": "Orogel - Catalogo",
    "fornitore": "Orogel",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/orogel-catalogo.pdf",
+   "file": "cataloghi/orogel-catalogo.pdf.enc",
    "desc": "Verdure e surgelati, assortimento Marchi",
    "tag": [
     "verdure",
@@ -484,7 +484,7 @@
    "titolo": "Orogel - Catalogo pizzerie",
    "fornitore": "Orogel",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/orogel-catalogo-pizzeria.pdf",
+   "file": "cataloghi/orogel-catalogo-pizzeria.pdf.enc",
    "desc": "Assortimento per pizzerie",
    "tag": [
     "verdure",
@@ -497,7 +497,7 @@
    "titolo": "Samporta - Flan di verdure",
    "fornitore": "Samporta",
    "categoria": "Patate e verdure",
-   "file": "cataloghi/samporta-flan-verdure-catalogo.pdf",
+   "file": "cataloghi/samporta-flan-verdure-catalogo.pdf.enc",
    "desc": "Pronti, da rigenerare al microonde",
    "tag": [
     "verdure",
@@ -510,7 +510,7 @@
    "titolo": "Debic - Panne, burri e cream cheese",
    "fornitore": "Debic",
    "categoria": "Latte, panna e uova",
-   "file": "cataloghi/debic-catalogo.pdf",
+   "file": "cataloghi/debic-catalogo.pdf.enc",
    "desc": "Panne, dessert, burri e cream cheese",
    "tag": [
     "latte",
@@ -525,7 +525,7 @@
    "titolo": "Eurovo - Ricettario Horeca",
    "fornitore": "Eurovo",
    "categoria": "Latte, panna e uova",
-   "file": "cataloghi/eurovo-ricettario-horeca.pdf",
+   "file": "cataloghi/eurovo-ricettario-horeca.pdf.enc",
    "desc": "Ricettario con prodotti a base d'uovo",
    "tag": [
     "latte",
@@ -539,7 +539,7 @@
    "titolo": "Re Cappuccio - Latte Ho.Re.Ca.",
    "fornitore": "Re Cappuccio",
    "categoria": "Latte, panna e uova",
-   "file": "cataloghi/re-cappuccio-flyer.pdf",
+   "file": "cataloghi/re-cappuccio-flyer.pdf.enc",
    "desc": "Latte fresco per cappuccino e latte art",
    "tag": [
     "latte",
@@ -554,7 +554,7 @@
    "titolo": "CGM - Catalogo",
    "fornitore": "CGM",
    "categoria": "Surgelati e gastronomia",
-   "file": "cataloghi/cgm-catalogo.pdf",
+   "file": "cataloghi/cgm-catalogo.pdf.enc",
    "desc": "Impanati surgelati: olive ascolane, arancini, mozzarelle",
    "tag": [
     "surgelati",
@@ -570,7 +570,7 @@
    "titolo": "Fioravanti - Gastronomia panata",
    "fornitore": "Fioravanti (Menoventuno)",
    "categoria": "Surgelati e gastronomia",
-   "file": "cataloghi/fioravanti-catalogo.pdf",
+   "file": "cataloghi/fioravanti-catalogo.pdf.enc",
    "desc": "Mozzarelle, olive ascolane, arancini, fiori di zucca",
    "tag": [
     "surgelati",
@@ -586,7 +586,7 @@
    "titolo": "Sysco - Catalogo Davigel",
    "fornitore": "Sysco (Davigel)",
    "categoria": "Surgelati e gastronomia",
-   "file": "cataloghi/sysco-catalogo.pdf",
+   "file": "cataloghi/sysco-catalogo.pdf.enc",
    "desc": "Surgelati: pesce panato, waffle, pancake, semifreddi",
    "tag": [
     "surgelati",
@@ -601,7 +601,7 @@
    "titolo": "Edna - Bakery surgelata",
    "fornitore": "Edna",
    "categoria": "Surgelati e gastronomia",
-   "file": "cataloghi/edna-catalogo.pdf",
+   "file": "cataloghi/edna-catalogo.pdf.enc",
    "desc": "Mini panini, burger colorati, pancake, waffle",
    "tag": [
     "surgelati",
@@ -616,7 +616,7 @@
    "titolo": "Pasticceria Veneta - Torte",
    "fornitore": "Pasticceria Veneta",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/pasticceria-veneta-catalogo.pdf",
+   "file": "cataloghi/pasticceria-veneta-catalogo.pdf.enc",
    "desc": "Torte pretagliate e intere, mousse, crostate",
    "tag": [
     "dolci",
@@ -631,7 +631,7 @@
    "titolo": "Martinucci - Dolci e gelati",
    "fornitore": "Martinucci",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/martinucci-catalogo.pdf",
+   "file": "cataloghi/martinucci-catalogo.pdf.enc",
    "desc": "Soufflé, mini torte, profiteroles, gelato",
    "tag": [
     "dolci",
@@ -646,7 +646,7 @@
    "titolo": "Martini Professional - Cioccolato",
    "fornitore": "Martini Professional",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/martini-professional-catalogo.pdf",
+   "file": "cataloghi/martini-professional-catalogo.pdf.enc",
    "desc": "Cioccolato per pralineria, coperture e ganache",
    "tag": [
     "dolci",
@@ -661,7 +661,7 @@
    "titolo": "Menodiciotto - Gelato",
    "fornitore": "Menodiciotto (Meno18)",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/meno18-catalogo.pdf",
+   "file": "cataloghi/meno18-catalogo.pdf.enc",
    "desc": "Gelato mantecato pronto, vaschette da 3 kg",
    "tag": [
     "dolci",
@@ -675,7 +675,7 @@
   {
    "titolo": "Sorbetti - Catalogo",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/sorbetti-catalogo.pdf",
+   "file": "cataloghi/sorbetti-catalogo.pdf.enc",
    "desc": "Sorbetti gusti vari",
    "tag": [
     "dolci",
@@ -690,7 +690,7 @@
    "titolo": "Guerra - Creme in sac à poche",
    "fornitore": "Guerra (7 Chef)",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/guerra-sac-a-poche-catalogo.pdf",
+   "file": "cataloghi/guerra-sac-a-poche-catalogo.pdf.enc",
    "desc": "Farciture per croissant e pasticceria",
    "tag": [
     "dolci",
@@ -707,7 +707,7 @@
    "titolo": "Lizzi - Cornetti e krapfen",
    "fornitore": "Lizzi",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/lizzi-catalogo.pdf",
+   "file": "cataloghi/lizzi-catalogo.pdf.enc",
    "desc": "Cornetti e krapfen surgelati",
    "tag": [
     "dolci",
@@ -722,7 +722,7 @@
    "titolo": "Delifrance - Cornetti e viennoiserie",
    "fornitore": "Delifrance",
    "categoria": "Dolci, colazione e gelati",
-   "file": "cataloghi/delifrance-catalogo.pdf",
+   "file": "cataloghi/delifrance-catalogo.pdf.enc",
    "desc": "Cornetti e fagottini surgelati",
    "tag": [
     "dolci",
@@ -737,7 +737,7 @@
    "titolo": "Wiberg - Catalogo 2026",
    "fornitore": "Wiberg",
    "categoria": "Spezie, sale e condimenti",
-   "file": "cataloghi/wiberg-catalogo-2026.pdf",
+   "file": "cataloghi/wiberg-catalogo-2026.pdf.enc",
    "desc": "Spezie, aceti e condimenti",
    "anno": "2026",
    "tag": [
@@ -752,7 +752,7 @@
    "titolo": "Wiberg - Linea Exquisite",
    "fornitore": "Wiberg",
    "categoria": "Spezie, sale e condimenti",
-   "file": "cataloghi/wiberg-linea-exquisite.pdf",
+   "file": "cataloghi/wiberg-linea-exquisite.pdf.enc",
    "desc": "Miscele di spezie",
    "tag": [
     "spezie",
@@ -766,7 +766,7 @@
    "titolo": "Italkali - Sale di Sicilia",
    "fornitore": "Italkali",
    "categoria": "Spezie, sale e condimenti",
-   "file": "cataloghi/italkali-catalogo.pdf",
+   "file": "cataloghi/italkali-catalogo.pdf.enc",
    "desc": "Sale naturale 100% italiano",
    "tag": [
     "spezie",
@@ -780,7 +780,7 @@
    "titolo": "Montosco - Sale Maldon e aromi",
    "fornitore": "Montosco",
    "categoria": "Spezie, sale e condimenti",
-   "file": "cataloghi/montosco-catalogo.pdf",
+   "file": "cataloghi/montosco-catalogo.pdf.enc",
    "desc": "Erbe aromatiche, peperoncino, polveri gourmet",
    "tag": [
     "spezie",
@@ -795,7 +795,7 @@
    "titolo": "Non food - Catalogo",
    "fornitore": "TTS Cleaning / Interchem",
    "categoria": "Non food e monouso",
-   "file": "cataloghi/non-food-catalogo.pdf",
+   "file": "cataloghi/non-food-catalogo.pdf.enc",
    "desc": "Detergenti, stoviglie e pulizia",
    "tag": [
     "non food",
@@ -810,7 +810,7 @@
    "titolo": "TTS Cleaning - Catalogo generale",
    "fornitore": "TTS Cleaning",
    "categoria": "Non food e monouso",
-   "file": "cataloghi/tts-catalogo.pdf",
+   "file": "cataloghi/tts-catalogo.pdf.enc",
    "desc": "Sistemi di pulizia professionale",
    "anno": "2025",
    "tag": [
@@ -825,7 +825,7 @@
   {
    "titolo": "Finger food monouso",
    "categoria": "Non food e monouso",
-   "file": "cataloghi/finger-food-monouso-catalogo.pdf",
+   "file": "cataloghi/finger-food-monouso-catalogo.pdf.enc",
    "desc": "Coppette, bicchierini e coperchi",
    "tag": [
     "non food",
@@ -840,7 +840,7 @@
    "titolo": "Icewer - Personalizzazioni",
    "fornitore": "Icewer",
    "categoria": "Non food e monouso",
-   "file": "cataloghi/icewer-personalizzazioni.pdf",
+   "file": "cataloghi/icewer-personalizzazioni.pdf.enc",
    "desc": "Stampa 1 colore, minimo 3 scatole",
    "tag": [
     "non food",

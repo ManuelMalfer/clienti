@@ -152,32 +152,56 @@ Su telefono non entrano tutte: la barra scorre in orizzontale e porta al centro 
 Scheda **Cataloghi** nella barra in basso: i cataloghi PDF dei fornitori e di Marchi, con barra di ricerca,
 etichette per **categoria** e elenco **raggruppato per categoria** (gruppi che si aprono/chiudono, "Chiudi tutte").
 Ogni riga: titolo, fornitore, breve descrizione, anno; si apre nel **lettore PDF** dell'app (sotto); il pulsante di
-condivisione usa la condivisione del telefono (o WhatsApp Web sul PC).
+condivisione manda il PDF vero (decifrato) con la condivisione del telefono, oppure lo scarica sul PC.
 
 - **Ricerca**: per inizio parola (non per pezzi dentro le parole: "gelato" non trova "surgelato"), ignora l'ultima
   lettera (mozzarella = mozzarelle). Cerca in titolo, fornitore, descrizione, anno e `tag`; NON nel nome della
   categoria, perciò ogni voce ha nei `tag` le parole generiche della sua categoria (pesce, carne, dolci…).
-- I file stanno **nel repository** (pubblico!), cartella `cataloghi/`, scelta di Manuel (niente account né Firebase
-  Storage). Il sito è nascosto ai motori di ricerca ma i PDF sono raggiungibili da chi ha il link: non metterci
-  documenti riservati (listini con condizioni speciali per singoli clienti, ecc.). Nomi file in minuscolo, senza
-  spazi né accenti.
+- I file stanno nel repository (pubblico), cartella `cataloghi/`, ma **cifrati** (`nome.pdf.enc`): chi conosce il link
+  diretto scarica solo byte illeggibili. Vedi "Protezione dei PDF" sotto. Nomi file in minuscolo, senza spazi né accenti.
 - L'elenco è `cataloghi.json` (letto a ogni apertura della scheda, `cache: "no-cache"`):
   `{ "categorie": [ordine di categorie e gruppi], "cataloghi": [ { "titolo", "fornitore", "categoria", "desc", "anno", "file", "tag": [] } ] }`.
-  `file` è un percorso (`cataloghi/nome.pdf`) o un indirizzo completo (`https://…`). `fornitore` può mancare.
+  `file` è un percorso (`cataloghi/nome.pdf.enc`, cifrato) o un indirizzo completo (`https://…`, mai cifrato). `fornitore` può mancare.
   Categorie non elencate in `categorie` vanno in fondo; senza categoria = "Altri cataloghi".
 - Categorie attuali: Marchi S.p.A., Carni e salumi, Pesce e frutti di mare, Pasta e pasta fresca, Farine e pizzeria,
   Patate e verdure, Latte panna e uova, Surgelati e gastronomia, Dolci colazione e gelati, Spezie sale e condimenti,
   Non food e monouso.
-- Aggiungere un catalogo = copiare il PDF in `cataloghi/` + una voce in `cataloghi.json` + push. Manuel manda i PDF
-  a Claude, che li inserisce e propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato a mano).
+- Aggiungere un catalogo: copiare il PDF in `cataloghi-originali/`, lanciare `node strumenti/cifra-cataloghi.mjs`
+  (crea `cataloghi/nome.pdf.enc`), aggiungere la voce in `cataloghi.json` con `file: "cataloghi/nome.pdf.enc"` e fare push.
+  Manuel manda i PDF a Claude, che propone fornitore/categoria dal contenuto (se il PDF è solo immagini va guardato
+  a mano, per esempio aprendolo nel lettore).
 - Il 18/11/2026 sono stati caricati 57 PDF (~220 MB). Fornitore di ostriche, caviale, alghe, cozze e di tutto il
   pesce fresco = **Ittica Center** (confermato da Manuel). **Demetra** è un fornitore (non un marchio Marchi): il suo
   "Catalogo generale 27" (152 pagine di sole immagini) copre funghi, carciofi, ortaggi, condimenti, frutti di mare,
   frutta e dessert; sta in "Patate e verdure".
 
+### Protezione dei PDF (cifratura)
+
+Obiettivo di Manuel: **chi conosce il link diretto di un PDF non deve poterlo aprire**, senza password da digitare
+nell'app. Siccome il repository e GitHub Pages sono pubblici, i PDF sono cifrati e la chiave sta dietro il login.
+
+- Cifratura **AES-256-GCM** con chiave casuale da 256 bit. Formato di `cataloghi/x.pdf.enc`: 12 byte iniziali (iv) +
+  testo cifrato con sigillo. `cataloghi/cifratura.json` contiene solo un "sigillo" (`verifica`: la parola `catalogo-ok`
+  cifrata) con cui l'app controlla che la chiave sia quella giusta. Nessun segreto su GitHub.
+- **Chiave**: la crea `strumenti/cifra-cataloghi.mjs` la prima volta e la salva in
+  `cataloghi-originali/chiave-cataloghi.txt` (solo sul PC di Manuel, la cartella è in `.gitignore`; la copia anche negli
+  appunti). Le volte dopo la riusa. `--tutti` ricifra tutto, `--nuova` crea una chiave nuova (poi va incollata di nuovo).
+- **Nell'app**: al primo catalogo cifrato l'app legge la chiave dal documento Firestore
+  `utenti/{uid}/impostazioni/cataloghi` (campo `chiave`, stesse regole dei clienti: serve il login di un'email abilitata),
+  la importa con Web Crypto e decifra da sola. Se il documento non c'è (prima volta su quell'account, es. il papà di
+  Manuel), compare "Attiva i cataloghi": si incolla la chiave UNA volta, l'app la controlla col sigillo e la salva
+  nell'account; da lì in poi nessuna domanda, su ogni dispositivo. La chiave in memoria si dimentica uscendo dall'account.
+- **Non si recupera**: se si perdono sia `chiave-cataloghi.txt` sia il documento Firestore, i `.enc` non si aprono più e
+  vanno ricifrati dagli originali (`--nuova`). Tenere una copia di `cataloghi-originali/` (PDF e chiave).
+- Limiti da conoscere: il titolo dei cataloghi (`cataloghi.json`) resta pubblico; chi ha il telefono con l'accesso aperto
+  vede i cataloghi come vede i clienti; chi condivide un catalogo manda il PDF in chiaro.
+- I PDF in chiaro erano stati pubblicati per errore il 18/11/2026 (commit 01529c2…32448ed): vanno tolti dalla cronologia
+  (riscrittura + force push) e restano per un po' raggiungibili su GitHub via vecchi indirizzi di commit finché GitHub non
+  li elimina.
+
 ### Lettore PDF dei cataloghi
 
-Toccando un catalogo del sito (percorso locale `cataloghi/…`) si apre un lettore a tutto schermo (`#pdfv`, codice
+Toccando un catalogo del sito (percorso locale `cataloghi/…`, cifrato o no) si apre un lettore a tutto schermo (`#pdfv`, codice
 `lp*`/`LP` in `index.html`) con **pdf.js 3.11.174** (stesso script dei Preventivi, caricato solo al bisogno da cdnjs):
 scorrimento continuo, zoom 50–400% (pizzico, doppio tocco, pulsanti −/+, Ctrl+rotella; il numero % riporta a 100%),
 numero di pagina modificabile con avanti/indietro, **ricerca nel testo** con evidenziazione in giallo e risultato
@@ -186,12 +210,15 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 
 - Le pagine si disegnano solo se vicine alla schermata (circa 1 schermata sopra e sotto) e si liberano quando si
   allontanano: così reggono anche i cataloghi da 150 pagine. Canvas limitati a ~9 milioni di pixel (memoria iPhone).
-- Il PDF si scarica a pezzi (range requests, `disableAutoFetch`): GitHub Pages li supporta, quindi la prima pagina
-  compare subito anche con file da 20 MB.
+- PDF non cifrati: si scaricano a pezzi (range requests, `disableAutoFetch`). PDF cifrati (tutti quelli veri): si
+  scarica il file intero (con percentuale), si decifra in memoria e si passa a pdf.js come dati; un file da 23 MB
+  si apre in circa 1,5 secondi.
 - I link esterni (`https://…`, es. Drive) NON usano il lettore (CORS): restano un normale collegamento. Se pdf.js
   non si carica (offline) compare "Non riesco ad aprire il catalogo qui" con il pulsante "Apri il PDF".
-- Per provarlo in locale senza login: servire la cartella con un piccolo server che supporti `Range`, nascondere
-  `#login`, mostrare `#app` (tenendolo forzato: l'app senza accesso torna al login dopo pochi secondi).
+- Per provarlo in locale senza login: copiare il progetto in una cartella di prova, sostituire i tre import Firebase
+  con piccoli moduli finti (utente sempre collegato, Firestore in `localStorage`), cifrare 3-4 PDF di prova con lo
+  strumento (`CATALOGHI_SENZA_APPUNTI=1`) e servire la cartella con un server che supporti `Range` e dia `text/javascript`
+  ai `.js`. Così si prova anche "Attiva i cataloghi" senza toccare il vero account.
 
 ## Come lavorare su questo progetto
 
