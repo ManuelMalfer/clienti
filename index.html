@@ -637,6 +637,85 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
 .chip-btn{background:var(--surface)}
 .storico li{padding:10px 0}
 /* ===== /Aspetto moderno ===== */
+/* ===== Versione PC ===== */
+/* mappa delle zone: piccola su telefono, più grande su iPad (così si vede bene) */
+.only-desk{display:none}
+@media (max-width:599px){.zone-panel svg{max-height:176px}}
+@media (min-width:600px){
+  .zone-panel svg{max-height:300px}
+  .zone-chips{grid-template-rows:repeat(3,auto)}
+}
+
+/* PC: schermo largo + mouse. L'iPad (anche in orizzontale) usa il puntatore "grossolano" e NON entra qui. */
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){
+  :root{--tabbar:0px;--side:248px}
+
+  /* menu laterale fisso con tutte le sezioni (al posto della barra in basso) */
+  nav.tabs{top:0;bottom:0;right:auto;left:0;width:var(--side);display:flex;flex-direction:column;overflow-y:auto;padding:22px 12px 18px;border-top:0;border-right:1px solid color-mix(in srgb,var(--line) 70%,transparent);z-index:40}
+  nav.tabs::before{content:"Clienti";display:block;font-family:var(--font-cond);font-weight:700;font-size:32px;line-height:1;letter-spacing:-.015em;padding:2px 14px 22px;color:var(--accent)}
+  .tabs-inner{display:flex;flex-direction:column;gap:4px;height:auto;width:100%;max-width:none;margin:0}
+  .tabs button{flex-direction:row;justify-content:flex-start;gap:13px;height:46px;padding:0 14px;border-radius:12px;font-size:15.5px;font-weight:600;text-align:left;color:var(--ink);letter-spacing:0}
+  .tabs button::before{display:none}
+  .tabs button:hover:not([aria-current="page"]){background:var(--surface-2)}
+  .tabs button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+  .tabs button svg{width:22px;height:22px;flex:0 0 auto}
+  .tabs .num{position:static;margin:0 0 0 auto;top:auto;left:auto;box-shadow:none}
+  .tabs button[data-view="altro"]{display:none}
+  .only-desk{display:flex}
+  .tabs button[data-view="clienti"]{order:1}
+  .tabs button[data-view="mappa"]{order:2}
+  .tabs button[data-view="giro"]{order:3}
+  .tabs button[data-view="richiami"]{order:4}
+  .tabs button[data-view="cataloghi"]{order:5}
+  .tabs button[data-view="preventivi"]{order:6}
+  .tabs button[data-view="riepilogo"]{order:7}
+  .tabs button[data-view="rosario"]{order:8}
+
+  /* contenuto: a destra del menu, più largo */
+  .view-wrap,#offline{margin-left:var(--side)}
+  .wrap{max-width:1320px;padding:0 40px}
+  header.top{padding:20px 0 16px}
+  .top h1{font-size:40px}
+  .search input{min-height:48px}
+  main.view{padding-bottom:56px}
+  .empty{padding:72px 12px}
+
+  /* Clienti: elenco a sinistra, mappa delle zone grande a destra (sempre visibile, filtra l'elenco) */
+  #v-clienti main.view{display:grid;grid-template-columns:minmax(0,1fr) 460px;column-gap:32px;align-items:start;padding-top:20px}
+  #v-clienti main.view > *{grid-column:1}
+  #v-clienti main.view > .zone-panel{grid-column:2;grid-row:1 / span 4;position:sticky;top:168px;margin:0;padding:16px 18px 18px;max-height:calc(100vh - 190px);overflow-y:auto}
+  #zoneBtn{display:none}
+  #zonePanel.hidden{display:block!important}
+  .zone-panel svg{max-height:340px}
+  .zone-chips{display:flex;flex-wrap:wrap;overflow:visible;margin:14px 0 0;padding:0}
+  .zone-hint{display:block}
+  .pills{flex-wrap:wrap;margin:14px 0 0;padding:0;overflow:visible}
+  .filters{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .row{cursor:pointer}
+  .row:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:var(--sh2)}
+  .pill:hover,.zone-chips button:hover,.chip-btn:hover{border-color:var(--accent)}
+
+  /* altre schermate: sfruttano la larghezza */
+  #v-giro .list,#v-richiami .list,#pvList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ct-grid{grid-template-columns:repeat(4,1fr);gap:14px}
+  .ct-tile:hover,.alt-tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:var(--sh2);transform:translateY(-2px)}
+  .ct-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .ct-item:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+  #riepBody{display:block;column-count:2;column-gap:16px}
+  #riepBody > .rp-kpis{column-span:all}
+  #riepBody .rp-card{break-inside:avoid}
+  .rp-kpis{grid-template-columns:repeat(3,1fr)}
+  .rp-kpi:first-child{grid-column:auto}
+  #v-mappa:not(.hidden){height:100vh}
+  .map-wrap{margin-bottom:0}
+
+  /* finestre: al centro, più larghe; il "+" torna con la scritta */
+  dialog{max-width:760px}
+  .fab{top:calc(22px + env(safe-area-inset-top,0px));right:40px;bottom:auto;width:auto;height:46px;padding:0 22px;font-size:15.5px;gap:8px;border-radius:14px;box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 35%,transparent)}
+  .fab svg{width:20px;height:20px}
+  #v-clienti .top-row,#v-richiami .top-row,#v-giro .top-row,#v-preventivi .top-row{padding-right:150px}
+}
+/* ===== /Versione PC ===== */
 </style>
 </head>
 <body>
@@ -835,6 +914,10 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
     <button data-view="cataloghi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
     <button data-view="riepilogo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
     <button data-view="altro"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg>Altro<span class="num hidden" id="altroNum"></span></button>
+    <button data-view="mappa" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
+    <button data-view="giro" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
+    <button data-view="preventivi" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Preventivi</button>
+    <button data-view="rosario" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNumNav"></span></button>
   </div></nav>
 </div>
 
@@ -1341,11 +1424,18 @@ async function migraExClienti(){
 /* ---------- navigazione ---------- */
 $$(".tabs button").forEach(b => b.addEventListener("click", () => go(b.dataset.view)));
 document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if(g) go(g.dataset.go); });
+// scorciatoia: / porta alla ricerca della schermata aperta (solo con la tastiera, fuori dai campi di testo)
+addEventListener("keydown", e => {
+  if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || document.querySelector("dialog[open]")) return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable) return;
+  const campo = { clienti: "#q", cataloghi: "#ctQ", preventivi: "#pvQ" }[ui.view];
+  if(campo && $(campo)){ e.preventDefault(); $(campo).focus(); }
+});
 function go(view){
   ui.view = view;
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
   const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
-  $$(".tabs button").forEach(b => b.dataset.view === voce ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  $$(".tabs button").forEach(b => b.dataset.view === voce || b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
   $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro");
   if(view !== "mappa") stopPick();
@@ -2670,7 +2760,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 2 (v2)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3 (v3)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

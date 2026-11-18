@@ -257,9 +257,11 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 
 - **v1** = interfaccia precedente al rinnovo (barra in basso con 8 schede a scorrimento, elenco clienti a righe, categorie dei
   cataloghi come etichette). Tag Git `v1`.
-- **v2** = rinnovo dell'interfaccia del 18/11/2026 (sezione "Interfaccia" qui sotto). Tag Git `v2`. In Riepilogo, sotto l'email
-  dell'account, compare "App versione 2 (v2)" (utile per capire se il telefono mostra ancora la versione vecchia).
-- **Tornare alla v1** (se Manuel lo chiede): senza riscrivere la cronologia, con `git revert --no-edit <commit-di-v2>` (il commit
+- **v2** = rinnovo dell'interfaccia del 18/11/2026 (sezione "Interfaccia" qui sotto). Tag Git `v2`.
+- **v3** = v2 + mappa delle zone più grande su iPad/iPhone + **versione per PC** (sezione "Versione per PC"). Tag Git `v3`. In Riepilogo, sotto
+  l'email dell'account, compare "App versione 3 (v3)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
+  la scritta a ogni nuova versione).
+- **Tornare alla v2** (solo senza la parte PC): `git revert --no-edit <commit-di-v3>`. **Tornare alla v1** (se Manuel lo chiede): senza riscrivere la cronologia, con `git revert --no-edit <commit-di-v2>` (il commit
   a cui punta il tag `v2`) e push su `main`; il sito torna com'era e i dati non cambiano. Attenzione: i cataloghi aggiunti dall'app
   (commit "Cataloghi: aggiunto…") e le modifiche a `cataloghi.json` NON vanno persi, perché stanno in file diversi da quelli del
   rinnovo; verificare comunque con `git diff v1 HEAD --stat` prima del push. Per rivedere la v1 senza toccare nulla:
@@ -289,6 +291,23 @@ scorrimento laterale). Lo stile nuovo sta in un blocco CSS a fondo `<style>` del
   (`cat.cat`, `cat.tutti`, `cat.q`).
 - Provato con una copia dell'app con finto Firebase e 28 clienti inventati (vedi "Per provarlo in locale senza login"); altre schermate
   (Mappa, Riepilogo, Preventivi, Rosario) non sono state ridisegnate: solo ereditano intestazione, bottoni e campi nuovi.
+
+## Versione per PC (v3)
+
+Manuel usa l'app da iPad/iPhone e da PC Windows. Su iPad e iPhone resta la colonna con la barra in basso (la sua preferenza); sul PC
+l'interfaccia cambia. Il blocco CSS è `/* ===== Versione PC ===== */`, dopo `Aspetto moderno`.
+
+- **Quando si attiva**: `@media (min-width:1100px) and (hover:hover) and (pointer:fine)`. L'iPad, anche in orizzontale, ha il
+  puntatore "grossolano" e NON la attiva (non si può provare con l'emulazione del browser: lì il mouse risulta "fine").
+- **Menu laterale** fisso a sinistra (248 px) con **tutte e 8** le sezioni nell'ordine Clienti, Mappa, Giro, Richiami, Cataloghi,
+  Preventivi, Riepilogo, Rosario (le 4 voci `.only-desk` stanno nello stesso `<nav class="tabs">`, nascoste su telefono; "Altro" è
+  nascosto sul PC). `go()` accende sia la voce vera sia "Altro". Il numero di Rosario è anche in `#rosNumNav`.
+- **Clienti**: elenco a sinistra, **mappa delle zone grande a destra** (460 px, sticky, tutti i chip visibili); il tasto "Zone" sparisce
+  perché la mappa è sempre visibile e filtra l'elenco. Pulsante "+ Nuovo" in alto a destra (non più rotondo in basso).
+- Altre schermate: contenuto fino a 1320 px; Giro, Richiami e Preventivi in 2 colonne; Cataloghi con griglia a 4 colonne e elenco in
+  2 colonne; Riepilogo in 2 colonne bilanciate; Mappa a tutta altezza; finestre fino a 760 px; effetti al passaggio del mouse.
+- Scorciatoia da tastiera: **/** porta alla ricerca della schermata aperta (Clienti, Cataloghi, Preventivi).
+- **Mappa delle zone su iPad/iPhone**: 176 px su telefono (<600 px), 300 px su iPad (≥600 px, chip su 3 righe).
 
 ## Come lavorare su questo progetto
 
