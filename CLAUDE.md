@@ -195,9 +195,12 @@ nell'app. Siccome il repository e GitHub Pages sono pubblici, i PDF sono cifrati
   vanno ricifrati dagli originali (`--nuova`). Tenere una copia di `cataloghi-originali/` (PDF e chiave).
 - Limiti da conoscere: il titolo dei cataloghi (`cataloghi.json`) resta pubblico; chi ha il telefono con l'accesso aperto
   vede i cataloghi come vede i clienti; chi condivide un catalogo manda il PDF in chiaro.
-- I PDF in chiaro erano stati pubblicati per errore il 18/11/2026 (commit 01529c2…32448ed): vanno tolti dalla cronologia
-  (riscrittura + force push) e restano per un po' raggiungibili su GitHub via vecchi indirizzi di commit finché GitHub non
-  li elimina.
+- I PDF in chiaro erano stati pubblicati il 18/11/2026 (6 commit). Lo stesso giorno la cronologia è stata riscritta
+  (`git filter-branch`, poi push forzato) e ora nessun commit di `main` contiene PDF in chiaro; il vecchio indirizzo
+  `clienti.malfer.it/cataloghi/x.pdf` dà 404. Restano però raggiungibili su GitHub, finché GitHub non elimina gli oggetti
+  non più referenziati, tramite l'indirizzo completo dei vecchi commit (es. raw.githubusercontent.com/…/<sha di 40 caratteri>/…).
+  Per eliminarli del tutto: chiedere a GitHub Support di rimuovere i dati sensibili / far girare la pulizia, oppure
+  ricreare il repository. **Non rimettere mai PDF in chiaro in `cataloghi/`** (usare sempre `cataloghi-originali/` + lo strumento).
 
 ### Lettore PDF dei cataloghi
 
