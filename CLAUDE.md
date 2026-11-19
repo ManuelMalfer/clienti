@@ -54,7 +54,7 @@ Campi: `nome` (insegna del locale), `ragioneSociale`, `codice` (codice cliente a
 `tipologia`, `piva`, `codiceFiscale`, `codiceUnivoco` (SDI), `pagamento`,
 `fornitori` (array), `giorniOrdine` e `giorniConsegna` (array di "Lunedì"…"Sabato"),
 `orarioOrdine`, `orarioConsegna`, `stato`, `ricontattare` (YYYY-MM-DD), `ricontattareOra` (HH:MM),
-`note`, `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
+`chiusoDal`/`chiusoAl` (periodo di chiusura, YYYY-MM-DD, entrambi facoltativi: nel periodo il cliente non compare nel Giro, né ordini né mappa; funzione `chiusoIl(c, iso)`; campi nel modulo e nella scheda cliente, etichetta "Chiuso fino al…" nell'elenco), `note`, `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
 centro paese), `geoFail`, `creato`, `aggiornato` (ISO).
 
 Stati: `DA CONTATTARE`, `CONTATTATO`, `CLIENTE`, `NON SERVIBILE`.
@@ -268,6 +268,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v2** = rinnovo dell'interfaccia del 18/11/2026 (sezione "Interfaccia" qui sotto). Tag Git `v2`.
 - **v3** = v2 + mappa delle zone più grande su iPad/iPhone + **versione per PC** (sezione "Versione per PC"). Tag Git `v3`.
 - **v3.1** = v3 + nuovo **Giro** (mappa verde/gialla, niente elenco consegne, ordini con spunta). Tag Git `v3.1`.
+- **v3.3** = v3.2 + periodo di chiusura dei clienti, "+" tolto dal Giro, più aria sotto filtri e ricerca, riga dei Preventivi sistemata, **sposta catalogo di categoria** dall'app (icona cartella sulla riga, solo account autorizzati; riusa POST /elenco del Worker, che sostituisce la voce con lo stesso `file`). Brochure Carni spostata in Marchi S.p.A. Tag Git `v3.3`; la scritta in Riepilogo dice 3.3.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).

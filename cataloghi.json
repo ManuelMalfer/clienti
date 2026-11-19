@@ -83,7 +83,7 @@
   {
    "titolo": "Brochure Carni",
    "fornitore": "Marchi S.p.A.",
-   "categoria": "Carni e salumi",
+   "categoria": "Marchi S.p.A.",
    "file": "cataloghi/brochure-carni.pdf.enc",
    "desc": "Lavorazione e frollatura dry aged",
    "tag": [
@@ -92,7 +92,8 @@
     "salumi",
     "manzo",
     "dry aged",
-    "frollatura"
+    "frollatura",
+    "marchi"
    ]
   },
   {

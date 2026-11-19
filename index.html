@@ -768,6 +768,15 @@ h2.sec small{font-variant-numeric:tabular-nums}
   .giro-ord .list{grid-template-columns:minmax(0,1fr)}
 }
 /* ===== /Giro ===== */
+/* ===== Ritocchi v3.3 ===== */
+main.view{padding-top:14px}
+#list{margin-top:12px}
+.pv-li{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);box-shadow:var(--sh1);padding-right:8px;margin:0;gap:2px}
+.pv-li .row{background:none;border:0;box-shadow:none;border-radius:var(--r-md) 0 0 var(--r-md);flex:1;min-width:0}
+.ct-item .ct-mv{flex:0 0 auto}
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){ main.view{padding-top:20px} #list{margin-top:14px} }
+.row-main .flag.chiuso{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);margin-right:6px}
+/* ===== /Ritocchi v3.3 ===== */
 </style>
 </head>
 <body>
@@ -927,6 +936,19 @@ h2.sec small{font-variant-numeric:tabular-nums}
       <div class="dlg-foot"><button class="btn" type="button" id="catAddNo">Annulla</button><button class="btn btn-primary" type="submit" id="catAddOk">Carica</button></div>
     </form>
   </dialog>
+  <dialog id="dlgCatMv" aria-labelledby="catMvT">
+    <form class="dlg" id="catMvForm" novalidate>
+      <div class="dlg-head"><h2 id="catMvT">Sposta il catalogo</h2><button class="close" type="button" id="catMvX" aria-label="Chiudi">×</button></div>
+      <div class="dlg-body">
+        <p class="hint" id="catMvNome" style="margin:0 0 10px;font-weight:600"></p>
+        <label class="field"><span>Nuova categoria</span><select class="input" id="catMvCat"></select></label>
+        <label class="field hidden" id="catMvNuovaBox"><span>Nome della nuova categoria</span><input class="input" id="catMvNuova" maxlength="60" autocomplete="off"></label>
+        <p class="hint">Lo spostamento vale per tutti gli account (compare agli altri dopo 1-2 minuti).</p>
+        <p class="hint hidden" id="catMvMsg" role="alert" style="color:var(--danger);margin-top:10px"></p>
+      </div>
+      <div class="dlg-foot"><button class="btn" type="button" id="catMvNo">Annulla</button><button class="btn btn-primary" type="submit" id="catMvOk">Sposta</button></div>
+    </form>
+  </dialog>
   <!-- /AGGIUNGI CATALOGO -->
 
   <!-- LETTORE PDF -->
@@ -1057,6 +1079,13 @@ h2.sec small{font-variant-numeric:tabular-nums}
       <span class="field"><span>Giorni di consegna</span></span>
       <div class="days" data-days="giorniConsegna"></div>
       <label class="field"><span>Orario consegna</span><input class="input" name="orarioConsegna" placeholder="Es. dalle 7:30 alle 11:00" autocomplete="off"></label>
+
+      <h3>Periodo di chiusura</h3>
+      <div class="grid2">
+        <label class="field"><span>Chiuso dal</span><input class="input" name="chiusoDal" type="date"></label>
+        <label class="field"><span>Chiuso fino al</span><input class="input" name="chiusoAl" type="date"></label>
+      </div>
+      <p class="hint">Facoltativo, per chi chiude per ferie o stagione. In questo periodo il cliente non compare nel Giro (né ordini né mappa) e torna da solo il giorno dopo. Lascia "dal" vuoto per chiudere da subito.</p>
 
       <h3>Promemoria e note</h3>
       <div class="grid2">
@@ -1373,6 +1402,14 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const localISO = (d = new Date()) => new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 const addDays = n => { const d = new Date(); d.setDate(d.getDate()+n); return localISO(d); };
 const fmtDate = iso => iso ? iso.split("-").reverse().join("/") : "";
+// periodo di chiusura: chiusoDal (facoltativo, vuoto = da subito) e chiusoAl (ultimo giorno di chiusura, vuoto = senza fine)
+const chiusoIl = (c, iso) => !!(c.chiusoDal || c.chiusoAl) && (!c.chiusoDal || iso >= c.chiusoDal) && (!c.chiusoAl || iso <= c.chiusoAl);
+const chiusuraTesto = c => {
+  const t = localISO();
+  if(!(c.chiusoDal || c.chiusoAl) || (c.chiusoAl && c.chiusoAl < t)) return "";
+  if(c.chiusoDal && c.chiusoDal > t) return "Chiude il " + fmtDate(c.chiusoDal) + (c.chiusoAl ? " · fino al " + fmtDate(c.chiusoAl) : "");
+  return c.chiusoAl ? "Chiuso fino al " + fmtDate(c.chiusoAl) : "Chiuso (senza data di riapertura)";
+};
 const statoLabel = s => (STATI.find(x => x[0] === s) || [null, "Da contattare"])[1];
 const statoCls = s => "st-" + norm(s || "DA CONTATTARE");
 const nowISO = () => new Date().toISOString();
@@ -1489,7 +1526,7 @@ function go(view){
   const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
   $$(".tabs button").forEach(b => b.dataset.view === voce || b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro");
   if(view !== "mappa") stopPick();
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
@@ -1555,7 +1592,7 @@ function rowHTML(c, side = "", av = ""){
   const sub = [c.luogo, c.tipologia].filter(Boolean).join(" · ") || c.indirizzo || "";
   return `<button class="row ${statoCls(c.stato)}" data-open="${c.id}">
     ${av || `<span class="av" aria-hidden="true">${esc(inizialiDi(c.nome))}</span>`}
-    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${side ? "" : richiamoTag(c)}</span>
+    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${chiusuraTesto(c) ? `<span class="flag chiuso">${esc(chiusuraTesto(c))}</span>` : ""}${side ? "" : richiamoTag(c)}</span>
     <span class="row-side">${side || `<span class="st-pill">${esc(statoLabel(c.stato))}</span>`}</span>
   </button>`;
 }
@@ -1675,6 +1712,7 @@ $("#zonePanel").addEventListener("click", e => {
 const CAT_SERVIZIO = "https://cataloghi.webmalfer.workers.dev";
 let catalogo = [], catOrdine = [], catStato = "idle";   // idle | carico | ok | errore
 let catPuoCaricare = false, catPingFatto = false;
+const catMosse = new Map();                              // file -> { categoria, t }: spostamenti fatti da qui, finché il sito non si aggiorna
 const catPend = [];                                     // cataloghi caricati in questa sessione e non ancora online per gli altri
 const cat = { q: "", cat: "", tutti: false, chiusi: new Set() };
 
@@ -1688,6 +1726,7 @@ async function catLoad(){
     catalogo = (Array.isArray(j) ? j : (j.cataloghi || [])).filter(x => x && x.titolo && x.file);
     catOrdine = Array.isArray(j.categorie) ? j.categorie : [];
     catStato = "ok";
+    for(const [f, m] of catMosse){ if(Date.now() - m.t > 15 * 60e3) catMosse.delete(f); else { const x = catalogo.find(y => y.file === f); if(x) x.categoria = m.categoria; } }
     // cataloghi appena caricati da qui e non ancora pubblicati dal sito (1-2 minuti): si tengono in elenco
     const ora = Date.now();
     for(let i = catPend.length - 1; i >= 0; i--){
@@ -1795,6 +1834,7 @@ const catGrp = x => (x.categoria || "").trim() || "Altri cataloghi";
 const catPos = c => { const i = catOrdine.indexOf(c); return i < 0 ? 999 : i; };
 const catIcona = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>`;
 const catFreccia = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+const catMvIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 13h6m-2.5-2.5L15 13l-2.5 2.5"/></svg>`;
 const catShareIco = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>`;
 
 // Ricerca per inizio parola: "gelato" non trova "surgelato"; l'ultima lettera si ignora (mozzarella = mozzarelle).
@@ -1882,7 +1922,7 @@ function renderCataloghi(){
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno, x._nuovo ? "In pubblicazione…" : ""].filter(Boolean).join(" · ");
-      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button></li>`;
+      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button>${catPuoCaricare && !x._nuovo && /^cataloghi\/[a-z0-9-]+\.pdf\.enc$/.test(x.file) ? `<button class="icon-btn ct-mv" type="button" data-mv="${catalogo.indexOf(x)}" aria-label="Sposta ${esc(x.titolo)} in un'altra categoria">${catMvIco}</button>` : ""}</li>`;
     }).join("")}</ul>`;
     if(cat.cat && !cat.q.trim()){      // dentro una categoria: titolo grande invece dell'intestazione a comparsa
       const s = catStile(g);
@@ -1922,6 +1962,8 @@ $("#ctBody").addEventListener("click", e => {
     renderCataloghi(); return;
   }
   if(e.target.closest("#ctRetry")){ catLoad(); return; }
+  const mv = e.target.closest("[data-mv]");
+  if(mv){ const x = catalogo[+mv.dataset.mv]; if(x) catMvApri(x); return; }
   const s = e.target.closest("[data-share]");
   if(s){ const x = catalogo[+s.dataset.share]; if(x) catShare(x); }
 });
@@ -1964,6 +2006,7 @@ async function catPing(){
     catPuoCaricare = r.ok;
   }catch(err){ catPuoCaricare = false; catPingFatto = false; }       // offline: si riprova alla prossima apertura
   $("#ctAdd").classList.toggle("hidden", !catPuoCaricare);
+  if(catPuoCaricare) renderCataloghi();
 }
 
 function catB64Da(u8){
@@ -2076,6 +2119,57 @@ $("#catAddForm").addEventListener("submit", async e => {
     msg(err && err.message ? err.message : "Non sono riuscito a caricare il catalogo.");
     $("#catAddBar").classList.add("hidden"); $("#catAddOk").disabled = false; $("#catAddOk").textContent = "Riprova";
   }finally{ catAddInCorso = false; }
+});
+
+/* ---------- Spostare un catalogo in un'altra categoria ---------- */
+// Riusa POST /elenco del servizio (sostituisce la voce con lo stesso file), quindi vale per tutti gli account.
+let catMvX = null, catMvInCorso = false;
+function catMvApri(x){
+  catMvX = x;
+  const attuale = catGrp(x);
+  const cats = uniq(catalogo.map(catGrp)).sort((a, b) => catPos(a) - catPos(b) || a.localeCompare(b, "it"));
+  $("#catMvCat").innerHTML = cats.map(c => `<option${c === attuale ? " selected" : ""}>${esc(c)}</option>`).join("") + `<option value="__nuova">+ Nuova categoria…</option>`;
+  $("#catMvCat").value = attuale; $("#catMvNuova").value = ""; $("#catMvNuovaBox").classList.add("hidden");
+  $("#catMvNome").textContent = x.titolo + " · ora in «" + attuale + "»";
+  $("#catMvMsg").classList.add("hidden"); $("#catMvOk").disabled = false; $("#catMvOk").textContent = "Sposta";
+  $("#dlgCatMv").showModal();
+}
+$("#catMvX").addEventListener("click", () => { if(!catMvInCorso) $("#dlgCatMv").close(); });
+$("#catMvNo").addEventListener("click", () => { if(!catMvInCorso) $("#dlgCatMv").close(); });
+$("#dlgCatMv").addEventListener("cancel", e => { if(catMvInCorso) e.preventDefault(); });
+$("#catMvCat").addEventListener("change", e => {
+  const n = e.target.value === "__nuova";
+  $("#catMvNuovaBox").classList.toggle("hidden", !n);
+  if(n) $("#catMvNuova").focus();
+});
+$("#catMvForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(catMvInCorso || !catMvX) return;
+  const x = catMvX;
+  const msg = t => { const m = $("#catMvMsg"); m.textContent = t || ""; m.classList.toggle("hidden", !t); };
+  const categoria = ($("#catMvCat").value === "__nuova" ? $("#catMvNuova").value : $("#catMvCat").value).trim().replace(/\s+/g, " ");
+  if(!categoria) return msg("Scegli la categoria (o scrivi il nome di una nuova).");
+  if(categoria === catGrp(x)){ $("#dlgCatMv").close(); return; }
+  msg(""); catMvInCorso = true; $("#catMvOk").disabled = true; $("#catMvOk").textContent = "Sposto…";
+  try{
+    const voce = { titolo: x.titolo, file: x.file, categoria };
+    if(x.fornitore) voce.fornitore = x.fornitore;
+    if(x.desc) voce.desc = x.desc;
+    if(x.anno) voce.anno = x.anno;
+    voce.tag = [...new Set([...(x.tag || []), categoria].map(t => String(t).trim().toLowerCase()).filter(Boolean))];
+    const r = await fetch(CAT_SERVIZIO + "/elenco", { method: "POST", headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken(), "Content-Type": "application/json" }, body: JSON.stringify(voce) });
+    if(!r.ok){ let m = ""; try{ m = (await r.json()).errore; }catch(err){} throw new Error(m || "Non sono riuscito a spostare il catalogo. Riprova."); }
+    x.categoria = categoria; x.tag = voce.tag;
+    catMosse.set(x.file, { categoria, t: Date.now() });
+    if(!catOrdine.includes(categoria)) catOrdine.push(categoria);
+    $("#dlgCatMv").close();
+    if(cat.cat && cat.cat !== categoria && !catalogo.some(y => catGrp(y) === cat.cat)) cat.cat = "";
+    renderCataloghi();
+    toast("Spostato in «" + categoria + "». Agli altri compare tra 1-2 minuti.");
+  }catch(err){
+    msg(err && err.message ? err.message : "Non sono riuscito a spostare il catalogo.");
+    $("#catMvOk").disabled = false; $("#catMvOk").textContent = "Riprova";
+  }finally{ catMvInCorso = false; }
 });
 
 /* ---------- Lettore PDF dei cataloghi ---------- */
@@ -2406,14 +2500,15 @@ const ordineFatto = (c, iso) => (c.ordiniFatti || []).includes(iso);
 
 function renderGiro(){
   $("#daysStrip").innerHTML = DAY_SHORT.map((d,i) => {
-    const n = clienti.filter(c => (c.giorniOrdine||[]).includes(DAYS[i])).length;
+    const n = clienti.filter(c => (c.giorniOrdine||[]).includes(DAYS[i]) && !chiusoIl(c, giroData(i))).length;
     return `<button type="button" data-day="${i}" aria-pressed="${i === ui.giro}" class="${i === todayIdx ? "today" : ""}">${d}<span class="n">${n} ord.</span></button>`;
   }).join("");
   const day = DAYS[ui.giro], iso = giroData(ui.giro);
   const byPlace = (a,b) => (a.luogo||"").localeCompare(b.luogo||"","it") || (a.nome||"").localeCompare(b.nome||"","it");
   const giornoCons = DAYS[(ui.giro + 1) % DAYS.length];     // gli ordini raccolti oggi si consegnano il giorno dopo (sabato -> lunedì)
-  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(giornoCons));
-  const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day)).sort(byPlace);
+  const isoCons = giroData(ui.giro + (ui.giro === 5 ? 2 : 1));   // data della consegna (dopo il sabato: il lunedì)
+  const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(giornoCons) && !chiusoIl(c, isoCons));
+  const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day) && !chiusoIl(c, iso)).sort(byPlace);
   $("#giroLbl").textContent = day;
 
   // mappa: verde dove quel giorno si consegna, giallo dove no (segue il giorno scelto, di base oggi)
@@ -2862,7 +2957,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.2 (v3.2)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.3 (v3.3)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -2902,6 +2997,7 @@ function renderDetail(){
     ["Fornitori", esc((c.fornitori||[]).join(", "))],
     ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine].filter(Boolean).join(" · "))],
     ["Consegna", esc([(c.giorniConsegna||[]).join(", "), c.orarioConsegna].filter(Boolean).join(" · "))],
+    ["Chiusura", esc(chiusuraTesto(c))],
     ["Note", esc(c.note)]
   ].filter(x => x[1]);
   $("#dBody").innerHTML = `
@@ -2930,6 +3026,13 @@ function renderDetail(){
       <button class="chip-btn" type="button" data-rich="30">+1 mese</button>
       ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="cal">Aggiungi al calendario</button><button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
     </div>
+    <div class="richiamo">
+      <label for="dChDal">Chiusura</label>
+      <input class="input" type="date" id="dChDal" value="${c.chiusoDal || ""}" aria-label="Chiuso dal">
+      <input class="input" type="date" id="dChAl" value="${c.chiusoAl || ""}" aria-label="Chiuso fino al">
+      ${c.chiusoDal || c.chiusoAl ? `<button class="chip-btn" type="button" id="dChTogli">Rimuovi</button>` : ""}
+      <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Dal – fino al. In questi giorni il cliente non compare nel Giro.</span>
+    </div>
     ${pvDetailHTML(c)}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
@@ -2939,6 +3042,9 @@ function renderDetail(){
     update(c.id, { stato: nu, storico: [...(c.storico||[]), { d: localISO(), t: `Stato: ${statoLabel(old)} → ${statoLabel(nu)}` }] });
     toast("Stato aggiornato");
   };
+  $("#dChDal").onchange = e => update(c.id, { chiusoDal: e.target.value || "" });
+  $("#dChAl").onchange = e => update(c.id, { chiusoAl: e.target.value || "" });
+  const ct = $("#dChTogli"); if(ct) ct.onclick = () => { update(c.id, { chiusoDal: "", chiusoAl: "" }); toast("Chiusura rimossa"); };
   $("#dRich").onchange = e => update(c.id, e.target.value ? { ricontattare: e.target.value } : { ricontattare: "", ricontattareOra: "" });
   $("#dRichOra").onchange = e => {
     if(!c.ricontattare && e.target.value){ update(c.id, { ricontattare: localISO(), ricontattareOra: e.target.value }); return; }
