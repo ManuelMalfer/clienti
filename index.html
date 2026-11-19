@@ -234,7 +234,8 @@ form h3:first-child{margin-top:4px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
 .days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.day input{position:absolute;opacity:0;pointer-events:none}
+.day{position:relative;display:inline-flex}
+.day input{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}   /* l'input nascosto resta DENTRO il pulsante: prima stava in fondo al modulo e il browser faceva scorrere tutto fin lì */
 .day span{display:inline-flex;align-items:center;justify-content:center;min-width:48px;min-height:40px;border:1px solid var(--line);border-radius:10px;font-weight:600;background:var(--surface)}
 .day input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .day input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
@@ -811,6 +812,7 @@ button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
 .uni-col b{font-size:15.5px;overflow-wrap:anywhere}
 .uni-col span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 @media (max-width:520px){.uni-2{grid-template-columns:1fr}}
+.uni-tag{color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -1689,6 +1691,8 @@ function renderOptions(){
   renderPills();
 }
 
+// nomi che la scheda aveva prima di essere unita (campo `altriNomi`; per le unioni vecchie si leggono dalla riga dello storico "Unita con la scheda «…»")
+const uniAlias = c => { const a = [...(c.altriNomi || [])]; (c.storico || []).forEach(s => { const m = /Unita con la scheda «([^»]+)»/.exec((s && s.t) || ""); if(m) a.push(m[1]); }); return [...new Set(a.filter(x => x && norm(x) !== norm(c.nome)))]; };
 function filtered(){
   const words = ui.q.split(/\s+/).map(norm).filter(Boolean);
   return clienti.filter(c => {
@@ -1697,7 +1701,7 @@ function filtered(){
     if(ui.tipo && c.tipologia !== ui.tipo) return false;
     if(ui.zone.length && !ui.zone.includes(zonaDi(c))) return false;
     if(words.length){
-      const hay = norm([c.nome, c.ragioneSociale, c.cellulare, c.codice, c.referente, c.luogo, c.indirizzo, c.tipologia, c.tel, c.email, c.piva, (c.fornitori||[]).join(" "), c.note].join(" "));
+      const hay = norm([c.nome, c.ragioneSociale, uniAlias(c).join(" "), c.codice, c.codiceDest, c.codiceFatt, c.codiceReport, c.cellulare, c.referente, c.luogo, c.indirizzo, c.tipologia, c.tel, c.email, c.piva, (c.fornitori||[]).join(" "), c.note].join(" "));
       return words.every(w => hay.includes(w));
     }
     return true;
@@ -1713,11 +1717,19 @@ const inizialiDi = n => {
   const p = String(n || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(w => w && !/^(il|lo|la|le|l|da|di|del|dei|al|alla|e|&)$/i.test(w));
   return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase();
 };
+// scheda unita (fatturazione + destinazione): sotto il nome si vedono i nomi e i codici dell'altra parte
+function uniTag(c){
+  if(!(c.codiceDest || c.codiceFatt)) return "";
+  const al = uniAlias(c).concat(c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? [c.ragioneSociale] : []);
+  const t = al.filter((x, i) => al.findIndex(y => norm(y) === norm(x)) === i).slice(0, 2).join(" · ");
+  const cod = [c.codice ? "cod. " + c.codice : "", c.codiceDest ? "dest. " + c.codiceDest : "", c.codiceFatt && c.codiceFatt !== c.codice ? "fatt. " + c.codiceFatt : ""].filter(Boolean).join(" · ");
+  return `<span class="row-sub uni-tag">⇄ ${esc([t, cod].filter(Boolean).join(" · "))}</span>`;
+}
 function rowHTML(c, side = "", av = ""){
   const sub = [c.luogo, c.tipologia].filter(Boolean).join(" · ") || c.indirizzo || "";
   return `<button class="row ${statoCls(c.stato)}" data-open="${c.id}">
     ${av || `<span class="av" aria-hidden="true">${esc(inizialiDi(c.nome))}</span>`}
-    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${chiusuraTesto(c) ? `<span class="flag chiuso">${esc(chiusuraTesto(c))}</span>` : ""}${side ? "" : richiamoTag(c)}</span>
+    <span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc(sub)}</span>${side ? "" : uniTag(c)}${chiusuraTesto(c) ? `<span class="flag chiuso">${esc(chiusuraTesto(c))}</span>` : ""}${side ? "" : richiamoTag(c)}</span>
     <span class="row-side">${side || `<span class="st-pill">${esc(statoLabel(c.stato))}</span>`}</span>
   </button>`;
 }
@@ -3236,6 +3248,7 @@ function unisciSchede(f, d, oggi){
   ["nome", "indirizzo", "cap", "luogo", "prov", "tipologia", "referente", "tel", "cellulare", "email", "orarioOrdine", "orarioConsegna"].forEach(k => { o[k] = prima(d[k], f[k]); });
   ["ragioneSociale", "piva", "codiceFiscale", "codiceUnivoco", "pec", "pagamento"].forEach(k => { o[k] = prima(f[k], d[k]); });
   if(!v(o.ragioneSociale) && v(f.nome) && String(f.nome).trim() !== String(o.nome).trim()) o.ragioneSociale = f.nome;
+  o.altriNomi = [...new Set([...(f.altriNomi || []), ...(d.altriNomi || []), f.nome, d.nome].filter(x => v(x) && String(x).trim().toLowerCase() !== String(o.nome).trim().toLowerCase()))];
   o.codice = prima(f.codice, d.codice);
   o.codiceDest = v(d.codice) && String(d.codice) !== String(o.codice) ? d.codice : prima(f.codiceDest, d.codiceDest);
   o.fornitori = [...new Set([...(f.fornitori || []), ...(d.fornitori || [])])];
@@ -3269,6 +3282,7 @@ function unisciDestinazione(f, d, oggi){
   o.codice = d.codice || f.codice || "";
   o.codiceDest = d.codiceDest || "";
   o.codiceFatt = f.codice || d.codiceFatt || "";
+  o.altriNomi = [...new Set([...(d.altriNomi || []), f.nome].filter(x => x && String(x).trim().toLowerCase() !== String(o.nome).trim().toLowerCase()))];
   o.lat = d.lat != null ? d.lat : null; o.lng = d.lng != null ? d.lng : null; o.approx = !!d.approx; o.geoFail = !!d.geoFail;
   o.ricontattare = d.ricontattare || ""; o.ricontattareOra = d.ricontattareOra || "";
   o.ordiniFatti = d.ordiniFatti || [];
@@ -3897,7 +3911,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.10 (v4.10)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.12 (v4.12)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
