@@ -3116,7 +3116,7 @@ const tgtDig = s => String(s || "").replace(/\D/g, "").replace(/^0+/, "");
 // `codiceReport` = codice del report collegato a mano (Collega) quando la scheda ha già un altro codice
 function tgtMatch(c, x){
   const cx = tgtDig(x.c);
-  return [c.codice, c.codiceDest, c.codiceReport].map(tgtDig).filter(Boolean).some(k => k === cx || (k.length >= 5 && cx.endsWith(k)))
+  return [c.codice, c.codiceDest, c.codiceFatt, c.codiceReport].map(tgtDig).filter(Boolean).some(k => k === cx || (k.length >= 5 && cx.endsWith(k)))
     || !!(c.ragioneSociale && norm(c.ragioneSociale) === norm(x.n));
 }
 function tgtTrova(x){ return clienti.find(c => tgtMatch(c, x)) || null; }
@@ -3259,11 +3259,29 @@ function unisciSchede(f, d, oggi){
 /*UNI-PARSE-END*/
 
 const uniParole = s => new Set(deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2 && !["srl", "srls", "snc", "sas", "spa", "del", "dei", "della", "dello", "the"].includes(w)));
+
+// UNA fatturazione con PIÙ destinazioni (stessa società, più locali): le destinazioni restano schede separate (sono locali diversi), ognuna col suo nome,
+// indirizzo e codice 120…, e prende i dati di fatturazione (ragione sociale, P.IVA, pagamento…) più il codice di fatturazione in `codiceFatt`.
+// La scheda di fatturazione, che non è un locale, viene poi eliminata.
+/*UNI2-PARSE-START*/
+function unisciDestinazione(f, d, oggi){
+  const o = unisciSchede(f, d, oggi);
+  o.codice = d.codice || f.codice || "";
+  o.codiceDest = d.codiceDest || "";
+  o.codiceFatt = f.codice || d.codiceFatt || "";
+  o.lat = d.lat != null ? d.lat : null; o.lng = d.lng != null ? d.lng : null; o.approx = !!d.approx; o.geoFail = !!d.geoFail;
+  o.ricontattare = d.ricontattare || ""; o.ricontattareOra = d.ricontattareOra || "";
+  o.ordiniFatti = d.ordiniFatti || [];
+  o.storico = [...(d.storico || []), { d: oggi, t: "Dati di fatturazione presi da «" + f.nome + "»" + (f.codice ? " (cod. " + f.codice + ")" : "") + ", condivisa con altre destinazioni" }];
+  return o;
+}
+/*UNI2-PARSE-END*/
+
 // coppie probabili: una destinazione (120…) con una fatturazione (100…) che ha la stessa P.IVA, lo stesso indirizzo, la stessa coda del codice o un nome simile
 function uniCoppie(){
-  const fatt = clienti.filter(c => uniTipo(c) === "fatt"), usati = {};
+  const fatt = clienti.filter(c => uniTipo(c) === "fatt" && !c.codiceDest), usati = {};
   const coppie = [];
-  clienti.filter(c => uniTipo(c) === "dest").forEach(d => {
+  clienti.filter(c => uniTipo(c) === "dest" && !c.codiceFatt).forEach(d => {
     let migliore = null;
     fatt.forEach(f => {
       let p = 0;
@@ -3281,45 +3299,56 @@ function uniCoppie(){
   return coppie.sort((a, b) => b.p - a.p || (a.d.nome || "").localeCompare(b.d.nome || "", "it"));
 }
 
-const uni = { modo: "coppie", f: null, d: null, a: null, q: "", da: "" };   // da = "coppie" se si è partiti dall'elenco dei doppioni
+// az = azione in corso nella ricerca: "" (scelta normale), "aggiungi" (un'altra destinazione), "cambiaF" (altra fatturazione), "cambiaD" (altra destinazione)
+const uni = { modo: "coppie", f: null, ds: [], a: null, q: "", da: "", az: "" };   // da = "coppie" se si è partiti dall'elenco dei doppioni
 const uniRiga = (c, extra) => `<span>${esc(c.nome)}<small>${esc([c.codice ? "Cod. " + c.codice : "", c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", [c.indirizzo, c.luogo].filter(Boolean).join(", ")].filter(Boolean).join(" · "))}</small>${extra || ""}</span>`;
 function uniApri(modo, a, da){
-  uni.modo = modo; uni.a = a || null; uni.da = da || ""; uni.q = ""; uni.f = uni.d = null;
+  uni.modo = modo; uni.a = a || null; uni.da = da || ""; uni.q = ""; uni.f = null; uni.ds = []; uni.az = "";
   uniRender();
   if(!$("#dlgUni").open) $("#dlgUni").showModal();
 }
+const uniBlocco = (c, ruolo, x) => `<div class="uni-col"><small>${ruolo}</small><b>${esc(c.nome)}</b>${[c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", c.codice ? "Cod. " + c.codice : "", c.piva ? "P.IVA " + c.piva : "", [c.indirizzo, c.luogo].filter(Boolean).join(", "), c.tel || c.cellulare].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join("")}${x || ""}</div>`;
 function uniRender(){
   const body = $("#uniBody"), foot = $("#uniFoot");
   foot.classList.toggle("hidden", uni.modo !== "conferma");
   if(uni.modo === "coppie"){
     $("#uniT").textContent = "Doppioni";
-    const L = uniCoppie();
+    const L = uniCoppie(), gruppi = [...new Set(L.filter(o => o.multi).map(o => o.f.id))];
     body.innerHTML = L.length
-      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e unisci.</p>` +
-        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni: controlla bene" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Unisci</button><button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
+      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e unisci. Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
+        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Unisci</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
       : `<p class="hint">Non trovo doppioni tra i clienti con codice 100… e 120….</p>`;
-    body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o il doppione non è in elenco? Scegli tu le due schede, con la ricerca.</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
+    body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o il doppione non è in elenco? Scegli tu le schede, con la ricerca (anche più destinazioni per una stessa fatturazione).</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
   } else if(uni.modo === "scegli"){
     const a = uni.a ? byId(uni.a) : null; if(uni.a && !a){ $("#dlgUni").close(); return; }
-    $("#uniT").textContent = a ? "Scegli l'altra scheda" : "Collega a mano";
-    body.innerHTML = (uni.da === "coppie" ? `<button type="button" class="link" data-uniback style="padding:0 0 8px">‹ Torna ai doppioni</button>` : "") + (a
-      ? `<p class="hint" style="margin:0 0 8px">Scheda scelta: <b>${esc(a.nome)}</b>${a.codice ? " · cod. " + esc(a.codice) : ""}<br>Cerca l'altra scheda dello stesso locale (nome, codice, ragione sociale, indirizzo).</p>`
-      : `<p class="hint" style="margin:0 0 8px">Cerca la prima scheda (nome, codice, ragione sociale, indirizzo): di solito quella della destinazione, col nome del locale.</p>`) + `
+    $("#uniT").textContent = uni.az === "aggiungi" ? "Aggiungi una destinazione" : uni.az === "cambiaF" ? "Scegli la fatturazione" : uni.az === "cambiaD" ? "Scegli la destinazione" : a ? "Scegli l'altra scheda" : "Collega a mano";
+    const testo = uni.az === "aggiungi" ? "Cerca un'altra destinazione (un altro locale della stessa società)." : uni.az === "cambiaF" ? "Cerca la scheda di fatturazione giusta (codice 100…, ragione sociale)." : uni.az === "cambiaD" ? "Cerca la scheda della destinazione (col nome del locale)." : a ? "Cerca l'altra scheda dello stesso locale (nome, codice, ragione sociale, indirizzo)." : "Cerca la prima scheda (nome, codice, ragione sociale, indirizzo): di solito quella della destinazione, col nome del locale.";
+    body.innerHTML = (uni.az ? `<button type="button" class="link" data-uniindietro style="padding:0 0 8px">‹ Indietro</button>` : uni.da === "coppie" ? `<button type="button" class="link" data-uniback style="padding:0 0 8px">‹ Torna ai doppioni</button>` : "")
+      + (a ? `<p class="hint" style="margin:0 0 4px">Scheda di riferimento: <b>${esc(a.nome)}</b>${a.codice ? " · cod. " + esc(a.codice) : ""}</p>` : "") + `<p class="hint" style="margin:0 0 8px">${testo}</p>
       <input class="input" id="uniQ" type="search" placeholder="Cerca per nome o codice…" autocomplete="off" aria-label="Cerca cliente">
       <div class="tg-list" id="uniLista" style="margin-top:10px;max-height:46vh;overflow:auto"></div>`;
     uniLista();
   } else {
-    const f = byId(uni.f), d = byId(uni.d); if(!f || !d){ $("#dlgUni").close(); return; }
-    $("#uniT").textContent = "Unisci le due schede";
-    const r = unisciSchede(f, d, localISO());
-    const blocco = (c, ruolo) => `<div class="uni-col"><small>${ruolo}</small><b>${esc(c.nome)}</b>${[c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", c.codice ? "Cod. " + c.codice : "", c.piva ? "P.IVA " + c.piva : "", [c.indirizzo, c.luogo].filter(Boolean).join(", "), c.tel || c.cellulare].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
-    body.innerHTML = `<div class="uni-2">${blocco(f, "Fatturazione (si tiene questa scheda)")}${blocco(d, "Destinazione (nome del locale)")}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"><button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button><button class="chip-btn" type="button" data-unicambia="d">Cambia la fatturazione</button><button class="chip-btn" type="button" data-unicambia="f">Cambia la destinazione</button></div>
-      <div class="tg-det" style="margin-top:0"><h3>Dopo l'unione</h3>
-        <p class="hint" style="margin:0 0 2px"><b>${esc(r.nome)}</b>${r.ragioneSociale && norm(r.ragioneSociale) !== norm(r.nome) ? " · " + esc(r.ragioneSociale) : ""}</p>
+    const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length){ $("#dlgUni").close(); return; }
+    uni.ds = ds.map(x => x.id);
+    const g = ds.length > 1;
+    $("#uniT").textContent = g ? "Una fatturazione, più destinazioni" : "Unisci le due schede";
+    const tasti = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">${g ? "" : `<button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button>`}<button class="chip-btn" type="button" data-unicambia="F">Cambia la fatturazione</button>${g ? "" : `<button class="chip-btn" type="button" data-unicambia="D">Cambia la destinazione</button>`}<button class="chip-btn" type="button" data-uniplus>+ Aggiungi un'altra destinazione</button></div>`;
+    let risultato, avviso;
+    if(!g){
+      const r = unisciSchede(f, ds[0], localISO());
+      risultato = `<p class="hint" style="margin:0 0 2px"><b>${esc(r.nome)}</b>${r.ragioneSociale && norm(r.ragioneSociale) !== norm(r.nome) ? " · " + esc(r.ragioneSociale) : ""}</p>
         <p class="hint" style="margin:0 0 2px">Codice ${esc(r.codice || "—")}${r.codiceDest ? " · destinazione " + esc(r.codiceDest) : ""}${r.piva ? " · P.IVA " + esc(r.piva) : ""}</p>
-        <p class="hint" style="margin:0">${esc([r.indirizzo, r.luogo].filter(Boolean).join(", ") || "Nessun indirizzo")} · stato ${esc(statoLabel(r.stato))}</p></div>
-      <p class="hint" style="margin:10px 0 0">I dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(d.nome)}» viene <b>eliminata</b>: non si può annullare.</p>
+        <p class="hint" style="margin:0">${esc([r.indirizzo, r.luogo].filter(Boolean).join(", ") || "Nessun indirizzo")} · stato ${esc(statoLabel(r.stato))}</p>`;
+      avviso = `I dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(ds[0].nome)}» viene <b>eliminata</b>: non si può annullare.`;
+    } else {
+      risultato = `<p class="hint" style="margin:0 0 4px">Restano <b>${ds.length} schede</b>, una per locale, ognuna con ragione sociale, P.IVA e pagamento di <b>${esc(f.nome)}</b> e il codice di fatturazione ${esc(f.codice || "—")}:</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
+      avviso = `Le destinazioni restano schede separate (sono locali diversi); i preventivi e le proposte di Rosario della fatturazione passano alla prima. La scheda di fatturazione «${esc(f.nome)}» viene <b>eliminata</b>: non si può annullare.`;
+    }
+    body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? "Fatturazione (sarà eliminata)" : "Fatturazione (si tiene questa scheda)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
+      + (g ? `<div class="uni-2" style="margin-top:10px">${ds.map(d => uniBlocco(d, "Destinazione", `<button type="button" class="link" data-unirim="${d.id}" style="align-self:flex-start;padding:4px 0">Togli</button>`)).join("")}</div>` : "")
+      + tasti + `<div class="tg-det" style="margin-top:0"><h3>Dopo l'unione</h3>${risultato}</div>
+      <p class="hint" style="margin:10px 0 0">${avviso}</p>
       <p class="hint hidden" id="uniMsg" role="alert" style="color:var(--danger);margin-top:8px"></p>`;
   }
 }
@@ -3327,7 +3356,8 @@ function uniLista(){
   if(!$("#uniLista")) return;
   const a = uni.a ? byId(uni.a) : null;
   const q = norm($("#uniQ").value), pa = a ? uniParole(a.nome + " " + (a.ragioneSociale || "")) : new Set();
-  let L = clienti.filter(c => !a || c.id !== a.id).map(c => ({ c, t: norm([c.nome, c.ragioneSociale, c.luogo, c.codice, c.codiceDest, c.indirizzo].join(" ")), s: a ? [...uniParole(c.nome + " " + (c.ragioneSociale || ""))].filter(w => pa.has(w)).length + (uniTipo(c) && uniTipo(c) !== uniTipo(a) ? 1 : 0) : 0 }));
+  const esclusi = new Set([uni.f, ...uni.ds, a && a.id].filter(Boolean));
+  let L = clienti.filter(c => !esclusi.has(c.id)).map(c => ({ c, t: norm([c.nome, c.ragioneSociale, c.luogo, c.codice, c.codiceDest, c.indirizzo].join(" ")), s: a ? [...uniParole(c.nome + " " + (c.ragioneSociale || ""))].filter(w => pa.has(w)).length + (uniTipo(c) && uniTipo(c) !== uniTipo(a) ? 1 : 0) : 0 }));
   if(q) L = L.filter(o => o.t.includes(q));
   L = L.sort((x, y) => y.s - x.s || (x.c.nome || "").localeCompare(y.c.nome || "", "it")).slice(0, 40);
   $("#uniLista").innerHTML = L.map(({ c }) => `<button type="button" class="tg-cli" data-unipick="${c.id}">${uniRiga(c)}</button>`).join("") || `<p class="hint">Nessun cliente trovato.</p>`;
@@ -3338,34 +3368,60 @@ function uniConferma(idA, idB){
   let f = a, d = b;
   if(uniTipo(a) === "dest" || (uniTipo(b) === "fatt" && uniTipo(a) !== "fatt")){ f = b; d = a; }
   else if(!uniTipo(a) && !uniTipo(b) && !(a.piva || a.ragioneSociale) && (b.piva || b.ragioneSociale)){ f = b; d = a; }
-  uni.modo = "conferma"; uni.f = f.id; uni.d = d.id; uniRender();
+  uni.modo = "conferma"; uni.f = f.id; uni.ds = [d.id]; uni.az = ""; uniRender();
 }
 $("#uniX").addEventListener("click", () => $("#dlgUni").close());
 $("#uniNo").addEventListener("click", () => $("#dlgUni").close());
 $("#uniBody").addEventListener("click", e => {
   const c = e.target.closest("[data-uni]"); if(c){ const [f, d] = c.dataset.uni.split("|"); uniConferma(f, d); return; }
-  const p = e.target.closest("[data-unipick]"); if(p){ if(!uni.a){ uni.a = p.dataset.unipick; uniRender(); } else uniConferma(uni.a, p.dataset.unipick); return; }
+  const gr = e.target.closest("[data-unigruppo]"); if(gr){ uni.f = gr.dataset.unigruppo; uni.ds = uniCoppie().filter(o => o.f.id === uni.f).map(o => o.d.id); uni.modo = "conferma"; uni.az = ""; uniRender(); return; }
+  const p = e.target.closest("[data-unipick]");
+  if(p){
+    const id = p.dataset.unipick;
+    if(uni.az){
+      if(uni.az === "aggiungi"){ if(id !== uni.f && !uni.ds.includes(id)) uni.ds.push(id); }
+      else if(uni.az === "cambiaF"){ const vecchio = uni.f; uni.f = id; uni.ds = uni.ds.filter(x => x !== id); if(!uni.ds.length) uni.ds = [vecchio]; }
+      else if(uni.az === "cambiaD"){ uni.ds = [id]; }
+      uni.az = ""; uni.modo = "conferma"; uniRender(); return;
+    }
+    if(!uni.a){ uni.a = id; uniRender(); } else uniConferma(uni.a, id);
+    return;
+  }
   const alt = e.target.closest("[data-unialtra]"); if(alt){ uniApri("scegli", alt.dataset.unialtra, "coppie"); return; }
   if(e.target.closest("[data-uniman]")){ uniApri("scegli", null, "coppie"); return; }
   if(e.target.closest("[data-uniback]")){ uniApri("coppie"); return; }
-  const cb = e.target.closest("[data-unicambia]"); if(cb){ const tieni = cb.dataset.unicambia === "d" ? uni.d : uni.f; uniApri("scegli", tieni, uni.da); return; }
-  if(e.target.closest("[data-uniswap]")){ [uni.f, uni.d] = [uni.d, uni.f]; uniRender(); }
+  if(e.target.closest("[data-uniindietro]")){ uni.az = ""; uni.modo = "conferma"; uniRender(); return; }
+  if(e.target.closest("[data-uniplus]")){ uni.az = "aggiungi"; uni.modo = "scegli"; uni.a = uni.f; uniRender(); return; }
+  const cb = e.target.closest("[data-unicambia]"); if(cb){ uni.az = cb.dataset.unicambia === "F" ? "cambiaF" : "cambiaD"; uni.modo = "scegli"; uni.a = cb.dataset.unicambia === "F" ? uni.ds[0] : uni.f; uniRender(); return; }
+  const rim = e.target.closest("[data-unirim]"); if(rim){ uni.ds = uni.ds.filter(x => x !== rim.dataset.unirim); uniRender(); return; }
+  if(e.target.closest("[data-uniswap]")){ const vecchio = uni.f; uni.f = uni.ds[0]; uni.ds = [vecchio]; uniRender(); }
 });
 $("#uniBody").addEventListener("input", e => { if(e.target.id === "uniQ") uniLista(); });
 $("#uniOk").addEventListener("click", async () => {
-  const f = byId(uni.f), d = byId(uni.d); if(!f || !d) return;
+  const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length) return;
   const msg = t => { const m = $("#uniMsg"); if(m){ m.textContent = t || ""; m.classList.toggle("hidden", !t); } };
   $("#uniOk").disabled = true; $("#uniOk").textContent = "Unisco…"; msg("");
   try{
-    const dati = unisciSchede(f, d, localISO());
-    await updateDoc(ref(f.id), { ...dati, aggiornato: nowISO() });
-    for(const p of preventivi.filter(x => x.clienteId === d.id)) await updateDoc(doc(pvCol(), p.id), { clienteId: f.id });
-    for(const p of rosario.filter(x => x.clienteId === d.id)) await updateDoc(rosRef(p.id), { clienteId: f.id, clienteNome: dati.nome });
-    await deleteDoc(ref(d.id));
-    toast("Schede unite: «" + dati.nome + "»");
+    let nome;
+    if(ds.length === 1){
+      const d = ds[0], dati = unisciSchede(f, d, localISO());
+      await updateDoc(ref(f.id), { ...dati, aggiornato: nowISO() });
+      for(const p of preventivi.filter(x => x.clienteId === d.id)) await updateDoc(doc(pvCol(), p.id), { clienteId: f.id });
+      for(const p of rosario.filter(x => x.clienteId === d.id)) await updateDoc(rosRef(p.id), { clienteId: f.id, clienteNome: dati.nome });
+      await deleteDoc(ref(d.id));
+      nome = dati.nome; toast("Schede unite: «" + nome + "»");
+    } else {
+      // una fatturazione, più destinazioni: ogni destinazione resta una scheda con i dati di fatturazione, poi si elimina la fatturazione
+      const primo = ds[0];
+      for(const d of ds) await updateDoc(ref(d.id), { ...unisciDestinazione(f, d, localISO()), aggiornato: nowISO() });
+      for(const p of preventivi.filter(x => x.clienteId === f.id)) await updateDoc(doc(pvCol(), p.id), { clienteId: primo.id });
+      for(const p of rosario.filter(x => x.clienteId === f.id)) await updateDoc(rosRef(p.id), { clienteId: primo.id, clienteNome: primo.nome });
+      await deleteDoc(ref(f.id));
+      nome = f.nome; toast(ds.length + " destinazioni collegate a «" + nome + "»");
+    }
     if($("#dlgDetail").open) $("#dlgDetail").close();
-    if(uni.a){ $("#dlgUni").close(); }
-    else { uni.modo = "coppie"; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altri doppioni…</p>`; }
+    if(uni.a && uni.da !== "coppie"){ $("#dlgUni").close(); }
+    else { uni.modo = "coppie"; uni.az = ""; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altri doppioni…</p>`; }
   }catch(err){ msg("Non sono riuscito a unire le schede: " + (err && err.message ? err.message : "riprova.")); }
   finally{ $("#uniOk").disabled = false; $("#uniOk").textContent = "Unisci"; }
 });
@@ -3837,7 +3893,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.8 (v4.8)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.9 (v4.9)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -3920,7 +3976,7 @@ function renderDetail(){
       <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">Lo stesso locale con due codici (fatturazione e destinazione)</span>
       <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>
     </div>
-    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}`;
+    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
     : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
@@ -4269,7 +4325,7 @@ $("#fileImport").addEventListener("change", async e => {
     const luoghi = {}; clienti.forEach(c => { if(c.luogo) luoghi[norm(c.luogo)] = c.luogo; });
     const digits = t => String(t || "").replace(/[^\d]/g, "").replace(/^0039|^39(?=3\d{9}$)/, "");
     const trova = c => {
-      if(c.codice){ const x = clienti.find(e => (e.codice && String(e.codice) === String(c.codice)) || (e.codiceDest && String(e.codiceDest) === String(c.codice))); if(x) return x; }
+      if(c.codice){ const x = clienti.find(e => (e.codice && String(e.codice) === String(c.codice)) || (e.codiceDest && String(e.codiceDest) === String(c.codice)) || (e.codiceFatt && String(e.codiceFatt) === String(c.codice))); if(x) return x; }
       const tels = [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
       if(tels.length){ const x = clienti.find(e => [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
       if(c.ragioneSociale){ const x = clienti.find(e => e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
