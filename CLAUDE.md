@@ -289,6 +289,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.16** = v4.15 + correzione dell'**import Excel**: una riga di fatturazione (es. ARIKI S.R.L., 1001090070) non viene più scambiata per una delle sue destinazioni collegate. Tag Git `v4.16`; la scritta in Riepilogo dice 4.16.
 - **v4.17** = v4.16 + l'**import Excel non fonde più fatturazione e destinazione** nella stessa scheda e le **collega da solo**. Tag Git `v4.17`; la scritta in Riepilogo dice 4.17.
 - **v4.18** = v4.17 + abbinamento fatturazione/destinazione con la **regola dei codici Marchi** e correzione delle schede create con il codice della fatturazione (caso ALPI). Tag Git `v4.18`; la scritta in Riepilogo dice 4.18.
+- **v4.19** = v4.18 **senza più l'unione delle schede**: fatturazione e destinazione si possono solo **collegare** (richiesta di Manuel). Tag Git `v4.19`; la scritta in Riepilogo dice 4.19.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -408,7 +409,11 @@ da solo il tipo (`bdgCaricaFile`): scheda performance, report target, **Analisi 
 - I report crediti settimanali (fino ad aprile) NON sono usati: l'azienda non li manda più (deciso con Manuel).
 - Provato con i file veri: pressione gennaio–ottobre (totali e somme dei clienti coincidono; ottobre 6,46%), provvigioni (totali mensili uguali al foglio Riepilogo, −19.079,57 €).
 
-### Unire le schede doppie (v4.5)
+### Fatturazione e destinazioni (dalla v4.19 solo COLLEGARE)
+
+**Dalla v4.19 l'unione in una scheda non è più disponibile** (decisione di Manuel): si può solo **collegare** una o più destinazioni a una fatturazione. Il tasto `#uniOk` ("Unisci in una scheda") resta nel codice ma sempre nascosto; `unisciSchede`/`unisciDestinazione` non sono più raggiungibili dall'interfaccia. Nomi nuovi: Riepilogo → **"Collega fatturazioni e destinazioni"** (prima "Cerca doppioni"), finestra "Fatturazioni e destinazioni", tasti **Collega** / **Collega tutte** / **Cambia** / **Collega a mano…**; nella scheda cliente la riga si chiama **Fatturazione** con il tasto **Collega a…**. **Annulla unione** compare solo sulle schede unite con le versioni vecchie (`codiceDest`), per separarle; per togliere un collegamento c'è "Scollega dalla fatturazione". Le sezioni qui sotto descrivono anche il vecchio funzionamento.
+
+### Unire le schede doppie (v4.5, non più disponibile dalla v4.19)
 
 L'export del gestionale può creare **due clienti per lo stesso locale**: la **fatturazione** (codice che inizia per **100…**, ragione sociale e dati fiscali) e la **destinazione**
 (codice che inizia per **120…**, di solito col nome vero del locale). Segnalato dal papà di Manuel. Funzioni (blocco "Unire due schede" in `index.html`, `unisciSchede` pura tra i marcatori `UNI-PARSE-START/END`):

@@ -1088,7 +1088,7 @@ main.view{padding-top:14px}
     <div class="dlg">
       <div class="dlg-head"><h2 id="uniT">Unisci schede</h2><button class="close" type="button" id="uniX" aria-label="Chiudi">×</button></div>
       <div class="dlg-body" id="uniBody"></div>
-      <div class="dlg-foot hidden" id="uniFoot"><button class="btn" type="button" id="uniNo">Annulla</button><button class="btn" type="button" id="uniOk">Unisci in una scheda</button><button class="btn btn-primary" type="button" id="uniLega">Collega (schede separate)</button></div>
+      <div class="dlg-foot hidden" id="uniFoot"><button class="btn" type="button" id="uniNo">Annulla</button><button class="btn hidden" type="button" id="uniOk" aria-hidden="true">Unisci in una scheda</button><button class="btn btn-primary" type="button" id="uniLega">Collega (schede separate)</button></div>
     </div>
   </dialog>
   <dialog id="dlgSure" class="sure" aria-labelledby="sureT" aria-describedby="sureTxt">
@@ -3385,18 +3385,18 @@ function uniRender(){
   const body = $("#uniBody"), foot = $("#uniFoot");
   foot.classList.toggle("hidden", uni.modo !== "conferma");
   if(uni.modo === "coppie"){
-    $("#uniT").textContent = "Doppioni";
+    $("#uniT").textContent = "Fatturazioni e destinazioni";
     const L = uniCoppie(), gruppi = [...new Set(L.filter(o => o.multi).map(o => o.f.id))];
     body.innerHTML = L.length
-      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e <b>collega</b> (restano due schede, la destinazione sta sotto la fatturazione) oppure <b>unisci</b> (una scheda sola). Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
-        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Collega / unisci</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
-      : `<p class="hint">Non trovo doppioni tra i clienti con codice 100… e 120….</p>`;
-    body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o il doppione non è in elenco? Scegli tu le schede, con la ricerca (anche più destinazioni per una stessa fatturazione).</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
+      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "destinazione (codice 120…, col nome del locale) sembra appartenere" : "destinazioni (codice 120…, col nome del locale) sembrano appartenere"} a una fatturazione (codice 100…). Controlla e <b>collega</b>: restano schede separate, la destinazione compare sotto la fatturazione. Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
+        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Collega</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
+      : `<p class="hint">Non trovo destinazioni (120…) da collegare a una fatturazione (100…).</p>`;
+    body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o la coppia non è in elenco? Scegli tu le schede, con la ricerca (anche più destinazioni per una stessa fatturazione).</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
   } else if(uni.modo === "scegli"){
     const a = uni.a ? byId(uni.a) : null; if(uni.a && !a){ $("#dlgUni").close(); return; }
     $("#uniT").textContent = uni.az === "aggiungi" ? "Aggiungi una destinazione" : uni.az === "cambiaF" ? "Scegli la fatturazione" : uni.az === "cambiaD" ? "Scegli la destinazione" : a ? "Scegli l'altra scheda" : "Collega a mano";
     const testo = uni.az === "aggiungi" ? "Cerca un'altra destinazione (un altro locale della stessa società)." : uni.az === "cambiaF" ? "Cerca la scheda di fatturazione giusta (codice 100…, ragione sociale)." : uni.az === "cambiaD" ? "Cerca la scheda della destinazione (col nome del locale)." : a ? "Cerca l'altra scheda dello stesso locale (nome, codice, ragione sociale, indirizzo)." : "Cerca la prima scheda (nome, codice, ragione sociale, indirizzo): di solito quella della destinazione, col nome del locale.";
-    body.innerHTML = (uni.az ? `<button type="button" class="link" data-uniindietro style="padding:0 0 8px">‹ Indietro</button>` : uni.da === "coppie" ? `<button type="button" class="link" data-uniback style="padding:0 0 8px">‹ Torna ai doppioni</button>` : "")
+    body.innerHTML = (uni.az ? `<button type="button" class="link" data-uniindietro style="padding:0 0 8px">‹ Indietro</button>` : uni.da === "coppie" ? `<button type="button" class="link" data-uniback style="padding:0 0 8px">‹ Torna all'elenco</button>` : "")
       + (a ? `<p class="hint" style="margin:0 0 4px">Scheda di riferimento: <b>${esc(a.nome)}</b>${a.codice ? " · cod. " + esc(a.codice) : ""}</p>` : "") + `<p class="hint" style="margin:0 0 8px">${testo}</p>
       <input class="input" id="uniQ" type="search" placeholder="Cerca per nome o codice…" autocomplete="off" aria-label="Cerca cliente">
       <div class="tg-list" id="uniLista" style="margin-top:10px;max-height:46vh;overflow:auto"></div>`;
@@ -3405,10 +3405,10 @@ function uniRender(){
     const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length){ $("#dlgUni").close(); return; }
     uni.ds = ds.map(x => x.id);
     const tieni = !!f.codiceDest;   // la fatturazione è già stata unita a una destinazione: è anche un locale, quindi resta
-    const g = ds.length > 1 || tieni;
-    $("#uniT").textContent = g ? "Una fatturazione, più destinazioni" : "Collega o unisci le due schede";
-    $("#uniOk").classList.toggle("hidden", g);
-    const tasti = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">${g ? "" : `<button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button>`}<button class="chip-btn" type="button" data-unicambia="F">Cambia la fatturazione</button>${g ? "" : `<button class="chip-btn" type="button" data-unicambia="D">Cambia la destinazione</button>`}<button class="chip-btn" type="button" data-uniplus>+ Aggiungi un'altra destinazione</button></div>`;
+    const g = true;      // dalla v4.19 si può solo collegare (niente unione in una scheda)
+    $("#uniT").textContent = ds.length > 1 ? "Collega la fatturazione alle destinazioni" : "Collega fatturazione e destinazione";
+    $("#uniOk").classList.add("hidden");
+    const tasti = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">${ds.length > 1 ? "" : `<button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button>`}<button class="chip-btn" type="button" data-unicambia="F">Cambia la fatturazione</button>${ds.length > 1 ? "" : `<button class="chip-btn" type="button" data-unicambia="D">Cambia la destinazione</button>`}<button class="chip-btn" type="button" data-uniplus>+ Aggiungi un'altra destinazione</button></div>`;
     let risultato, avviso;
     if(!g){
       const r = unisciSchede(f, ds[0], localISO());
@@ -3417,7 +3417,7 @@ function uniRender(){
         <p class="hint" style="margin:0">${esc([r.indirizzo, r.luogo].filter(Boolean).join(", ") || "Nessun indirizzo")} · stato ${esc(statoLabel(r.stato))}</p>`;
       avviso = `<b>Collega</b>: restano due schede separate; la destinazione compare sotto la fatturazione (freccia ▾ nell'elenco) e nessun dato cambia.<br><b>Unisci in una scheda</b>: i dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(ds[0].nome)}» viene <b>eliminata</b>: non si può annullare.`;
     } else {
-      risultato = `<p class="hint" style="margin:0 0 4px">Le destinazioni restano <b>schede separate</b> e compaiono sotto <b>${esc(f.nome)}</b> (cod. ${esc(f.codice || "—")}) nell'elenco clienti, con la freccia ▾:</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
+      risultato = `<p class="hint" style="margin:0 0 4px">${ds.length > 1 ? "Le destinazioni restano <b>schede separate</b> e compaiono" : "La destinazione resta una <b>scheda separata</b> e compare"} sotto <b>${esc(f.nome)}</b> (cod. ${esc(f.codice || "—")}) nell'elenco clienti, con la freccia ▾:</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
       avviso = `Nessuna scheda viene unita o eliminata: ogni destinazione tiene i suoi dati. Si può scollegare in qualsiasi momento dalla sua scheda.`;
     }
     body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? "Fatturazione (scheda principale)" : "Fatturazione (principale)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
@@ -3602,7 +3602,7 @@ $("#uniLega").addEventListener("click", async () => {
     toast(ds.length === 1 ? "Collegata a «" + f.nome + "»" : ds.length + " destinazioni collegate a «" + f.nome + "»");
     if($("#dlgDetail").open) $("#dlgDetail").close();
     if(uni.a && uni.da !== "coppie"){ $("#dlgUni").close(); }
-    else { uni.modo = "coppie"; uni.az = ""; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altri doppioni…</p>`; }
+    else { uni.modo = "coppie"; uni.az = ""; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altre destinazioni da collegare…</p>`; }
   }catch(err){ msg("Non sono riuscito a collegare: " + (err && err.message ? err.message : "riprova.")); }
   finally{ $("#uniLega").disabled = false; $("#uniLega").textContent = "Collega (schede separate)"; }
 });
@@ -4068,13 +4068,13 @@ function renderRiepilogo(){
       <div class="rp-tools">
         <button class="btn" type="button" id="impBtn">Importa da Excel</button>
         <button class="btn" type="button" id="expBtn">Esporta in Excel</button>
-        <button class="btn" type="button" id="uniBtn">Cerca doppioni</button>
+        <button class="btn" type="button" id="uniBtn">Collega fatturazioni e destinazioni</button>
       </div>
-      <p class="rp-note" style="margin-top:10px;font-size:13px">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Cerca doppioni" trova i locali presenti due volte (fatturazione 100… e destinazione 120…) e li unisce in una scheda.</p>
+      <p class="rp-note" style="margin-top:10px;font-size:13px">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p>
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.18 (v4.18)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.19 (v4.19)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4153,9 +4153,9 @@ function renderDetail(){
       <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Dal – fino al. In questi giorni il cliente non compare nel Giro.</span>
     </div>
     <div class="richiamo">
-      <label>Doppione?</label>
-      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : (c.codiceFatt || c.fattId) ? "Destinazione collegata alla fatturazione" + (c.codiceFatt ? " " + esc(c.codiceFatt) : "") : "Lo stesso locale con due codici (fatturazione e destinazione)"}</span>
-      <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>${c.codiceDest || c.codiceFatt || c.fattId ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
+      <label>Fatturazione</label>
+      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : (c.codiceFatt || c.fattId) ? "Destinazione collegata alla fatturazione" + (c.codiceFatt ? " " + esc(c.codiceFatt) : "") : "Collega questa scheda alla sua fatturazione o alle sue destinazioni"}</span>
+      <button class="chip-btn" type="button" data-uni-start>Collega a…</button>${c.codiceDest ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
     </div>
     ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${uniLegamiHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
