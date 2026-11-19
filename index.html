@@ -2920,11 +2920,30 @@ async function prsCarica(){
 const prsLista = () => Object.values(prs).filter(r => r && r.clienti && r.tot).sort((a, b) => a.key.localeCompare(b.key));
 const prsPerc = r => r.tot[0] ? r.tot[6] / r.tot[0] * 100 : 0;
 
+// somma di tutti i mesi caricati di un anno: totali e clienti (la pressione di ogni cliente si ricalcola sui totali dell'anno)
+function prsAnno(anno){
+  const mesi = prsLista().filter(x => x.anno === anno);
+  if(!mesi.length) return null;
+  const tot = Array(7).fill(0), cli = new Map();
+  mesi.forEach(r => {
+    r.tot.forEach((v, i) => { tot[i] += v || 0; });
+    r.clienti.forEach(x => {
+      let o = cli.get(x.c); if(!o){ o = { c: x.c, n: x.n, v: Array(6).fill(0), mesi: 0 }; cli.set(x.c, o); }
+      x.v.forEach((v, i) => { o.v[i] += v || 0; }); o.mesi++;
+    });
+  });
+  const clienti = [...cli.values()].map(o => ({ ...o, p: o.v[0] ? (o.v[1] + o.v[2] + o.v[3]) / o.v[0] * 100 : 0 }));
+  return { key: "A" + anno, anno, mese: 0, tot, clienti, nMesi: mesi.length, ultimo: mesi[mesi.length - 1].mese };
+}
 function prsVista(){
   const L = prsLista();
   if(!L.length) return { lbl: "", html: bdgVuoto(prsStato === "carico" || prsStato === "idle" ? "Carico i dati…" : "Nessuna analisi pressione caricata. Tocca <b>Carica scheda</b> e scegli i PDF «Analisi pressione» di Marchi (puoi sceglierne più di uno insieme).") };
-  const sel = prs[prsMese] ? prsMese : L[L.length - 1].key, r = prs[sel], anno = r.anno;
-  const nomeMese = BDG_MESI[r.mese - 1];
+  const ultimo = L[L.length - 1];
+  // selezione: un mese ("2026-10") oppure tutto l'anno ("A2026")
+  const annoSel = /^A\d{4}$/.test(prsMese || "") ? +prsMese.slice(1) : 0;
+  const r = annoSel ? prsAnno(annoSel) : (prs[prsMese] || ultimo);
+  const sel = r.key, anno = r.anno;
+  const periodo = annoSel ? "tutto il " + anno : BDG_MESI[r.mese - 1].toLowerCase();
   const perc = prsPerc(r), ok = perc <= PRS_LIMITE;
   const delAnno = L.filter(x => x.anno === anno), sL = delAnno.reduce((t, x) => t + x.tot[0], 0), sS = delAnno.reduce((t, x) => t + x.tot[6], 0), media = sL ? sS / sL * 100 : 0;
   const vals = Array(12).fill(null); delAnno.forEach(x => { vals[x.mese - 1] = prsPerc(x); });
@@ -2933,18 +2952,22 @@ function prsVista(){
   const sopra = cl.filter(x => x.p > PRS_LIMITE);
   const riga = x => {
     const c = tgtTrova(x), nome = c ? c.nome : tgtTit(x.n), sc = x.v[1] + x.v[2] + x.v[3];
-    return bdgVoce(c, `<span>${esc(nome)}<small>${bdgEuro(sc)} € di sconto su ${bdgEuro(x.v[0])} €${x.v[4] ? " · canvas " + bdgEuro(x.v[4]) + " €" : ""}</small></span><b class="${x.p > PRS_LIMITE ? "bdg-down" : ""}">${bdgPct(x.p)}</b>`, x);
+    const quando = annoSel ? ` · ${x.mesi} ${x.mesi === 1 ? "mese" : "mesi"}` : "";
+    return bdgVoce(c, `<span>${esc(nome)}<small>${bdgEuro(sc)} € di sconto su ${bdgEuro(x.v[0])} €${x.v[4] ? " · canvas " + bdgEuro(x.v[4]) + " €" : ""}${quando}</small></span><b class="${x.p > PRS_LIMITE ? "bdg-down" : ""}">${bdgPct(x.p)}</b>`, x);
   };
-  return { lbl: `${anno} · aggiornato a ${nomeMese.toLowerCase()}`, html: `
+  const terzo = annoSel
+    ? `<div class="bdg-kpi"><small>Ultimo mese (${BDG_MESI[ultimo.mese - 1].toLowerCase()})</small><b class="${prsPerc(ultimo) <= PRS_LIMITE ? "bdg-up" : "bdg-down"}">${bdgPct(prsPerc(ultimo))}</b><span>${r.nMesi} ${r.nMesi === 1 ? "mese caricato" : "mesi caricati"}</span></div>`
+    : `<div class="bdg-kpi"><small>Media ${anno}</small><b class="${media <= PRS_LIMITE ? "bdg-up" : "bdg-down"}">${bdgPct(media)}</b><span>${delAnno.length} ${delAnno.length === 1 ? "mese" : "mesi"}</span></div>`;
+  return { lbl: `${anno} · aggiornato a ${BDG_MESI[ultimo.mese - 1].toLowerCase()}`, html: `
     <div class="bdg-kpis">
-      <div class="bdg-kpi"><small>Pressione ${nomeMese.toLowerCase()}</small><b class="${ok ? "bdg-up" : "bdg-down"}">${bdgPct(perc)}</b><span class="${ok ? "bdg-up" : "bdg-down"}">${ok ? "sotto" : "sopra"} il limite del ${PRS_LIMITE}%</span></div>
-      <div class="bdg-kpi"><small>Sconti ${nomeMese.toLowerCase()}</small><b>${bdgEuro(r.tot[6])} €</b><span>su ${bdgEuro(r.tot[0])} € a listino</span></div>
-      <div class="bdg-kpi"><small>Media ${anno}</small><b class="${media <= PRS_LIMITE ? "bdg-up" : "bdg-down"}">${bdgPct(media)}</b><span>${delAnno.length} ${delAnno.length === 1 ? "mese" : "mesi"}</span></div>
+      <div class="bdg-kpi"><small>Pressione ${periodo}</small><b class="${ok ? "bdg-up" : "bdg-down"}">${bdgPct(perc)}</b><span class="${ok ? "bdg-up" : "bdg-down"}">${ok ? "sotto" : "sopra"} il limite del ${PRS_LIMITE}%</span></div>
+      <div class="bdg-kpi"><small>Sconti ${periodo}</small><b>${bdgEuro(r.tot[6])} €</b><span>su ${bdgEuro(r.tot[0])} € a listino</span></div>
+      ${terzo}
     </div>
     <section class="bdg-card"><h2>Pressione mese per mese</h2><div class="bdg-scroll">${grafico}</div></section>
-    <section class="bdg-card"><h2>Clienti · ${nomeMese.toLowerCase()}</h2>
-      ${bdgMeseChips(L.filter(x => x.anno === anno).map(x => [x.key, BDG_MESI[x.mese - 1]]), sel, "data-pmese")}
-      <p class="hint" style="margin:6px 0 4px">${sopra.length ? `<b>${sopra.length}</b> ${sopra.length === 1 ? "cliente è sopra" : "clienti sono sopra"} il limite del ${PRS_LIMITE}%: sono in cima.` : `Nessun cliente sopra il limite del ${PRS_LIMITE}%.`} Pressione = sconti (listino cliente, estemporaneo, borsellino) su valore a listino.</p>
+    <section class="bdg-card"><h2>Clienti · ${periodo}</h2>
+      ${bdgMeseChips([["A" + anno, "Anno " + anno], ...L.filter(x => x.anno === anno).map(x => [x.key, BDG_MESI[x.mese - 1]])], sel, "data-pmese")}
+      <p class="hint" style="margin:6px 0 4px">${sopra.length ? `<b>${sopra.length}</b> ${sopra.length === 1 ? "cliente è sopra" : "clienti sono sopra"} il limite del ${PRS_LIMITE}%: sono in cima.` : `Nessun cliente sopra il limite del ${PRS_LIMITE}%.`} Pressione = sconti (listino cliente, estemporaneo, borsellino) su valore a listino${annoSel ? ", sommando tutti i mesi caricati" : ""}.</p>
       <div class="tg-list">${cl.map(riga).join("")}</div>
     </section>` };
 }
@@ -4074,7 +4097,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.19 (v4.19)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.20 (v4.20)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

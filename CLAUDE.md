@@ -290,6 +290,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.17** = v4.16 + l'**import Excel non fonde più fatturazione e destinazione** nella stessa scheda e le **collega da solo**. Tag Git `v4.17`; la scritta in Riepilogo dice 4.17.
 - **v4.18** = v4.17 + abbinamento fatturazione/destinazione con la **regola dei codici Marchi** e correzione delle schede create con il codice della fatturazione (caso ALPI). Tag Git `v4.18`; la scritta in Riepilogo dice 4.18.
 - **v4.19** = v4.18 **senza più l'unione delle schede**: fatturazione e destinazione si possono solo **collegare** (richiesta di Manuel). Tag Git `v4.19`; la scritta in Riepilogo dice 4.19.
+- **v4.20** = v4.19 + nella **Pressione** la vista **Anno** (tutti i mesi caricati sommati). Tag Git `v4.20`; la scritta in Riepilogo dice 4.20.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -400,6 +401,7 @@ da solo il tipo (`bdgCaricaFile`): scheda performance, report target, **Analisi 
   `utenti/{uid}/impostazioni/pressione`, campo `r["2026-10"]` = `{key, anno, mese, tot[7], clienti:[{c, n, v[6], p}]}` (un nuovo caricamento sostituisce solo quel mese). Schermata: tre
   riquadri (pressione del mese, sconti, media dell'anno), grafico a barre mensile con linea tratteggiata al 5%, elenco clienti del mese scelto dal più alto (sopra il limite in rosso); i clienti
   senza scheda hanno "Collega" (come nei target). Nella scheda cliente: pressione dell'ultimo mese e ultimi mesi (`prsDetailHTML`).
+  **Vista Anno** (v4.20): la prima pillola è "Anno 2026" (`prsMese = "A2026"`, funzione `prsAnno`): somma listino e sconti di tutti i mesi caricati, per i totali e per ogni cliente, e ricalcola la pressione sui totali (non è la media delle percentuali). I riquadri diventano Pressione/Sconti di tutto l'anno e "Ultimo mese"; ogni cliente mostra in quanti mesi compare. Con i 10 PDF di gennaio–ottobre 2026: 5,50% (28.660 € di sconti su 521.055 € a listino), 35 clienti.
 - **Provvigioni** (file Excel "Provvigioni Anno 2026 …", un foglio "Mese di …" per mese più "Riepilogo"; `prvAnalizza`, marcatori `PRV-PARSE-START/END`, usa SheetJS già caricato): per ogni
   riga di fattura legge cliente (col. C), capitolo (D, categoria merceologica), fatturato (H) e valore provvigione (J); controlla che la somma torni con la riga "Totale" del foglio. Si salvano solo
   i totali per mese, per cliente e per capitolo in `utenti/{uid}/impostazioni/provvigioni` = `{anno, tot:{f[12],p[12]}, cap:[{k,n,f[12],p[12]}], cli:[{c,n,f[12],p[12]}]}`. **Nel file i valori sono
