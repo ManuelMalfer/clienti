@@ -3331,7 +3331,8 @@ function uniRender(){
   } else {
     const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length){ $("#dlgUni").close(); return; }
     uni.ds = ds.map(x => x.id);
-    const g = ds.length > 1;
+    const tieni = !!f.codiceDest;   // la fatturazione è già stata unita a una destinazione: è anche un locale, quindi resta
+    const g = ds.length > 1 || tieni;
     $("#uniT").textContent = g ? "Una fatturazione, più destinazioni" : "Unisci le due schede";
     const tasti = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">${g ? "" : `<button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button>`}<button class="chip-btn" type="button" data-unicambia="F">Cambia la fatturazione</button>${g ? "" : `<button class="chip-btn" type="button" data-unicambia="D">Cambia la destinazione</button>`}<button class="chip-btn" type="button" data-uniplus>+ Aggiungi un'altra destinazione</button></div>`;
     let risultato, avviso;
@@ -3342,10 +3343,10 @@ function uniRender(){
         <p class="hint" style="margin:0">${esc([r.indirizzo, r.luogo].filter(Boolean).join(", ") || "Nessun indirizzo")} · stato ${esc(statoLabel(r.stato))}</p>`;
       avviso = `I dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(ds[0].nome)}» viene <b>eliminata</b>: non si può annullare.`;
     } else {
-      risultato = `<p class="hint" style="margin:0 0 4px">Restano <b>${ds.length} schede</b>, una per locale, ognuna con ragione sociale, P.IVA e pagamento di <b>${esc(f.nome)}</b> e il codice di fatturazione ${esc(f.codice || "—")}:</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
-      avviso = `Le destinazioni restano schede separate (sono locali diversi); i preventivi e le proposte di Rosario della fatturazione passano alla prima. La scheda di fatturazione «${esc(f.nome)}» viene <b>eliminata</b>: non si può annullare.`;
+      risultato = `<p class="hint" style="margin:0 0 4px">${tieni ? `La scheda <b>${esc(f.nome)}</b> resta com'è (è già un locale, destinazione ${esc(f.codiceDest)}). ${ds.length === 1 ? "La nuova destinazione diventa" : "Le nuove destinazioni diventano"} ${ds.length === 1 ? "una scheda" : ds.length + " schede"} a parte, con ragione sociale, P.IVA e pagamento di questa scheda e il codice di fatturazione ${esc(f.codice || "—")}:` : `Restano <b>${ds.length} schede</b>, una per locale, ognuna con ragione sociale, P.IVA e pagamento di <b>${esc(f.nome)}</b> e il codice di fatturazione ${esc(f.codice || "—")}:`}</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
+      avviso = tieni ? `Le destinazioni sono locali diversi, per questo restano schede separate. La scheda «${esc(f.nome)}» non viene toccata né eliminata.` : `Le destinazioni restano schede separate (sono locali diversi); i preventivi e le proposte di Rosario della fatturazione passano alla prima. La scheda di fatturazione «${esc(f.nome)}» viene <b>eliminata</b>: non si può annullare.`;
     }
-    body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? "Fatturazione (sarà eliminata)" : "Fatturazione (si tiene questa scheda)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
+    body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? (tieni ? "Fatturazione (resta com'è)" : "Fatturazione (sarà eliminata)") : "Fatturazione (si tiene questa scheda)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
       + (g ? `<div class="uni-2" style="margin-top:10px">${ds.map(d => uniBlocco(d, "Destinazione", `<button type="button" class="link" data-unirim="${d.id}" style="align-self:flex-start;padding:4px 0">Togli</button>`)).join("")}</div>` : "")
       + tasti + `<div class="tg-det" style="margin-top:0"><h3>Dopo l'unione</h3>${risultato}</div>
       <p class="hint" style="margin:10px 0 0">${avviso}</p>
@@ -3414,10 +3415,13 @@ $("#uniOk").addEventListener("click", async () => {
       // una fatturazione, più destinazioni: ogni destinazione resta una scheda con i dati di fatturazione, poi si elimina la fatturazione
       const primo = ds[0];
       for(const d of ds) await updateDoc(ref(d.id), { ...unisciDestinazione(f, d, localISO()), aggiornato: nowISO() });
-      for(const p of preventivi.filter(x => x.clienteId === f.id)) await updateDoc(doc(pvCol(), p.id), { clienteId: primo.id });
-      for(const p of rosario.filter(x => x.clienteId === f.id)) await updateDoc(rosRef(p.id), { clienteId: primo.id, clienteNome: primo.nome });
-      await deleteDoc(ref(f.id));
-      nome = f.nome; toast(ds.length + " destinazioni collegate a «" + nome + "»");
+      if(f.codiceDest){ nome = f.nome; toast(ds.length === 1 ? "Destinazione aggiunta a «" + nome + "»" : ds.length + " destinazioni aggiunte a «" + nome + "»"); }   // fatturazione già anche locale: resta
+      else {
+        for(const p of preventivi.filter(x => x.clienteId === f.id)) await updateDoc(doc(pvCol(), p.id), { clienteId: primo.id });
+        for(const p of rosario.filter(x => x.clienteId === f.id)) await updateDoc(rosRef(p.id), { clienteId: primo.id, clienteNome: primo.nome });
+        await deleteDoc(ref(f.id));
+        nome = f.nome; toast(ds.length + " destinazioni collegate a «" + nome + "»");
+      }
     }
     if($("#dlgDetail").open) $("#dlgDetail").close();
     if(uni.a && uni.da !== "coppie"){ $("#dlgUni").close(); }
@@ -3893,7 +3897,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.9 (v4.9)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.10 (v4.10)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
