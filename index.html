@@ -813,6 +813,15 @@ button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
 .uni-col span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 @media (max-width:520px){.uni-2{grid-template-columns:1fr}}
 .uni-tag{color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.grp{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);box-shadow:var(--sh1);overflow:hidden}
+.grp .row{border:0;box-shadow:none;border-radius:0;background:none;width:100%}
+.grp-btn{display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;border:0;border-top:1px solid var(--line);background:color-mix(in srgb,var(--accent) 7%,transparent);color:var(--accent);font-weight:600;font-size:14px;text-align:left}
+.grp-btn svg{transition:transform .2s;flex:0 0 auto}
+.grp-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.grp-figli{list-style:none;margin:0;padding:0 0 0 16px;border-top:1px solid var(--line);background:var(--surface-2)}
+.grp-figli .row{border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;background:none;width:100%}
+.grp-figli li:last-child .row{border-bottom:0}
+.grp-figli li.hit .row{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -1069,7 +1078,7 @@ main.view{padding-top:14px}
     <div class="dlg">
       <div class="dlg-head"><h2 id="uniT">Unisci schede</h2><button class="close" type="button" id="uniX" aria-label="Chiudi">×</button></div>
       <div class="dlg-body" id="uniBody"></div>
-      <div class="dlg-foot hidden" id="uniFoot"><button class="btn" type="button" id="uniNo">Annulla</button><button class="btn btn-primary" type="button" id="uniOk">Unisci</button></div>
+      <div class="dlg-foot hidden" id="uniFoot"><button class="btn" type="button" id="uniNo">Annulla</button><button class="btn" type="button" id="uniOk">Unisci in una scheda</button><button class="btn btn-primary" type="button" id="uniLega">Collega (schede separate)</button></div>
     </div>
   </dialog>
   <!-- /AGGIUNGI CATALOGO -->
@@ -1752,7 +1761,7 @@ function renderList(){
   const active = ui.q || ui.stato || ui.luogo || ui.tipo || ui.zone.length;
   $("#fReset").classList.toggle("hidden", !active);
   $("#countLbl").textContent = active ? `${rows.length} di ${clienti.length}` : `${clienti.length} locali`;
-  $("#list").innerHTML = rows.length ? rows.map(c => `<li>${rowHTML(c)}</li>`).join("")
+  $("#list").innerHTML = rows.length ? uniGruppi(rows).map(g => uniRigaGruppo(g, !!active)).join("")
     : `<li class="empty">${clienti.length ? "Nessun locale con questi filtri." : "Nessun cliente ancora. Tocca Nuovo per aggiungere il primo, oppure importa il tuo Excel da Riepilogo."}</li>`;
 }
 
@@ -3131,7 +3140,11 @@ function tgtMatch(c, x){
   return [c.codice, c.codiceDest, c.codiceFatt, c.codiceReport].map(tgtDig).filter(Boolean).some(k => k === cx || (k.length >= 5 && cx.endsWith(k)))
     || !!(c.ragioneSociale && norm(c.ragioneSociale) === norm(x.n));
 }
-function tgtTrova(x){ return clienti.find(c => tgtMatch(c, x)) || null; }
+function tgtTrova(x){
+  const cx = tgtDig(x.c);
+  return clienti.find(c => [c.codice, c.codiceDest].map(tgtDig).some(k => k && (k === cx || (k.length >= 5 && cx.endsWith(k)))))   // prima la scheda col codice proprio
+    || clienti.find(c => tgtMatch(c, x)) || null;
+}
 const tgtSel = {}, tgtTutti = {};
 
 function tgtHTML(lista){
@@ -3295,7 +3308,7 @@ function unisciDestinazione(f, d, oggi){
 function uniCoppie(){
   const fatt = clienti.filter(c => uniTipo(c) === "fatt" && !c.codiceDest), usati = {};
   const coppie = [];
-  clienti.filter(c => uniTipo(c) === "dest" && !c.codiceFatt).forEach(d => {
+  clienti.filter(c => uniTipo(c) === "dest" && !c.codiceFatt && !c.fattId).forEach(d => {
     let migliore = null;
     fatt.forEach(f => {
       let p = 0;
@@ -3329,8 +3342,8 @@ function uniRender(){
     $("#uniT").textContent = "Doppioni";
     const L = uniCoppie(), gruppi = [...new Set(L.filter(o => o.multi).map(o => o.f.id))];
     body.innerHTML = L.length
-      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e unisci. Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
-        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Unisci</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
+      ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e <b>collega</b> (restano due schede, la destinazione sta sotto la fatturazione) oppure <b>unisci</b> (una scheda sola). Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
+        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Collega / unisci</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
       : `<p class="hint">Non trovo doppioni tra i clienti con codice 100… e 120….</p>`;
     body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o il doppione non è in elenco? Scegli tu le schede, con la ricerca (anche più destinazioni per una stessa fatturazione).</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
   } else if(uni.modo === "scegli"){
@@ -3347,7 +3360,8 @@ function uniRender(){
     uni.ds = ds.map(x => x.id);
     const tieni = !!f.codiceDest;   // la fatturazione è già stata unita a una destinazione: è anche un locale, quindi resta
     const g = ds.length > 1 || tieni;
-    $("#uniT").textContent = g ? "Una fatturazione, più destinazioni" : "Unisci le due schede";
+    $("#uniT").textContent = g ? "Una fatturazione, più destinazioni" : "Collega o unisci le due schede";
+    $("#uniOk").classList.toggle("hidden", g);
     const tasti = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0">${g ? "" : `<button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button>`}<button class="chip-btn" type="button" data-unicambia="F">Cambia la fatturazione</button>${g ? "" : `<button class="chip-btn" type="button" data-unicambia="D">Cambia la destinazione</button>`}<button class="chip-btn" type="button" data-uniplus>+ Aggiungi un'altra destinazione</button></div>`;
     let risultato, avviso;
     if(!g){
@@ -3355,14 +3369,14 @@ function uniRender(){
       risultato = `<p class="hint" style="margin:0 0 2px"><b>${esc(r.nome)}</b>${r.ragioneSociale && norm(r.ragioneSociale) !== norm(r.nome) ? " · " + esc(r.ragioneSociale) : ""}</p>
         <p class="hint" style="margin:0 0 2px">Codice ${esc(r.codice || "—")}${r.codiceDest ? " · destinazione " + esc(r.codiceDest) : ""}${r.piva ? " · P.IVA " + esc(r.piva) : ""}</p>
         <p class="hint" style="margin:0">${esc([r.indirizzo, r.luogo].filter(Boolean).join(", ") || "Nessun indirizzo")} · stato ${esc(statoLabel(r.stato))}</p>`;
-      avviso = `I dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(ds[0].nome)}» viene <b>eliminata</b>: non si può annullare.`;
+      avviso = `<b>Collega</b>: restano due schede separate; la destinazione compare sotto la fatturazione (freccia ▾ nell'elenco) e nessun dato cambia.<br><b>Unisci in una scheda</b>: i dati mancanti si completano a vicenda, le note e lo storico si sommano, preventivi e proposte di Rosario passano alla scheda unita. La scheda «${esc(ds[0].nome)}» viene <b>eliminata</b>: non si può annullare.`;
     } else {
-      risultato = `<p class="hint" style="margin:0 0 4px">${tieni ? `La scheda <b>${esc(f.nome)}</b> resta com'è (è già un locale, destinazione ${esc(f.codiceDest)}). ${ds.length === 1 ? "La nuova destinazione diventa" : "Le nuove destinazioni diventano"} ${ds.length === 1 ? "una scheda" : ds.length + " schede"} a parte, con ragione sociale, P.IVA e pagamento di questa scheda e il codice di fatturazione ${esc(f.codice || "—")}:` : `Restano <b>${ds.length} schede</b>, una per locale, ognuna con ragione sociale, P.IVA e pagamento di <b>${esc(f.nome)}</b> e il codice di fatturazione ${esc(f.codice || "—")}:`}</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
-      avviso = tieni ? `Le destinazioni sono locali diversi, per questo restano schede separate. La scheda «${esc(f.nome)}» non viene toccata né eliminata.` : `Le destinazioni restano schede separate (sono locali diversi); i preventivi e le proposte di Rosario della fatturazione passano alla prima. La scheda di fatturazione «${esc(f.nome)}» viene <b>eliminata</b>: non si può annullare.`;
+      risultato = `<p class="hint" style="margin:0 0 4px">Le destinazioni restano <b>schede separate</b> e compaiono sotto <b>${esc(f.nome)}</b> (cod. ${esc(f.codice || "—")}) nell'elenco clienti, con la freccia ▾:</p>` + ds.map(d => `<p class="hint" style="margin:0 0 2px">• <b>${esc(d.nome)}</b> · cod. ${esc(d.codice || "—")}</p>`).join("");
+      avviso = `Nessuna scheda viene unita o eliminata: ogni destinazione tiene i suoi dati. Si può scollegare in qualsiasi momento dalla sua scheda.`;
     }
-    body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? (tieni ? "Fatturazione (resta com'è)" : "Fatturazione (sarà eliminata)") : "Fatturazione (si tiene questa scheda)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
+    body.innerHTML = `<div class="uni-2">${uniBlocco(f, g ? "Fatturazione (scheda principale)" : "Fatturazione (principale)")}${g ? "" : uniBlocco(ds[0], "Destinazione (nome del locale)")}</div>`
       + (g ? `<div class="uni-2" style="margin-top:10px">${ds.map(d => uniBlocco(d, "Destinazione", `<button type="button" class="link" data-unirim="${d.id}" style="align-self:flex-start;padding:4px 0">Togli</button>`)).join("")}</div>` : "")
-      + tasti + `<div class="tg-det" style="margin-top:0"><h3>Dopo l'unione</h3>${risultato}</div>
+      + tasti + `<div class="tg-det" style="margin-top:0"><h3>${g ? "Dopo il collegamento" : "Se scegli Unisci"}</h3>${risultato}</div>
       <p class="hint" style="margin:10px 0 0">${avviso}</p>
       <p class="hint hidden" id="uniMsg" role="alert" style="color:var(--danger);margin-top:8px"></p>`;
   }
@@ -3441,7 +3455,7 @@ $("#uniOk").addEventListener("click", async () => {
     if(uni.a && uni.da !== "coppie"){ $("#dlgUni").close(); }
     else { uni.modo = "coppie"; uni.az = ""; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altri doppioni…</p>`; }
   }catch(err){ msg("Non sono riuscito a unire le schede: " + (err && err.message ? err.message : "riprova.")); }
-  finally{ $("#uniOk").disabled = false; $("#uniOk").textContent = "Unisci"; }
+  finally{ $("#uniOk").disabled = false; $("#uniOk").textContent = "Unisci in una scheda"; }
 });
 $("#dBody").addEventListener("click", e => { if(e.target.closest("[data-uni-start]")) uniApri("scegli", ui.openId); });
 
@@ -3462,15 +3476,89 @@ async function uniAnnulla(id){
       await setDoc(doc(col()), f);
       await update(c.id, a);
       toast("Unione annullata: create due schede");
-    } else if(c.codiceFatt){
+    } else if(c.codiceFatt || c.fattId){
       if(!confirm("Tolgo il collegamento di «" + c.nome + "» con la fatturazione (cod. " + c.codiceFatt + ")?\n\nLa scheda tiene i suoi dati, ma non sarà più abbinata ai report di quella fatturazione.")) return;
-      await update(c.id, { codiceFatt: "", altriNomi: [], storico: [...(c.storico || []), { d: localISO(), t: "Collegamento con la fatturazione cod. " + c.codiceFatt + " tolto" }] });
+      await update(c.id, { codiceFatt: "", fattId: "", altriNomi: [], storico: [...(c.storico || []), { d: localISO(), t: "Collegamento con la fatturazione cod. " + c.codiceFatt + " tolto" }] });
       toast("Collegamento tolto");
     } else return;
     if($("#dlgDetail").open) $("#dlgDetail").close();
   }catch(err){ fail(err); }
 }
 $("#dBody").addEventListener("click", e => { if(e.target.closest("[data-uni-undo]")) uniAnnulla(ui.openId); });
+
+/* ---------- Fatturazione + destinazioni COLLEGATE (schede separate, non unite) ---------- */
+// Una destinazione collegata a una fatturazione resta una scheda a sé (con i suoi dati). Il legame è `fattId` (id della scheda di fatturazione) e `codiceFatt`
+// (suo codice 100…). Nell'elenco Clienti compare la fatturazione come scheda principale; con la freccia ▾ si aprono le destinazioni, ognuna una scheda cliente.
+const uniAperti = new Map();      // id fatturazione -> true/false (scelta fatta con la freccia)
+function uniPadre(c){
+  if(!(c.fattId || c.codiceFatt)) return null;
+  const cf = tgtDig(c.codiceFatt);
+  return clienti.find(p => p.id !== c.id && (p.id === c.fattId || (cf && p.codice && tgtDig(p.codice) === cf))) || null;
+}
+function uniGruppi(rows){
+  const figli = new Map(), padre = new Map();
+  clienti.forEach(c => { const p = uniPadre(c); if(p){ padre.set(c.id, p); if(!figli.has(p.id)) figli.set(p.id, []); figli.get(p.id).push(c); } });
+  const top = new Map();
+  rows.forEach(c => {
+    const p = padre.get(c.id), k = p || c;
+    let g = top.get(k.id);
+    if(!g){ g = { c: k, figli: (figli.get(k.id) || []).sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "it")), hits: [] }; top.set(k.id, g); }
+    if(p) g.hits.push(c.id);
+  });
+  return [...top.values()].sort((a, b) => (a.c.nome || "").localeCompare(b.c.nome || "", "it"));
+}
+const uniFreccia = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+function uniRigaGruppo(g, attivo){
+  const n = g.figli.length;
+  if(!n) return `<li>${rowHTML(g.c)}</li>`;
+  const aperto = uniAperti.has(g.c.id) ? uniAperti.get(g.c.id) : (attivo && g.hits.length > 0);
+  const figli = aperto ? `<ul class="grp-figli">${g.figli.map(f => `<li class="${g.hits.includes(f.id) ? "hit" : ""}">${rowHTML(f)}</li>`).join("")}</ul>` : "";
+  return `<li class="grp"><div class="grp-top">${rowHTML(g.c)}</div><button type="button" class="grp-btn" data-grp-toggle="${g.c.id}" aria-expanded="${!!aperto}">${uniFreccia}<span>${n} ${n === 1 ? "destinazione collegata" : "destinazioni collegate"}</span></button>${figli}</li>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-grp-toggle]"); if(!b) return;
+  const id = b.dataset.grpToggle, att = !!(ui.q || ui.stato || ui.luogo || ui.tipo || ui.zone.length);
+  const g = uniGruppi(filtered()).find(x => x.c.id === id);
+  const ora = uniAperti.has(id) ? uniAperti.get(id) : !!(att && g && g.hits.length);
+  uniAperti.set(id, !ora); renderList();
+});
+
+// nella scheda cliente: le destinazioni collegate (se è una fatturazione) o la fatturazione (se è una destinazione)
+function uniLegamiHTML(c){
+  const voce = x => `<button type="button" class="tg-cli" data-open="${x.id}"><span>${esc(x.nome)}<small>${esc([x.codice ? "Cod. " + x.codice : "", [x.indirizzo, x.luogo].filter(Boolean).join(", ")].filter(Boolean).join(" · "))}</small></span></button>`;
+  const figli = clienti.filter(x => x.id !== c.id && uniPadre(x) && uniPadre(x).id === c.id).sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "it"));
+  const p = uniPadre(c);
+  let out = "";
+  if(figli.length) out += `<div class="tg-det"><h3>Destinazioni collegate (${figli.length})</h3><div class="tg-list">${figli.map(voce).join("")}</div></div>`;
+  if(p) out += `<div class="tg-det"><h3>Fatturazione</h3><div class="tg-list">${voce(p)}</div><button type="button" class="chip-btn" data-uni-scollega style="margin-top:8px">Scollega dalla fatturazione</button></div>`;
+  return out;
+}
+$("#dBody").addEventListener("click", async e => {
+  if(!e.target.closest("[data-uni-scollega]")) return;
+  const c = byId(ui.openId); if(!c) return;
+  if(!confirm("Scollego «" + c.nome + "» dalla fatturazione?")) return;
+  await update(c.id, { codiceFatt: "", fattId: "", storico: [...(c.storico || []), { d: localISO(), t: "Scollegata dalla fatturazione" }] });
+  toast("Scollegata");
+});
+
+// collega (senza unire) una o più destinazioni a una fatturazione
+async function uniLega(f, ds){
+  for(const d of ds) await update(d.id, { codiceFatt: f.codice || "", fattId: f.id, storico: [...(d.storico || []), { d: localISO(), t: "Collegata alla fatturazione «" + f.nome + "»" + (f.codice ? " (cod. " + f.codice + ")" : "") }] });
+}
+$("#uniLega").addEventListener("click", async () => {
+  const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length) return;
+  const msg = t => { const m = $("#uniMsg"); if(m){ m.textContent = t || ""; m.classList.toggle("hidden", !t); } };
+  $("#uniLega").disabled = true; $("#uniLega").textContent = "Collego…"; msg("");
+  try{
+    await uniLega(f, ds);
+    toast(ds.length === 1 ? "Collegata a «" + f.nome + "»" : ds.length + " destinazioni collegate a «" + f.nome + "»");
+    if($("#dlgDetail").open) $("#dlgDetail").close();
+    if(uni.a && uni.da !== "coppie"){ $("#dlgUni").close(); }
+    else { uni.modo = "coppie"; uni.az = ""; setTimeout(() => { if($("#dlgUni").open && uni.modo === "coppie") uniRender(); }, 600); $("#uniFoot").classList.add("hidden"); $("#uniBody").innerHTML = `<p class="hint">Fatto. Cerco altri doppioni…</p>`; }
+  }catch(err){ msg("Non sono riuscito a collegare: " + (err && err.message ? err.message : "riprova.")); }
+  finally{ $("#uniLega").disabled = false; $("#uniLega").textContent = "Collega (schede separate)"; }
+});
+
 
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
@@ -3938,7 +4026,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.13 (v4.13)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.14 (v4.14)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4018,10 +4106,10 @@ function renderDetail(){
     </div>
     <div class="richiamo">
       <label>Doppione?</label>
-      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : c.codiceFatt ? "Destinazione collegata alla fatturazione " + esc(c.codiceFatt) : "Lo stesso locale con due codici (fatturazione e destinazione)"}</span>
-      <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>${c.codiceDest || c.codiceFatt ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
+      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : (c.codiceFatt || c.fattId) ? "Destinazione collegata alla fatturazione" + (c.codiceFatt ? " " + esc(c.codiceFatt) : "") : "Lo stesso locale con due codici (fatturazione e destinazione)"}</span>
+      <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>${c.codiceDest || c.codiceFatt || c.fattId ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
     </div>
-    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
+    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${uniLegamiHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
     : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
@@ -4370,7 +4458,7 @@ $("#fileImport").addEventListener("change", async e => {
     const luoghi = {}; clienti.forEach(c => { if(c.luogo) luoghi[norm(c.luogo)] = c.luogo; });
     const digits = t => String(t || "").replace(/[^\d]/g, "").replace(/^0039|^39(?=3\d{9}$)/, "");
     const trova = c => {
-      if(c.codice){ const x = clienti.find(e => (e.codice && String(e.codice) === String(c.codice)) || (e.codiceDest && String(e.codiceDest) === String(c.codice)) || (e.codiceFatt && String(e.codiceFatt) === String(c.codice))); if(x) return x; }
+      if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => e.codiceDest && String(e.codiceDest) === String(c.codice)) || clienti.find(e => e.codiceFatt && String(e.codiceFatt) === String(c.codice)); if(x) return x; }
       const tels = [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
       if(tels.length){ const x = clienti.find(e => [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
       if(c.ragioneSociale){ const x = clienti.find(e => e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
