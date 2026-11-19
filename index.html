@@ -669,7 +669,8 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="cataloghi"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
-  .tabs button[data-view="rosario"]{order:8}
+  .tabs button[data-view="budget"]{order:8}
+  .tabs button[data-view="rosario"]{order:9}
 
   .view-wrap,#offline{margin-left:var(--side)}
 }
@@ -705,7 +706,8 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .ct-item:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
   #riepBody{display:block;column-count:2;column-gap:16px}
   #riepBody > .rp-kpis{column-span:all}
-  #riepBody .rp-card{break-inside:avoid}
+  #riepBody .rp-card{break-inside:avoid;margin-top:0;margin-bottom:12px}
+  #riepBody > .rp-kpis{margin-bottom:16px}
   .rp-kpis{grid-template-columns:repeat(3,1fr)}
   .rp-kpi:first-child{grid-column:auto}
   #v-mappa:not(.hidden){height:100vh}
@@ -741,7 +743,8 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="cataloghi"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
-  .tabs button[data-view="rosario"]{order:8}
+  .tabs button[data-view="budget"]{order:8}
+  .tabs button[data-view="rosario"]{order:9}
   #menuVelo{display:block;position:fixed;inset:0;z-index:55;background:rgba(10,20,25,.42);opacity:0;pointer-events:none;transition:opacity .26s}
   body.menu-open #menuVelo{opacity:1;pointer-events:auto}
   body.menu-open{overflow:hidden}
@@ -750,6 +753,33 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .menu-btn svg{width:24px;height:24px}
 }
 /* ===== /Menu a scomparsa ===== */
+/* ===== Budget ===== */
+:root{--b-ap:#9AA6A9;--b-ac:var(--accent);--b-bd:#E08A2E}
+.bdg-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:6px}
+.bdg-kpi{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);padding:12px 14px;box-shadow:var(--sh1)}
+.bdg-kpi small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}
+.bdg-kpi b{display:block;font-family:var(--font-cond);font-size:26px;font-weight:700;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
+.bdg-kpi span{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.bdg-up{color:var(--st-cliente)} .bdg-down{color:var(--danger)}
+.bdg-card{background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-lg);padding:14px 14px 12px;margin-top:12px;box-shadow:var(--sh1)}
+.bdg-card h2{margin:0 0 6px;font-family:var(--font-cond);font-size:20px;font-weight:600}
+.bdg-leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--muted);margin-bottom:8px}
+.bdg-leg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.bdg-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bdg-scroll svg{display:block;width:100%;min-width:600px;height:auto}
+.bdg-scroll text{font-family:var(--font);fill:var(--muted);font-size:11px}
+.bdg-grid{stroke:var(--line);stroke-width:1}
+.bdg-ap{fill:var(--b-ap)} .bdg-ac{fill:var(--b-ac)} .bdg-bd{fill:color-mix(in srgb,var(--b-bd) 22%,transparent);stroke:var(--b-bd);stroke-width:1.5}
+.bdg-tab{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
+.bdg-tab th{color:var(--muted);font-weight:600;font-size:12.5px;text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
+.bdg-tab td{text-align:right;padding:8px 4px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.bdg-tab th:first-child,.bdg-tab td:first-child{text-align:left;font-weight:600}
+.bdg-tab tfoot td{font-weight:700;border-bottom:0}
+.bdg-vuoto{text-align:center;color:var(--muted);padding:48px 12px}
+.bdg-msg{margin:10px 0 0;font-size:14px;color:var(--danger)}
+@media (max-width:420px){.bdg-kpi b{font-size:21px}}
+@media (min-width:1100px){.bdg-kpis{gap:16px}.bdg-kpi b{font-size:32px}.bdg-card{padding:20px 22px}}
+/* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
 .giro-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:6px}
@@ -897,6 +927,14 @@ main.view{padding-top:14px}
     <main class="wrap view" id="riepBody"></main>
   </section>
 
+  <section id="v-budget" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Budget</h1><span class="ct-head"><span class="count" id="bdgLbl"></span><button class="link" id="bdgCarica" type="button">Carica scheda</button></span></div>
+      <input type="file" id="bdgFile" accept="application/pdf,.pdf" hidden>
+    </div></header>
+    <main class="wrap view" id="bdgBody"></main>
+  </section>
+
   <section id="v-preventivi" class="view-wrap hidden">
     <header class="top"><div class="wrap">
       <div class="top-row"><h1>Preventivi</h1><span class="count" id="pvLbl"></span></div>
@@ -1026,6 +1064,7 @@ main.view{padding-top:14px}
     <button data-view="mappa" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
     <button data-view="giro" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
     <button data-view="preventivi" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Preventivi</button>
+    <button data-view="budget" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9"/></svg>Budget</button>
     <button data-view="rosario" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNumNav"></span></button>
   </div></nav>
 </div>
@@ -1561,10 +1600,11 @@ function go(view){
   const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
   $$(".tabs button").forEach(b => b.dataset.view === voce || b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro" || view === "budget");
   if(view !== "mappa") stopPick();
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
+  if(view === "budget") bdgCarica();
 }
 
 /* ---------- render ---------- */
@@ -1576,6 +1616,7 @@ function renderAll(){
   if(ui.view === "clienti") renderList();
   if(ui.view === "giro") renderGiro();
   if(ui.view === "riepilogo") renderRiepilogo();
+  if(ui.view === "budget") renderBudget();
   if(ui.view === "mappa") renderMap();
   if(ui.view === "preventivi") pvRenderList();
   if(ui.view === "cataloghi") renderCataloghi();
@@ -2562,6 +2603,142 @@ $("nav.tabs").addEventListener("click", e => { if(e.target.closest("button")) me
 addEventListener("keydown", e => { if(e.key === "Escape") menuChiudi(); });
 addEventListener("resize", () => { if(matchMedia("(min-width:1100px) and (hover:hover) and (pointer:fine)").matches) menuChiudi(); });
 
+/* ---------- Budget ---------- */
+// Si carica la "Scheda performance agente" di Marchi (PDF): l'app legge le righe Fatturato AP (anno precedente),
+// Fatturato AC (anno in corso) e Bdg (budget), mese per mese, sul dispositivo. I numeri stanno in utenti/{uid}/impostazioni/budget.
+const BDG_MESI = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+let bdg = null, bdgStato = "idle", bdgErr = "";
+const bdgRef = () => doc(db, "utenti", uid, "impostazioni", "budget");
+const bdgEuro = n => n == null ? "–" : Math.round(n).toLocaleString("it-IT");
+/*BDG-PARSE-START*/
+function bdgNum(s){
+  s = String(s).trim();
+  if(!/^-?\d{1,3}(\.\d{3})*(,\d+)?$|^-?\d+(,\d+)?$/.test(s)) return null;
+  return parseFloat(s.replace(/\./g, "").replace(",", "."));
+}
+// righe: array di righe, ognuna = elenco di pezzi di testo da sinistra a destra
+function bdgAnalizza(righe){
+  const testo = righe.map(r => r.join(" ")).join("\n");
+  const trova = re => righe.find(r => re.test(r.join(" ").trim()));
+  const leggi = (re, nome) => {
+    const r = trova(re);
+    if(!r) throw new Error("Non trovo la riga «" + nome + "» nel PDF. È la scheda performance di Marchi?");
+    const n = r.map(bdgNum).filter(v => v != null);
+    if(n.length < 2) throw new Error("La riga «" + nome + "» è vuota.");
+    const tot = n[n.length - 1], mesi = n.slice(0, -1);
+    if(mesi.length > 12) throw new Error("La riga «" + nome + "» ha troppi mesi.");
+    const somma = mesi.reduce((a, b) => a + b, 0);
+    if(Math.abs(somma - tot) > Math.max(5, Math.abs(tot) * 0.005)) throw new Error("I numeri di «" + nome + "» non quadrano con il totale: non li carico per non sbagliare.");
+    return [...mesi, ...Array(12 - mesi.length).fill(null)];
+  };
+  const ap = leggi(/^Fatturato AP\b/i, "Fatturato AP"), ac = leggi(/^Fatturato AC\b/i, "Fatturato AC"), bd = leggi(/^Bdg\b/i, "Bdg");
+  const anno = +((/Performance Agente\s+(20\d\d)/i.exec(testo) || /(20\d\d)/.exec(testo) || [])[1]) || new Date().getFullYear();
+  const date = testo.match(/\d{2}\/\d{2}\/\d{4}/g);
+  const nome = ((/Agente\s+([A-Za-zÀ-ÿ' ]+?)\s*\|?\s*\d{2}\/\d{2}\/\d{4}/.exec(testo) || [])[1] || "").trim();
+  return { anno, ap, ac, bd, agg: date ? date[date.length - 1] : "", nome };
+}
+/*BDG-PARSE-END*/
+async function bdgLeggiPdf(buf){
+  await lpLib();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const righe = [];
+  for(let p = 1; p <= Math.min(pdf.numPages, 3); p++){
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const linee = [];
+    tc.items.forEach(it => {
+      if(!it.str || !it.str.trim()) return;
+      const y = it.transform[5];
+      let l = linee.find(k => Math.abs(k.y - y) < 3);
+      if(!l){ l = { y, it: [] }; linee.push(l); }
+      l.it.push({ x: it.transform[4], s: it.str.trim() });
+    });
+    linee.sort((a, b) => b.y - a.y).forEach(l => righe.push(l.it.sort((a, b) => a.x - b.x).map(i => i.s)));
+  }
+  return bdgAnalizza(righe);
+}
+async function bdgCarica(){
+  if(bdgStato === "carico" || bdgStato === "ok" || !uid) return;
+  bdgStato = "carico";
+  try{
+    const s = await getDoc(bdgRef());
+    bdg = s.exists() ? s.data() : null;
+    bdgStato = "ok";
+  }catch(err){ bdgStato = "errore"; }
+  renderBudget();
+}
+$("#bdgCarica").addEventListener("click", () => $("#bdgFile").click());
+$("#bdgFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  bdgErr = ""; toast("Leggo la scheda…");
+  try{
+    const dati = await bdgLeggiPdf(await f.arrayBuffer());
+    await setDoc(bdgRef(), { ...dati, caricato: nowISO() });
+    bdg = dati; bdgStato = "ok";
+    toast("Budget aggiornato");
+  }catch(err){ bdgErr = err && err.message ? err.message : "Non riesco a leggere il PDF."; }
+  renderBudget();
+});
+
+function bdgGrafico(d){
+  const W = 760, H = 290, L = 46, R = 8, T = 14, B = 28, pw = W - L - R, ph = H - T - B;
+  const val = [...d.ap, ...d.ac, ...d.bd].filter(v => v != null);
+  const max = Math.max(...val, 1);
+  const passo = [5000, 10000, 20000, 25000, 50000, 100000].find(p => max / p <= 6) || 100000;
+  const top = Math.ceil(max / passo) * passo;
+  const y = v => T + ph - v / top * ph;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Fatturato mensile: anno precedente, anno in corso e budget">`;
+  for(let v = 0; v <= top; v += passo) s += `<line class="bdg-grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v ? v / 1000 + "k" : "0"}</text>`;
+  const gw = pw / 12, bw = 16, gap = 3, tot = bw * 3 + gap * 2;
+  BDG_MESI.forEach((m, i) => {
+    const x0 = L + gw * i + (gw - tot) / 2;
+    [["ap", d.ap[i], "Anno prec."], ["ac", d.ac[i], "Anno in corso"], ["bd", d.bd[i], "Budget"]].forEach(([k, v, nome], j) => {
+      if(v == null) return;
+      const alt = Math.max(0, v) / top * ph;
+      s += `<rect class="bdg-${k}" x="${x0 + j * (bw + gap)}" y="${T + ph - alt}" width="${bw}" height="${alt}" rx="2.5"><title>${m} · ${nome}: ${bdgEuro(v)} €</title></rect>`;
+    });
+    s += `<text x="${L + gw * i + gw / 2}" y="${H - 9}" text-anchor="middle">${m}</text>`;
+  });
+  return s + "</svg>";
+}
+
+function renderBudget(){
+  if(ui.view !== "budget") return;
+  const body = $("#bdgBody");
+  if(!bdg){
+    $("#bdgLbl").textContent = "";
+    body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `<div class="bdg-vuoto">${bdgStato === "carico" || bdgStato === "idle" ? "Carico i dati…" : bdgStato === "errore" ? "Non riesco a leggere i dati. Controlla la connessione." : "Nessuna scheda caricata. Tocca <b>Carica scheda</b> e scegli il PDF della scheda performance di Marchi."}</div>`;
+    return;
+  }
+  const d = bdg;
+  const mesi = d.ac.map((v, i) => v != null ? i : -1).filter(i => i >= 0);
+  const somma = a => mesi.reduce((t, i) => t + (a[i] || 0), 0);
+  const AC = somma(d.ac), AP = somma(d.ap), BD = somma(d.bd);
+  const pct = (a, b) => b ? (a - b) / Math.abs(b) * 100 : null;
+  const fmtP = p => p == null ? "" : (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(1).replace(".", ",") + "%";
+  const fmtD = n => (n >= 0 ? "+" : "−") + bdgEuro(Math.abs(n)) + " €";
+  const cls = n => n >= 0 ? "bdg-up" : "bdg-down";
+  const ultimo = mesi.length ? BDG_MESI[mesi[mesi.length - 1]] : "";
+  $("#bdgLbl").textContent = `${d.anno} · fino a ${ultimo.toLowerCase()}${d.agg ? " · scheda del " + d.agg : ""}`;
+  const righe = mesi.map(i => { const p = pct(d.ac[i], d.bd[i]); return `<tr><td>${BDG_MESI[i]}</td><td>${bdgEuro(d.ap[i])}</td><td>${bdgEuro(d.ac[i])}</td><td>${bdgEuro(d.bd[i])}</td><td class="${p == null ? "" : cls(p)}">${fmtP(p)}</td></tr>`; }).join("");
+  body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `
+    <div class="bdg-kpis">
+      <div class="bdg-kpi"><small>Fatturato ${d.anno}</small><b>${bdgEuro(AC)} €</b><span class="${cls(AC - AP)}">${fmtP(pct(AC, AP))} sul ${d.anno - 1}</span></div>
+      <div class="bdg-kpi"><small>Rispetto al budget</small><b class="${cls(AC - BD)}">${fmtD(AC - BD)}</b><span class="${cls(AC - BD)}">${fmtP(pct(AC, BD))}</span></div>
+      <div class="bdg-kpi"><small>Rispetto al ${d.anno - 1}</small><b class="${cls(AC - AP)}">${fmtD(AC - AP)}</b><span class="${cls(AC - AP)}">${fmtP(pct(AC, AP))}</span></div>
+    </div>
+    <section class="bdg-card">
+      <h2>Mese per mese</h2>
+      <div class="bdg-leg"><span><i style="background:var(--b-ap)"></i>${d.anno - 1}</span><span><i style="background:var(--b-ac)"></i>${d.anno}</span><span><i style="background:color-mix(in srgb,var(--b-bd) 22%,transparent);border:1.5px solid var(--b-bd)"></i>Budget</span></div>
+      <div class="bdg-scroll">${bdgGrafico(d)}</div>
+    </section>
+    <section class="bdg-card">
+      <h2>Dettaglio (€)</h2>
+      <table class="bdg-tab"><thead><tr><th>Mese</th><th>${d.anno - 1}</th><th>${d.anno}</th><th>Budget</th><th>Vs budget</th></tr></thead><tbody>${righe}</tbody>
+      <tfoot><tr><td>Totale</td><td>${bdgEuro(AP)}</td><td>${bdgEuro(AC)}</td><td>${bdgEuro(BD)}</td><td class="${cls(AC - BD)}">${fmtP(pct(AC, BD))}</td></tr></tfoot></table>
+    </section>`;
+}
+
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
 const giroData = i => addDays((new Date().getDay() === 0 ? 1 : 1 - new Date().getDay()) + i);
@@ -3027,7 +3204,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4 (v4)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.1 (v4.1)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

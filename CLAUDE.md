@@ -271,6 +271,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v3.3** = v3.2 + periodo di chiusura dei clienti, "+" tolto dal Giro, più aria sotto filtri e ricerca, riga dei Preventivi sistemata, **sposta catalogo di categoria** dall'app (icona cartella sulla riga, solo account autorizzati; riusa POST /elenco del Worker, che sostituisce la voce con lo stesso `file`). Brochure Carni spostata in Marchi S.p.A. Tag Git `v3.3`; la scritta in Riepilogo dice 3.3.
 - **v3.4** = v3.3 + **elimina catalogo** dall'app (finestra della cartella, pulsante Elimina; solo account autorizzati; percorso `POST /elimina {file}` del Worker: toglie la voce da `cataloghi.json` e cancella il `.enc`; **il Worker va ricaricato su Cloudflare** con il nuovo `strumenti/worker-cataloghi.js`, altrimenti l'app avvisa). Tag Git `v3.4`.
 - **v4** = v3.4 con lo **stesso layout del PC anche su iPhone/iPad**: niente barra in basso, le 8 sezioni stanno in un **menu laterale a scomparsa** aperto dal tasto a tre lineette (`.menu-btn`, inserito da JS in ogni `.top-row h1`; velo `#menuVelo`; si chiude toccando una voce, il velo o Esc). Blocco CSS `/* ===== Menu a scomparsa (iPhone/iPad) ===== */`, attivo quando NON vale `(min-width:1100px) and (hover:hover) and (pointer:fine)`. Le regole di contenuto del PC (due colonne, mappa zone grande, ecc.) valgono ora da 1100 px in su anche senza mouse (iPad in orizzontale); sotto restano una colonna. Per tornare: `v3.4`. Tag Git `v4`.
+- **v4.1** = v4 + sezione **Budget** (sotto) e Riepilogo con le schede allineate in cima su PC. Tag Git `v4.1`; la scritta in Riepilogo dice 4.1.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -335,6 +336,19 @@ l'interfaccia cambia. Il blocco CSS è `/* ===== Versione PC ===== */`, dopo `As
 - Pubblicare = commit + push su `main`; GitHub Pages aggiorna in 1–2 minuti. Su iPhone l'app sulla
   Home può mostrare la versione vecchia finché non viene chiusa e riaperta.
 - I dati vivono solo su Firestore: modificare `index.html` non tocca i dati.
+
+## Budget (v4.1)
+
+Scheda **Budget** nel menu (dopo Riepilogo). Manuel carica con **Carica scheda** il PDF "Scheda performance agente" di Marchi S.p.A. (una pagina, un
+PDF nuovo a ogni mese). L'app lo legge **sul dispositivo** con pdf.js (`bdgLeggiPdf` + funzione pura `bdgAnalizza`, tra i marcatori
+`BDG-PARSE-START/END`) e prende le righe **Fatturato AP** (anno precedente), **Fatturato AC** (anno in corso) e **Bdg** (budget): i mesi sono i
+numeri della riga e l'ultimo è il totale (mesi senza dati restano vuoti; i delta del PDF si ignorano e si ricalcolano). Se la somma dei mesi non
+quadra con il totale la lettura viene rifiutata. Salvataggio: `utenti/{uid}/impostazioni/budget` = `{anno, ap[12], ac[12], bd[12], agg, caricato}`
+(null = mese senza dati). Ogni caricamento sostituisce il precedente.
+Schermata: 3 riquadri (fatturato anno in corso, scarto sul budget, scarto sull'anno scorso, sui mesi con dati), **grafico a barre affiancate** mese
+per mese (anno precedente grigio, anno in corso colore principale, budget con solo contorno arancione; SVG inline `bdgGrafico`) e tabella di dettaglio
+con % sul budget. Nel PDF ci sono anche pressione, borsellino, perdite e obiettivi per famiglia (carni fresche, non food, pesce fresco): non usati
+per ora. Provato col PDF vero (fatturato AC 479.755, budget 368.118, AP 319.825 per gen–ott 2026).
 
 ## Rosario (assistente vocale)
 
