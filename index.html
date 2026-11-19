@@ -938,7 +938,7 @@ main.view{padding-top:14px}
   </dialog>
   <dialog id="dlgCatMv" aria-labelledby="catMvT">
     <form class="dlg" id="catMvForm" novalidate>
-      <div class="dlg-head"><h2 id="catMvT">Sposta il catalogo</h2><button class="close" type="button" id="catMvX" aria-label="Chiudi">×</button></div>
+      <div class="dlg-head"><h2 id="catMvT">Sposta o elimina il catalogo</h2><button class="close" type="button" id="catMvX" aria-label="Chiudi">×</button></div>
       <div class="dlg-body">
         <p class="hint" id="catMvNome" style="margin:0 0 10px;font-weight:600"></p>
         <label class="field"><span>Nuova categoria</span><select class="input" id="catMvCat"></select></label>
@@ -946,7 +946,7 @@ main.view{padding-top:14px}
         <p class="hint">Lo spostamento vale per tutti gli account (compare agli altri dopo 1-2 minuti).</p>
         <p class="hint hidden" id="catMvMsg" role="alert" style="color:var(--danger);margin-top:10px"></p>
       </div>
-      <div class="dlg-foot"><button class="btn" type="button" id="catMvNo">Annulla</button><button class="btn btn-primary" type="submit" id="catMvOk">Sposta</button></div>
+      <div class="dlg-foot"><button class="btn" type="button" id="catMvDel" style="color:var(--danger);margin-right:auto">Elimina</button><button class="btn" type="button" id="catMvNo">Annulla</button><button class="btn btn-primary" type="submit" id="catMvOk">Sposta</button></div>
     </form>
   </dialog>
   <!-- /AGGIUNGI CATALOGO -->
@@ -1712,6 +1712,7 @@ $("#zonePanel").addEventListener("click", e => {
 const CAT_SERVIZIO = "https://cataloghi.webmalfer.workers.dev";
 let catalogo = [], catOrdine = [], catStato = "idle";   // idle | carico | ok | errore
 let catPuoCaricare = false, catPingFatto = false;
+const catEliminati = new Set();                          // eliminati da qui: si nascondono finché il sito non si aggiorna
 const catMosse = new Map();                              // file -> { categoria, t }: spostamenti fatti da qui, finché il sito non si aggiorna
 const catPend = [];                                     // cataloghi caricati in questa sessione e non ancora online per gli altri
 const cat = { q: "", cat: "", tutti: false, chiusi: new Set() };
@@ -1724,6 +1725,7 @@ async function catLoad(){
     if(!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
     catalogo = (Array.isArray(j) ? j : (j.cataloghi || [])).filter(x => x && x.titolo && x.file);
+    if(catEliminati.size) catalogo = catalogo.filter(x => !catEliminati.has(x.file));
     catOrdine = Array.isArray(j.categorie) ? j.categorie : [];
     catStato = "ok";
     for(const [f, m] of catMosse){ if(Date.now() - m.t > 15 * 60e3) catMosse.delete(f); else { const x = catalogo.find(y => y.file === f); if(x) x.categoria = m.categoria; } }
@@ -1797,7 +1799,7 @@ $("#catPwNo").addEventListener("click", () => catPwFine(null));
 $("#dlgCatPw").addEventListener("cancel", e => { e.preventDefault(); catPwFine(null); });
 // all'uscita dall'account (e se il lettore è aperto) si dimentica tutto
 function catLock(){
-  catKey = null; catBlobs.clear(); catPuoCaricare = false; catPingFatto = false; catPend.length = 0;
+  catKey = null; catEliminati.clear(); catBlobs.clear(); catPuoCaricare = false; catPingFatto = false; catPend.length = 0;
   const b = $("#ctAdd"); if(b) b.classList.add("hidden");
   if(typeof LP !== "undefined" && LP.open){ if(LP.hist) history.back(); else lpClose(); }
 }
@@ -1922,7 +1924,7 @@ function renderCataloghi(){
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno, x._nuovo ? "In pubblicazione…" : ""].filter(Boolean).join(" · ");
-      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button>${catPuoCaricare && !x._nuovo && /^cataloghi\/[a-z0-9-]+\.pdf\.enc$/.test(x.file) ? `<button class="icon-btn ct-mv" type="button" data-mv="${catalogo.indexOf(x)}" aria-label="Sposta ${esc(x.titolo)} in un'altra categoria">${catMvIco}</button>` : ""}</li>`;
+      return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button>${catPuoCaricare && !x._nuovo && /^cataloghi\/[a-z0-9-]+\.pdf\.enc$/.test(x.file) ? `<button class="icon-btn ct-mv" type="button" data-mv="${catalogo.indexOf(x)}" aria-label="Sposta o elimina ${esc(x.titolo)}">${catMvIco}</button>` : ""}</li>`;
     }).join("")}</ul>`;
     if(cat.cat && !cat.q.trim()){      // dentro una categoria: titolo grande invece dell'intestazione a comparsa
       const s = catStile(g);
@@ -2137,6 +2139,24 @@ function catMvApri(x){
 $("#catMvX").addEventListener("click", () => { if(!catMvInCorso) $("#dlgCatMv").close(); });
 $("#catMvNo").addEventListener("click", () => { if(!catMvInCorso) $("#dlgCatMv").close(); });
 $("#dlgCatMv").addEventListener("cancel", e => { if(catMvInCorso) e.preventDefault(); });
+$("#catMvDel").addEventListener("click", async () => {
+  const x = catMvX; if(!x || catMvInCorso) return;
+  if(!confirm("Eliminare «" + x.titolo + "»? Sparisce per tutti gli account e non si può annullare (l'originale resta solo nei tuoi PDF sul PC).")) return;
+  const msg = t => { const m = $("#catMvMsg"); m.textContent = t || ""; m.classList.toggle("hidden", !t); };
+  msg(""); catMvInCorso = true; $("#catMvOk").disabled = true; $("#catMvDel").disabled = true; $("#catMvDel").textContent = "Elimino…";
+  try{
+    const r = await fetch(CAT_SERVIZIO + "/elimina", { method: "POST", headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken(), "Content-Type": "application/json" }, body: JSON.stringify({ file: x.file }) });
+    if(!r.ok){ let m = ""; try{ m = (await r.json()).errore; }catch(err){} throw new Error(r.status === 404 ? "Il servizio Cloudflare non è aggiornato: va caricato il nuovo codice del Worker." : (m || "Non sono riuscito a eliminare il catalogo. Riprova.")); }
+    const i = catalogo.indexOf(x); if(i >= 0) catalogo.splice(i, 1);
+    const p = catPend.findIndex(y => y.file === x.file); if(p >= 0) catPend.splice(p, 1);
+    catMosse.delete(x.file); catEliminati.add(x.file); catBlobs.delete(x.file);
+    $("#dlgCatMv").close();
+    if(cat.cat && !catalogo.some(y => catGrp(y) === cat.cat)) cat.cat = "";
+    renderCataloghi();
+    toast("Catalogo eliminato.");
+  }catch(err){ msg(err && err.message ? err.message : "Non sono riuscito a eliminare il catalogo."); }
+  finally{ catMvInCorso = false; $("#catMvOk").disabled = false; $("#catMvDel").disabled = false; $("#catMvDel").textContent = "Elimina"; }
+});
 $("#catMvCat").addEventListener("change", e => {
   const n = e.target.value === "__nuova";
   $("#catMvNuovaBox").classList.toggle("hidden", !n);
@@ -2957,7 +2977,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.3 (v3.3)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.4 (v3.4)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

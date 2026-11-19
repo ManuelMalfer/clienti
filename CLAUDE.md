@@ -238,7 +238,7 @@ e lo manda al servizio; il catalogo compare subito qui ("In pubblicazione…", s
   email non abilitata, nomi file non validi, doppioni, troppo grande, conflitti sull'elenco, nessun segreto nelle risposte) e
   l'app completa con finto Firebase: caricamento, voce nell'elenco, file decifrabile, riapertura dal "sito", PDF finto rifiutato,
   titolo doppio (suffisso `-2`), account non autorizzato (nessun pulsante), servizio spento (messaggio e "Riprova").
-- Non c'è ancora modifica/eliminazione di un catalogo dall'app: si fa dal PC (`cataloghi.json` + file) o chiedendo a Claude.
+- Sposta categoria ed elimina: icona cartella sulla riga (solo account autorizzati). Non c'è ancora la modifica di titolo/descrizione: si fa dal PC (`cataloghi.json`) o chiedendo a Claude. Un catalogo eliminato resta nella cronologia Git (cifrato).
 
 ### Lettore PDF dei cataloghi
 
@@ -269,6 +269,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v3** = v2 + mappa delle zone più grande su iPad/iPhone + **versione per PC** (sezione "Versione per PC"). Tag Git `v3`.
 - **v3.1** = v3 + nuovo **Giro** (mappa verde/gialla, niente elenco consegne, ordini con spunta). Tag Git `v3.1`.
 - **v3.3** = v3.2 + periodo di chiusura dei clienti, "+" tolto dal Giro, più aria sotto filtri e ricerca, riga dei Preventivi sistemata, **sposta catalogo di categoria** dall'app (icona cartella sulla riga, solo account autorizzati; riusa POST /elenco del Worker, che sostituisce la voce con lo stesso `file`). Brochure Carni spostata in Marchi S.p.A. Tag Git `v3.3`; la scritta in Riepilogo dice 3.3.
+- **v3.4** = v3.3 + **elimina catalogo** dall'app (finestra della cartella, pulsante Elimina; solo account autorizzati; percorso `POST /elimina {file}` del Worker: toglie la voce da `cataloghi.json` e cancella il `.enc`; **il Worker va ricaricato su Cloudflare** con il nuovo `strumenti/worker-cataloghi.js`, altrimenti l'app avvisa). Tag Git `v3.4`.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).

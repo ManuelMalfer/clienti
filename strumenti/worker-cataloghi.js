@@ -16,6 +16,7 @@
 //   GET  /ping            controlla il login e il permesso (l'app lo usa per mostrare il pulsante "Aggiungi")
 //   PUT  /file/<nome>.pdf.enc   scrive cataloghi/<nome>.pdf.enc (il corpo è il JSON dell'API GitHub: {message, content})
 //   POST /elenco          aggiunge/aggiorna la voce in cataloghi.json
+//   POST /elimina         toglie la voce da cataloghi.json e cancella il file cifrato ({file})
 //
 // Il Worker non guarda e non decifra il contenuto dei PDF: riceve già byte cifrati.
 
@@ -104,6 +105,35 @@ async function aggiornaElenco(env, voce){
   throw new Errore(409, "l'elenco è stato modificato da qualcun altro: riprova");
 }
 
+async function eliminaCatalogo(env, file){
+  if(!PERCORSO_FILE.test(file)) throw new Errore(400, "nome file non valido");
+  let titolo = file;
+  for(let tentativo = 0; ; tentativo++){
+    const r = await fetch(ghUrl(env, "cataloghi.json") + ref(env), { headers: ghHead(env) });
+    if(!r.ok) throw new Errore(502, "non riesco a leggere l'elenco (" + r.status + ")");
+    const info = await r.json();
+    const dati = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(String(info.content).replace(/\s/g, "")), c => c.charCodeAt(0))));
+    const i = (dati.cataloghi || []).findIndex(x => x.file === file);
+    if(i < 0) break;                                   // già tolto dall'elenco: resta solo il file
+    titolo = dati.cataloghi[i].titolo || file;
+    dati.cataloghi.splice(i, 1);
+    const put = await fetch(ghUrl(env, "cataloghi.json"), {
+      method: "PUT", headers: ghHead(env, { "Content-Type": "application/json" }),
+      body: JSON.stringify({ message: "Cataloghi: eliminato «" + titolo + "» (da app)", content: bytesToB64(new TextEncoder().encode(JSON.stringify(dati, null, 1) + "\n")), sha: info.sha, branch: env.GITHUB_BRANCH || "main" })
+    });
+    if(put.ok) break;
+    if((put.status !== 409 && put.status !== 422) || tentativo >= 3) throw new Errore(502, "non riesco a scrivere l'elenco (" + put.status + ")");
+  }
+  // poi il file cifrato (se non c'è già più, va bene lo stesso)
+  const f = await fetch(ghUrl(env, file) + ref(env), { headers: ghHead(env) });
+  if(f.status === 404) return;
+  if(!f.ok) throw new Errore(502, "GitHub non risponde (" + f.status + ")");
+  const sha = (await f.json()).sha;
+  const d = await fetch(ghUrl(env, file), { method: "DELETE", headers: ghHead(env, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ message: "Cataloghi: eliminato il file di «" + titolo + "» (da app)", sha, branch: env.GITHUB_BRANCH || "main" }) });
+  if(!d.ok) throw new Errore(502, "il catalogo è stato tolto dall'elenco ma non sono riuscito a cancellare il file (" + d.status + ")");
+}
+
 export default {
   async fetch(req, env){
     const origine = req.headers.get("Origin") || "";
@@ -150,6 +180,11 @@ export default {
         let corpo; try{ corpo = await req.json(); }catch(e){ throw new Errore(400, "dati non validi"); }
         const esito = await aggiornaElenco(env, controllaVoce(corpo));
         return risposta({ ok: true, esito }, 200, cors);
+      }
+      if(req.method === "POST" && url.pathname === "/elimina"){
+        let corpo; try{ corpo = await req.json(); }catch(e){ throw new Errore(400, "dati non validi"); }
+        await eliminaCatalogo(env, String((corpo && corpo.file) || ""));
+        return risposta({ ok: true }, 200, cors);
       }
       throw new Errore(404, "percorso sconosciuto");
     }catch(e){
