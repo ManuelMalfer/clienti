@@ -277,7 +277,8 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.4** = v4.3 + Budget a **quattro schede** (Andamento, Target, Pressione, Provvigioni). Tag Git `v4.4`; la scritta in Riepilogo dice 4.4.
 - **v4.5** = v4.4 + **unione delle schede doppie** (fatturazione + destinazione). Tag Git `v4.5`; la scritta in Riepilogo dice 4.5.
 - **v4.6** = v4.5 + abbinamento manuale con ricerca tra destinazione e fatturazione. Tag Git `v4.6`; la scritta in Riepilogo dice 4.6.
-- **v4.7** = v4.6 + nelle Provvigioni l'elenco per cliente mostra tutti i clienti. Tag Git `v4.7`; la scritta in Riepilogo dice 4.7.
+- **v4.7** = v4.6 + nelle Provvigioni l'elenco per cliente mostrava tutti i clienti (poi cambiato in v4.8).
+- **v4.8** = v4.7 con le Provvigioni: "Per cliente" mostra i primi 15 + **Mostra tutti**, "Per categoria" in un riquadro separato a fianco. Tag Git `v4.8`; la scritta in Riepilogo dice 4.8.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -388,7 +389,7 @@ da solo il tipo (`bdgCaricaFile`): scheda performance, report target, **Analisi 
   riga di fattura legge cliente (col. C), capitolo (D, categoria merceologica), fatturato (H) e valore provvigione (J); controlla che la somma torni con la riga "Totale" del foglio. Si salvano solo
   i totali per mese, per cliente e per capitolo in `utenti/{uid}/impostazioni/provvigioni` = `{anno, tot:{f[12],p[12]}, cap:[{k,n,f[12],p[12]}], cli:[{c,n,f[12],p[12]}]}`. **Nel file i valori sono
   negativi** (es. −2,8%, totale annuo −19.080 €): nell'app si mostrano in positivo con la costante `PROV_SEGNO = -1` (da verificare con Manuel che sia il significato giusto; se no, cambiare la costante).
-  Schermata: riquadri (provvigioni dell'anno, fatturato provvigionato, % media), grafico mensile, tabella, poi elenco per cliente (**tutti**, non solo i primi: segnalato dal papà di Manuel) e per categoria, con scelta del mese o dell'anno.
+  Schermata: riquadri (provvigioni dell'anno, fatturato provvigionato, % media), grafico mensile, tabella, poi due riquadri affiancati su PC (uno sotto l'altro su telefono) con la scelta del periodo (anno o mese) sopra: **Per cliente** (primi 15 e tasto **Mostra tutti**, `prvTutti`) e **Per categoria** (tutte), con scelta del mese o dell'anno.
   Nella scheda cliente: provvigioni dell'anno su quel cliente.
 - I report crediti settimanali (fino ad aprile) NON sono usati: l'azienda non li manda più (deciso con Manuel).
 - Provato con i file veri: pressione gennaio–ottobre (totali e somme dei clienti coincidono; ottobre 6,46%), provvigioni (totali mensili uguali al foglio Riepilogo, −19.079,57 €).

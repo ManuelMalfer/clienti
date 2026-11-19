@@ -799,7 +799,7 @@ button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
 .tg-det{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2)}
 .tg-det h3{margin:0 0 4px;font-size:14px;color:var(--muted);font-weight:600}
 .tg-sub{margin:8px 0 2px;font-size:13px;font-weight:700}
-@media (min-width:1100px){#bdgBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}#bdgBody > .bdg-kpis,#bdgBody > .bdg-msg,#bdgBody > .bdg-tabs,#bdgBody > .bdg-vuoto{grid-column:1 / -1}}
+@media (min-width:1100px){#bdgBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}#bdgBody > .bdg-kpis,#bdgBody > .bdg-msg,#bdgBody > .bdg-tabs,#bdgBody > .bdg-vuoto,#bdgBody > .bdg-wide{grid-column:1 / -1}}
 .bdg-tabs{margin-top:8px;flex-wrap:wrap;overflow:visible}
 .tg-cli > span{flex:1 1 auto}
 .tg-cli > .chip-btn{flex:0 0 auto}
@@ -2763,6 +2763,7 @@ $("#bdgBody").addEventListener("click", e => {
   if(t){ bdgTab = t.dataset.btab; renderBudget(); window.scrollTo(0, 0); return; }
   const p = e.target.closest("[data-pmese]");
   if(p){ prsMese = p.dataset.pmese; renderBudget(); return; }
+  if(e.target.closest("[data-vtutti]")){ prvTutti = !prvTutti; renderBudget(); return; }
   const m = e.target.closest("[data-vmese]");
   if(m){ prvMese = +m.dataset.vmese; renderBudget(); }
 });
@@ -2896,7 +2897,7 @@ function prsVista(){
 // Si salvano solo i totali per mese, per cliente e per capitolo (utenti/{uid}/impostazioni/provvigioni).
 // Nel file i valori sono NEGATIVI (es. −2,8%): nell'app si mostrano in positivo (PROV_SEGNO = −1). Se non è il significato giusto, basta cambiare il segno qui.
 const PROV_SEGNO = -1;
-let prv = null, prvStato = "idle", prvUid = null, prvMese = -1;
+let prv = null, prvStato = "idle", prvUid = null, prvMese = -1, prvTutti = false;
 const prvRef = () => doc(db, "utenti", uid, "impostazioni", "provvigioni");
 /*PRV-PARSE-START*/
 function prvAnalizza(wb){
@@ -2959,7 +2960,7 @@ function prvVista(){
   const cap = lista(d.cap), cli = lista(d.cli);
   const periodo = sel < 0 ? "tutto l'anno" : BDG_MESI[sel].toLowerCase();
   const rCap = cap.map(x => `<div class="tg-cli"><span>${esc(tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b></div>`).join("");
-  const rCli = cli.map(x => {
+  const rCli = (prvTutti ? cli : cli.slice(0, 15)).map(x => {
     const c = tgtTrova({ c: x.o.c, n: x.o.n });
     return bdgVoce(c, `<span>${esc(c ? c.nome : tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b>`, { c: x.o.c });
   }).join("");
@@ -2969,15 +2970,17 @@ function prvVista(){
       <div class="bdg-kpi"><small>Fatturato provvigionato</small><b>${bdgEuro(F)} €</b><span>${d.cli.length} clienti</span></div>
       <div class="bdg-kpi"><small>Provvigione media</small><b>${bdgPct(F ? P / F * 100 : null)}</b><span>${BDG_MESI[ultimo]}: ${bdgPct(d.tot.f[ultimo] ? d.tot.p[ultimo] * S / d.tot.f[ultimo] * 100 : null)}</span></div>
     </div>
-    <section class="bdg-card"><h2>Provvigioni mese per mese (€)</h2><div class="bdg-scroll">${grafico}</div>
+    <section class="bdg-card bdg-wide"><h2>Provvigioni mese per mese (€)</h2><div class="bdg-scroll">${grafico}</div>
       <table class="bdg-tab" style="margin-top:10px"><thead><tr><th>Mese</th><th>Fatturato</th><th>%</th><th>Provvigione</th></tr></thead><tbody>${righe}</tbody>
       <tfoot><tr><td>Totale</td><td>${bdgEuro(F)}</td><td>${bdgPct(F ? P / F * 100 : null)}</td><td>${bdgEuro(P)}</td></tr></tfoot></table>
       <p class="hint" style="margin:8px 0 0">Gli importi sono mostrati in positivo; nel file dell'azienda hanno il segno meno.</p></section>
+    <div class="bdg-wide"><p class="hint" style="margin:10px 0 0">Periodo per i due riquadri qui sotto:</p>${bdgMeseChips([[-1, "Anno"], ...mesi.map(i => [i, BDG_MESI[i]])], sel, "data-vmese")}</div>
     <section class="bdg-card"><h2>Per cliente · ${periodo}</h2>
-      ${bdgMeseChips([[-1, "Anno"], ...mesi.map(i => [i, BDG_MESI[i]])], sel, "data-vmese")}
       <div class="tg-list">${rCli || `<p class="hint">Nessun dato.</p>`}</div>
+      ${cli.length > 15 ? `<button type="button" class="link" data-vtutti style="margin-top:6px">${prvTutti ? "Mostra meno" : "Mostra tutti (" + cli.length + ")"}</button>` : ""}
       <p class="hint" style="margin:6px 0 0">${cli.length} ${cli.length === 1 ? "cliente" : "clienti"} con provvigioni in questo periodo.</p>
-      <h3 class="tg-h3">Per categoria · ${periodo}</h3>
+    </section>
+    <section class="bdg-card"><h2>Per categoria · ${periodo}</h2>
       <div class="tg-list">${rCap || `<p class="hint">Nessun dato.</p>`}</div>
     </section>` };
 }
@@ -3834,7 +3837,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.7 (v4.7)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.8 (v4.8)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
