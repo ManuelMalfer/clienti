@@ -4064,7 +4064,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.15 (v4.15)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.16 (v4.16)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4496,12 +4496,16 @@ $("#fileImport").addEventListener("change", async e => {
     const luoghi = {}; clienti.forEach(c => { if(c.luogo) luoghi[norm(c.luogo)] = c.luogo; });
     const digits = t => String(t || "").replace(/[^\d]/g, "").replace(/^0039|^39(?=3\d{9}$)/, "");
     const trova = c => {
-      if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => e.codiceDest && String(e.codiceDest) === String(c.codice)) || clienti.find(e => e.codiceFatt && String(e.codiceFatt) === String(c.codice)); if(x) return x; }
+      // stesso conto = stesso codice proprio (o codice di destinazione di una scheda unita).
+      // NON basta il codice di fatturazione collegato (`codiceFatt`): quelle sono le sue destinazioni, schede diverse.
+      if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => e.codiceDest && String(e.codiceDest) === String(c.codice)); if(x) return x; }
+      // una scheda che ha già un ALTRO codice cliente è un altro conto: telefono, ragione sociale o nome uguali non bastano
+      const libero = e => !c.codice || !e.codice || String(e.codice) === String(c.codice);
       const tels = [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
-      if(tels.length){ const x = clienti.find(e => [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
-      if(c.ragioneSociale){ const x = clienti.find(e => e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
+      if(tels.length){ const x = clienti.find(e => libero(e) && [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
+      if(c.ragioneSociale){ const x = clienti.find(e => libero(e) && e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
       const n = norm(c.nome), l = norm(c.luogo);
-      return clienti.find(e => { const en = norm(e.nome); if(en.length < 4 || !(n === en || n.includes(en))) return false; const stessoLuogo = !l || !e.luogo || norm(e.luogo) === l || norm(e.luogo).includes(l) || l.includes(norm(e.luogo)); return stessoLuogo || en.length >= 9; }) || null;
+      return clienti.find(e => { if(!libero(e)) return false; const en = norm(e.nome); if(en.length < 4 || !(n === en || n.includes(en))) return false; const stessoLuogo = !l || !e.luogo || norm(e.luogo) === l || norm(e.luogo).includes(l) || l.includes(norm(e.luogo)); return stessoLuogo || en.length >= 9; }) || null;
     };
     const CAMPI = ["codice","referente","ragioneSociale","tel","cellulare","email","pec","cap","prov","indirizzo","luogo","piva"];
     const nuovi = [], aggiornamenti = []; let saltati = 0, esclusi = 0;
