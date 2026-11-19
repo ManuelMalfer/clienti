@@ -3445,6 +3445,33 @@ $("#uniOk").addEventListener("click", async () => {
 });
 $("#dBody").addEventListener("click", e => { if(e.target.closest("[data-uni-start]")) uniApri("scegli", ui.openId); });
 
+// Annulla unione: una scheda unita (con codice di destinazione) torna a essere due schede: la destinazione (questa, col nome del locale e codice 120…)
+// e la fatturazione (nuova, con ragione sociale, P.IVA, pagamento e codice 100…). Dei dati di prima si ricorda solo quello che l'unione ha lasciato.
+const UNI_FISCALI = ["ragioneSociale", "piva", "codiceFiscale", "codiceUnivoco", "pec", "pagamento"];
+async function uniAnnulla(id){
+  const c = byId(id); if(!c) return;
+  try{
+    if(c.codiceDest){
+      const nomeF = (c.altriNomi || []).find(x => x && norm(x) !== norm(c.nome)) || c.ragioneSociale || (c.nome + " (fatturazione)");
+      if(!confirm("Annullo l'unione di «" + c.nome + "»?\n\n•  «" + c.nome + "» torna la destinazione (cod. " + c.codiceDest + ").\n•  Viene ricreata la scheda di fatturazione «" + nomeF + "» (cod. " + (c.codice || "—") + ") con ragione sociale, P.IVA e dati amministrativi.\n\nL'indirizzo della fatturazione non si ricorda: nella nuova scheda c'è quello attuale, da correggere se serve.")) return;
+      const f = { nome: nomeF, codice: c.codice || "", tipologia: "", fornitori: [], giorniOrdine: [], giorniConsegna: [], stato: c.stato || "DA CONTATTARE", note: "",
+        indirizzo: c.indirizzo || "", cap: c.cap || "", luogo: c.luogo || "", prov: c.prov || "", storico: [{ d: localISO(), t: "Creata annullando l'unione con la scheda «" + c.nome + "» (cod. " + c.codiceDest + ")" }], creato: nowISO(), aggiornato: nowISO() };
+      UNI_FISCALI.forEach(k => { f[k] = c[k] || ""; });
+      const a = { codice: c.codiceDest, codiceDest: "", altriNomi: [], storico: [...(c.storico || []), { d: localISO(), t: "Unione annullata: ricreata la fatturazione «" + nomeF + "» (cod. " + (c.codice || "—") + ")" }] };
+      UNI_FISCALI.forEach(k => { a[k] = ""; });
+      await setDoc(doc(col()), f);
+      await update(c.id, a);
+      toast("Unione annullata: create due schede");
+    } else if(c.codiceFatt){
+      if(!confirm("Tolgo il collegamento di «" + c.nome + "» con la fatturazione (cod. " + c.codiceFatt + ")?\n\nLa scheda tiene i suoi dati, ma non sarà più abbinata ai report di quella fatturazione.")) return;
+      await update(c.id, { codiceFatt: "", altriNomi: [], storico: [...(c.storico || []), { d: localISO(), t: "Collegamento con la fatturazione cod. " + c.codiceFatt + " tolto" }] });
+      toast("Collegamento tolto");
+    } else return;
+    if($("#dlgDetail").open) $("#dlgDetail").close();
+  }catch(err){ fail(err); }
+}
+$("#dBody").addEventListener("click", e => { if(e.target.closest("[data-uni-undo]")) uniAnnulla(ui.openId); });
+
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
 const giroData = i => addDays((new Date().getDay() === 0 ? 1 : 1 - new Date().getDay()) + i);
@@ -3911,7 +3938,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.12 (v4.12)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.13 (v4.13)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -3991,8 +4018,8 @@ function renderDetail(){
     </div>
     <div class="richiamo">
       <label>Doppione?</label>
-      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">Lo stesso locale con due codici (fatturazione e destinazione)</span>
-      <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>
+      <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : c.codiceFatt ? "Destinazione collegata alla fatturazione " + esc(c.codiceFatt) : "Lo stesso locale con due codici (fatturazione e destinazione)"}</span>
+      <button class="chip-btn" type="button" data-uni-start>Unisci a…</button>${c.codiceDest || c.codiceFatt ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
     </div>
     ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
