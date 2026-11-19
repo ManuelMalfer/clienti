@@ -276,6 +276,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.3** = v4.2 + tasto **Collega** per i clienti dei report target senza scheda collegata. Tag Git `v4.3`; la scritta in Riepilogo dice 4.3.
 - **v4.4** = v4.3 + Budget a **quattro schede** (Andamento, Target, Pressione, Provvigioni). Tag Git `v4.4`; la scritta in Riepilogo dice 4.4.
 - **v4.5** = v4.4 + **unione delle schede doppie** (fatturazione + destinazione). Tag Git `v4.5`; la scritta in Riepilogo dice 4.5.
+- **v4.6** = v4.5 + abbinamento manuale con ricerca tra destinazione e fatturazione. Tag Git `v4.6`; la scritta in Riepilogo dice 4.6.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -398,6 +399,7 @@ L'export del gestionale può creare **due clienti per lo stesso locale**: la **f
 
 - **Riepilogo → Dati → "Cerca doppioni"** (`uniCoppie`): per ogni scheda con codice 120… cerca una 100… con stessa P.IVA (+3), stesso indirizzo e località (+3), stessa coda di 6 cifre del codice (+2)
   o nome simile (+1/+3); propone le coppie con almeno 3 punti, con avviso se una fatturazione ha più destinazioni. **Nella scheda cliente → "Doppione? Unisci a…"**: si cerca a mano l'altra scheda.
+- **Abbinamento manuale** (v4.6, perché il sistema non sempre abbina la coppia giusta): nell'elenco dei doppioni ogni riga ha **Unisci** e **Cambia** (sceglie un'altra scheda con la ricerca per nome, codice, ragione sociale, indirizzo), e in fondo c'è **Collega a mano…** (si cercano le due schede da zero). Nell'anteprima ci sono **Scambia i ruoli**, **Cambia la fatturazione** e **Cambia la destinazione**. Stato in `uni` (`modo`: coppie / scegli / conferma, `a`, `f`, `d`, `da`).
 - Prima di unire si vede un'anteprima con i ruoli (si possono **scambiare**) e il risultato. L'unione tiene la scheda di **fatturazione** (stesso id, `codice` = quello di fatturazione) e mette il codice
   della destinazione in `codiceDest`. Per ogni campo: dati del locale (nome, indirizzo, cap, località, prov, tipologia, referente, telefoni, email, orari) prevale la **destinazione**; dati fiscali
   e amministrativi (ragione sociale, P.IVA, codice fiscale, SDI, PEC, pagamento) prevale la **fatturazione**; se uno è vuoto si prende l'altro. Fornitori e `ordiniFatti` si sommano, giorni dalla

@@ -3278,10 +3278,10 @@ function uniCoppie(){
   return coppie.sort((a, b) => b.p - a.p || (a.d.nome || "").localeCompare(b.d.nome || "", "it"));
 }
 
-const uni = { modo: "coppie", f: null, d: null, a: null, q: "" };
+const uni = { modo: "coppie", f: null, d: null, a: null, q: "", da: "" };   // da = "coppie" se si è partiti dall'elenco dei doppioni
 const uniRiga = (c, extra) => `<span>${esc(c.nome)}<small>${esc([c.codice ? "Cod. " + c.codice : "", c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", [c.indirizzo, c.luogo].filter(Boolean).join(", ")].filter(Boolean).join(" · "))}</small>${extra || ""}</span>`;
-function uniApri(modo, a){
-  uni.modo = modo; uni.a = a || null; uni.q = ""; uni.f = uni.d = null;
+function uniApri(modo, a, da){
+  uni.modo = modo; uni.a = a || null; uni.da = da || ""; uni.q = ""; uni.f = uni.d = null;
   uniRender();
   if(!$("#dlgUni").open) $("#dlgUni").showModal();
 }
@@ -3293,13 +3293,16 @@ function uniRender(){
     const L = uniCoppie();
     body.innerHTML = L.length
       ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "locale sembra" : "locali sembrano"} presenti due volte: la destinazione (codice 120…, col nome del locale) e la fatturazione (codice 100…). Controlla e unisci.</p>` +
-        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni: controlla bene" : ""}</small>`)}<button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Unisci</button></div>`).join("")
-      : `<p class="hint">Non trovo doppioni tra i clienti con codice 100… e 120…. Se ne vedi uno, aprilo e usa <b>Unisci a…</b> nella sua scheda.</p>`;
+        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni: controlla bene" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Unisci</button><button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
+      : `<p class="hint">Non trovo doppioni tra i clienti con codice 100… e 120….</p>`;
+    body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o il doppione non è in elenco? Scegli tu le due schede, con la ricerca.</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
   } else if(uni.modo === "scegli"){
-    const a = byId(uni.a); if(!a){ $("#dlgUni").close(); return; }
-    $("#uniT").textContent = "Unisci a un altro cliente";
-    body.innerHTML = `<p class="hint" style="margin:0 0 8px;font-weight:600">${esc(a.nome)}${a.codice ? " · cod. " + esc(a.codice) : ""}</p>
-      <input class="input" id="uniQ" type="search" placeholder="Cerca l'altra scheda dello stesso locale…" autocomplete="off" aria-label="Cerca cliente">
+    const a = uni.a ? byId(uni.a) : null; if(uni.a && !a){ $("#dlgUni").close(); return; }
+    $("#uniT").textContent = a ? "Scegli l'altra scheda" : "Collega a mano";
+    body.innerHTML = (uni.da === "coppie" ? `<button type="button" class="link" data-uniback style="padding:0 0 8px">‹ Torna ai doppioni</button>` : "") + (a
+      ? `<p class="hint" style="margin:0 0 8px">Scheda scelta: <b>${esc(a.nome)}</b>${a.codice ? " · cod. " + esc(a.codice) : ""}<br>Cerca l'altra scheda dello stesso locale (nome, codice, ragione sociale, indirizzo).</p>`
+      : `<p class="hint" style="margin:0 0 8px">Cerca la prima scheda (nome, codice, ragione sociale, indirizzo): di solito quella della destinazione, col nome del locale.</p>`) + `
+      <input class="input" id="uniQ" type="search" placeholder="Cerca per nome o codice…" autocomplete="off" aria-label="Cerca cliente">
       <div class="tg-list" id="uniLista" style="margin-top:10px;max-height:46vh;overflow:auto"></div>`;
     uniLista();
   } else {
@@ -3308,7 +3311,7 @@ function uniRender(){
     const r = unisciSchede(f, d, localISO());
     const blocco = (c, ruolo) => `<div class="uni-col"><small>${ruolo}</small><b>${esc(c.nome)}</b>${[c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", c.codice ? "Cod. " + c.codice : "", c.piva ? "P.IVA " + c.piva : "", [c.indirizzo, c.luogo].filter(Boolean).join(", "), c.tel || c.cellulare].filter(Boolean).map(x => `<span>${esc(x)}</span>`).join("")}</div>`;
     body.innerHTML = `<div class="uni-2">${blocco(f, "Fatturazione (si tiene questa scheda)")}${blocco(d, "Destinazione (nome del locale)")}</div>
-      <button class="chip-btn" type="button" data-uniswap style="margin:10px 0">⇄ Scambia i ruoli</button>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"><button class="chip-btn" type="button" data-uniswap>⇄ Scambia i ruoli</button><button class="chip-btn" type="button" data-unicambia="d">Cambia la fatturazione</button><button class="chip-btn" type="button" data-unicambia="f">Cambia la destinazione</button></div>
       <div class="tg-det" style="margin-top:0"><h3>Dopo l'unione</h3>
         <p class="hint" style="margin:0 0 2px"><b>${esc(r.nome)}</b>${r.ragioneSociale && norm(r.ragioneSociale) !== norm(r.nome) ? " · " + esc(r.ragioneSociale) : ""}</p>
         <p class="hint" style="margin:0 0 2px">Codice ${esc(r.codice || "—")}${r.codiceDest ? " · destinazione " + esc(r.codiceDest) : ""}${r.piva ? " · P.IVA " + esc(r.piva) : ""}</p>
@@ -3318,9 +3321,10 @@ function uniRender(){
   }
 }
 function uniLista(){
-  const a = byId(uni.a); if(!a || !$("#uniLista")) return;
-  const q = norm($("#uniQ").value), pa = uniParole(a.nome + " " + (a.ragioneSociale || ""));
-  let L = clienti.filter(c => c.id !== a.id).map(c => ({ c, t: norm([c.nome, c.ragioneSociale, c.luogo, c.codice, c.indirizzo].join(" ")), s: [...uniParole(c.nome + " " + (c.ragioneSociale || ""))].filter(w => pa.has(w)).length + (uniTipo(c) && uniTipo(c) !== uniTipo(a) ? 1 : 0) }));
+  if(!$("#uniLista")) return;
+  const a = uni.a ? byId(uni.a) : null;
+  const q = norm($("#uniQ").value), pa = a ? uniParole(a.nome + " " + (a.ragioneSociale || "")) : new Set();
+  let L = clienti.filter(c => !a || c.id !== a.id).map(c => ({ c, t: norm([c.nome, c.ragioneSociale, c.luogo, c.codice, c.codiceDest, c.indirizzo].join(" ")), s: a ? [...uniParole(c.nome + " " + (c.ragioneSociale || ""))].filter(w => pa.has(w)).length + (uniTipo(c) && uniTipo(c) !== uniTipo(a) ? 1 : 0) : 0 }));
   if(q) L = L.filter(o => o.t.includes(q));
   L = L.sort((x, y) => y.s - x.s || (x.c.nome || "").localeCompare(y.c.nome || "", "it")).slice(0, 40);
   $("#uniLista").innerHTML = L.map(({ c }) => `<button type="button" class="tg-cli" data-unipick="${c.id}">${uniRiga(c)}</button>`).join("") || `<p class="hint">Nessun cliente trovato.</p>`;
@@ -3337,7 +3341,11 @@ $("#uniX").addEventListener("click", () => $("#dlgUni").close());
 $("#uniNo").addEventListener("click", () => $("#dlgUni").close());
 $("#uniBody").addEventListener("click", e => {
   const c = e.target.closest("[data-uni]"); if(c){ const [f, d] = c.dataset.uni.split("|"); uniConferma(f, d); return; }
-  const p = e.target.closest("[data-unipick]"); if(p){ uniConferma(uni.a, p.dataset.unipick); return; }
+  const p = e.target.closest("[data-unipick]"); if(p){ if(!uni.a){ uni.a = p.dataset.unipick; uniRender(); } else uniConferma(uni.a, p.dataset.unipick); return; }
+  const alt = e.target.closest("[data-unialtra]"); if(alt){ uniApri("scegli", alt.dataset.unialtra, "coppie"); return; }
+  if(e.target.closest("[data-uniman]")){ uniApri("scegli", null, "coppie"); return; }
+  if(e.target.closest("[data-uniback]")){ uniApri("coppie"); return; }
+  const cb = e.target.closest("[data-unicambia]"); if(cb){ const tieni = cb.dataset.unicambia === "d" ? uni.d : uni.f; uniApri("scegli", tieni, uni.da); return; }
   if(e.target.closest("[data-uniswap]")){ [uni.f, uni.d] = [uni.d, uni.f]; uniRender(); }
 });
 $("#uniBody").addEventListener("input", e => { if(e.target.id === "uniQ") uniLista(); });
@@ -3826,7 +3834,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.5 (v4.5)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.6 (v4.6)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
