@@ -291,6 +291,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.18** = v4.17 + abbinamento fatturazione/destinazione con la **regola dei codici Marchi** e correzione delle schede create con il codice della fatturazione (caso ALPI). Tag Git `v4.18`; la scritta in Riepilogo dice 4.18.
 - **v4.19** = v4.18 **senza più l'unione delle schede**: fatturazione e destinazione si possono solo **collegare** (richiesta di Manuel). Tag Git `v4.19`; la scritta in Riepilogo dice 4.19.
 - **v4.20** = v4.19 + nella **Pressione** la vista **Anno** (tutti i mesi caricati sommati). Tag Git `v4.20`; la scritta in Riepilogo dice 4.20.
+- **v5.0** = v4.20 + nuova pagina **Articoli** (tutto il catalogo prodotti di Marchi copiato da marchispa.it, con foto, categorie e ricerca). Tag Git `v5.0`; la scritta in Riepilogo dice 5.0.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -341,6 +342,28 @@ l'interfaccia cambia. Il blocco CSS è `/* ===== Versione PC ===== */`, dopo `As
   2 colonne; Riepilogo in 2 colonne bilanciate; Mappa a tutta altezza; finestre fino a 760 px; effetti al passaggio del mouse.
 - Scorciatoia da tastiera: **/** porta alla ricerca della schermata aperta (Clienti, Cataloghi, Preventivi).
 - **Mappa delle zone su iPad/iPhone**: 176 px su telefono (<600 px), 300 px su iPad (≥600 px, chip su 3 righe).
+
+## Articoli (v5.0)
+
+Pagina **Articoli** nel menu (subito dopo Cataloghi): il catalogo prodotti di Marchi S.p.A. copiato dal sito pubblico **www.marchispa.it** (PrestaShop in
+"modalità catalogo": **non ci sono prezzi**). Decisioni di Manuel: foto **copiate** nel repository (non caricate da marchispa.it) e dati **in chiaro** (il repository è
+pubblico, ma sono già pubblici sul sito di Marchi).
+
+- **Scaricamento**: `node strumenti/articoli-marchi.mjs` (dal PC, cartella del progetto; nessuna libreria). Legge la sitemap pubblica `/1_index_sitemap.xml` → `1_it_0_sitemap.xml`
+  (≈5.400 prodotti con nome e foto, ≈500 categorie), apre ogni pagina di categoria (nome e percorso dal breadcrumb) e ogni pagina prodotto (codice "Cod. XXXXX", nome h1,
+  descrizione breve `product-description-short`, descrizione, marca se c'è, categoria principale dal breadcrumb), scarica la prima foto in formato **medium_default** (~30 KB)
+  in `articoli/img/<id>.jpg` e scrive `articoli.json`. Va piano apposta (3 richieste alla volta, 250 ms di pausa: circa 30–40 minuti) e rispetta robots.txt. Riprende da dove
+  si era fermato grazie alla memoria in `strumenti/.cache-articoli/` (in .gitignore); `--nuovo` rilegge tutte le pagine; `LIMITE=20` per una prova veloce.
+  **Per aggiornare il catalogo** (nuovi articoli, foto cambiate): rilanciare lo strumento e fare commit + push di `articoli.json` e `articoli/img/`.
+- **Primo scaricamento (19/11/2026)**: 5.199 articoli, 28 categorie, 445 sottocategorie, 4.447 foto (105 MB); 752 articoli non hanno foto nemmeno sul sito di Marchi (immagine generica `it-default`) e nell'app mostrano un'icona; 3 senza codice. Durata circa 35 minuti.
+- La sottocategoria si ricava dal link del prodotto (es. `/sughi/5462-….html`); se due categorie hanno lo stesso nome (es. "Sughi" sotto Oli e condimenti e sotto Surgelati)
+  si sceglie quella sotto la categoria principale del prodotto.
+- `articoli.json` = `{ agg, fonte, top:[categorie principali], sub:[{n: nome (percorso), t: indice categoria}], a:[{ i: id prodotto, c: codice, n: nome, t, s (-1 = nessuna), b: descrizione breve, d: descrizione, m: marca, f: 0 se senza foto }] }`.
+- **Nell'app** (`art*`): prima schermata = riquadri delle categorie (stile Cataloghi, `catStile`); dentro una categoria pillole delle sottocategorie; elenco a schede con foto
+  (`loading="lazy"`), nome, codice; 60 per volta con "Mostra altri". **Ricerca** su codice (anche senza zeri iniziali: "1205" trova 01205), nome, descrizioni, marca e
+  categorie, per pezzi di parola; prima i codici uguali e i nomi che iniziano con la parola cercata. Dentro una categoria la ricerca resta nella categoria ("Cerca in tutto il
+  catalogo" per uscire). Dettaglio (`#dlgArt`): foto grande, codice con **Copia**, categoria, descrizioni, "Apri su marchispa.it" (`index.php?id_product=…&controller=product`).
+  Tasto **/** porta alla ricerca anche qui.
 
 ## Conferma prima di eliminare (v4.15)
 

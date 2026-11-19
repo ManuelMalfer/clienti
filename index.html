@@ -668,6 +668,7 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="giro"]{order:3}
   .tabs button[data-view="richiami"]{order:4}
   .tabs button[data-view="cataloghi"]{order:5}
+  .tabs button[data-view="articoli"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
   .tabs button[data-view="budget"]{order:8}
@@ -742,6 +743,7 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="giro"]{order:3}
   .tabs button[data-view="richiami"]{order:4}
   .tabs button[data-view="cataloghi"]{order:5}
+  .tabs button[data-view="articoli"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
   .tabs button[data-view="budget"]{order:8}
@@ -832,6 +834,23 @@ dialog.sure[open]{margin:auto;inset:0;height:fit-content;max-height:calc(100% - 
 .sure-box p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.4}
 .sure-foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:12px}
 .sure-foot .btn{min-height:46px;justify-content:center}
+/* Articoli */
+.ar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:8px}
+.ar-card{display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--sh1);overflow:hidden;color:inherit;cursor:pointer}
+.ar-card:active{transform:scale(.985)}
+.ar-foto{display:block;width:100%;aspect-ratio:1/1;object-fit:contain;background:#fff;padding:6px}
+.ar-nofoto{display:grid;place-items:center;color:var(--muted);background:var(--surface-2)}
+span.ar-foto.ar-nofoto{width:100%;aspect-ratio:1/1}
+.ar-txt{display:flex;flex-direction:column;gap:3px;padding:8px 10px 10px}
+.ar-txt b{font-size:13.5px;font-weight:600;line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ar-txt small{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ar-subs{flex-wrap:wrap;overflow:visible;margin:4px 0 6px}
+.ar-subs small{opacity:.7;margin-left:4px}
+.ar-altri{display:block;margin:14px auto 0}
+.ar-big{display:block;width:100%;max-height:340px;object-fit:contain;background:#fff;border-radius:var(--r-md);margin-bottom:12px}
+div.ar-big.ar-nofoto{height:180px}
+@media (min-width:700px){.ar-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}}
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){.ar-card:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:var(--sh2)}}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -999,6 +1018,17 @@ main.view{padding-top:14px}
     <main class="wrap view"><ul class="list" id="pvList"></ul></main>
   </section>
 
+  <section id="v-articoli" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Articoli</h1><span class="count" id="arLbl"></span></div>
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input class="input" id="arQ" type="search" placeholder="Cerca articolo, codice, marca…" autocomplete="off" aria-label="Cerca negli articoli">
+      </div>
+    </div></header>
+    <main class="wrap view" id="arBody"></main>
+  </section>
+
   <section id="v-cataloghi" class="view-wrap hidden">
     <header class="top"><div class="wrap">
       <div class="top-row"><h1>Cataloghi</h1><span class="ct-head"><span class="count" id="ctLbl"></span><button class="link hidden" id="ctAdd" type="button">+ Aggiungi</button></span></div>
@@ -1099,6 +1129,12 @@ main.view{padding-top:14px}
       <div class="sure-foot"><button class="btn" type="button" id="sureNo">Annulla</button><button class="btn btn-danger" type="button" id="sureOk">Elimina</button></div>
     </div>
   </dialog>
+  <dialog id="dlgArt" aria-labelledby="artT">
+    <div class="dlg">
+      <div class="dlg-head"><h2 id="artT">Articolo</h2><button class="close" type="button" id="artX" aria-label="Chiudi">×</button></div>
+      <div class="dlg-body" id="artBody"></div>
+    </div>
+  </dialog>
   <!-- /AGGIUNGI CATALOGO -->
 
   <!-- LETTORE PDF -->
@@ -1137,6 +1173,7 @@ main.view{padding-top:14px}
     <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
     <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
     <button data-view="cataloghi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
+    <button data-view="articoli" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Articoli</button>
     <button data-view="riepilogo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
     <button data-view="altro"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg>Altro<span class="num hidden" id="altroNum"></span></button>
     <button data-view="mappa" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
@@ -1669,7 +1706,7 @@ document.addEventListener("click", e => { const g = e.target.closest("[data-go]"
 addEventListener("keydown", e => {
   if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || document.querySelector("dialog[open]")) return;
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable) return;
-  const campo = { clienti: "#q", cataloghi: "#ctQ", preventivi: "#pvQ" }[ui.view];
+  const campo = { clienti: "#q", cataloghi: "#ctQ", preventivi: "#pvQ", articoli: "#arQ" }[ui.view];
   if(campo && $(campo)){ e.preventDefault(); $(campo).focus(); }
 });
 function go(view){
@@ -1678,11 +1715,12 @@ function go(view){
   const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
   $$(".tabs button").forEach(b => b.dataset.view === voce || b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
-  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro" || view === "budget");
+  $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro" || view === "budget" || view === "articoli");
   if(view !== "mappa") stopPick();
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
   if(view === "budget") bdgCarica();
+  if(view === "articoli") artCarica();
 }
 
 /* ---------- Conferma prima di eliminare ---------- */
@@ -1713,6 +1751,7 @@ function renderAll(){
   if(ui.view === "giro") renderGiro();
   if(ui.view === "riepilogo") renderRiepilogo();
   if(ui.view === "budget") renderBudget();
+  if(ui.view === "articoli") renderArticoli();
   if(ui.view === "mappa") renderMap();
   if(ui.view === "preventivi") pvRenderList();
   if(ui.view === "cataloghi") renderCataloghi();
@@ -3236,7 +3275,7 @@ function tgtHTML(lista){
       const persi = r.clienti.filter(x => x.p).map(x => ({ x, perso: r.cat.map((nome, i) => ({ nome, p: x.p[i], v: x.v[i] })).filter(k => k.p > 0 && k.v === 0) }))
         .filter(o => o.perso.length).sort((a, b) => b.perso.reduce((t, k) => t + k.p, 0) - a.perso.reduce((t, k) => t + k.p, 0)).slice(0, 8);
       if(persi.length) rec = `<h3 class="tg-h3">Da recuperare</h3><p class="hint" style="margin:0 0 6px">Nel ${r.anno - 1} compravano, nel ${r.anno} per ora no.</p>` + persi.map(o => {
-        const c = tgtTrova(o.x), nome = c ? c.nome : tgtTit(o.x.n);
+        const c = tgtTrova(o.x), nome = c ? c.nome : artCat(o.x.n);
         return voce(c, `<span>${esc(nome)}<small>${o.perso.map(k => esc(k.nome) + " " + eur(k.p) + " € → 0").join(" · ")}</small></span>`, o.x);
       }).join("");
     }
@@ -3630,6 +3669,110 @@ $("#uniLega").addEventListener("click", async () => {
   finally{ $("#uniLega").disabled = false; $("#uniLega").textContent = "Collega (schede separate)"; }
 });
 
+
+/* ---------- Articoli (catalogo prodotti di Marchi, copiato da www.marchispa.it) ---------- */
+// articoli.json lo crea strumenti/articoli-marchi.mjs: { agg, fonte, top:[categorie], sub:[{n, t}], a:[{ i:id, c:codice, n:nome, t:categoria, s:sottocategoria, b:descr. breve, d:descrizione, m:marca, f:0 se senza foto }] }
+// Le foto stanno in articoli/img/<id>.jpg. Ricerca per parole (codice, nome, descrizione, marca, categoria), anche pezzi di parola.
+const art = { dati: null, stato: "idle", q: "", top: -1, sub: -1, mostra: 60, idx: [] };
+const artCat = s => { const t = String(s || "").toLowerCase().trim(); return t.charAt(0).toUpperCase() + t.slice(1); };   // "OLI E CONDIMENTI" -> "Oli e condimenti"
+const artNorm = s => deaccent(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+async function artCarica(){
+  if(art.stato === "carico" || art.stato === "ok") return;
+  art.stato = "carico"; renderArticoli();
+  try{
+    const r = await fetch("articoli.json", { cache: "no-cache" });
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    art.dati = await r.json();
+    const D = art.dati;
+    // testo di ricerca di ogni articolo (anche il codice senza zeri iniziali: "1205" trova "01205")
+    art.idx = D.a.map(x => " " + artNorm([x.c, String(x.c || "").replace(/^0+/, ""), x.n, x.b, x.d, x.m, D.top[x.t], x.s >= 0 ? D.sub[x.s].n : ""].join(" ")) + " ");
+    art.stato = "ok";
+  }catch(err){ art.stato = "errore"; }
+  renderArticoli();
+}
+const artFoto = x => x.f === 0 ? "" : `articoli/img/${x.i}.jpg`;
+const artImg = (x, cls) => x.f === 0
+  ? `<span class="${cls} ar-nofoto" aria-hidden="true">${catIcona}</span>`
+  : `<img class="${cls}" src="${artFoto(x)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} ar-nofoto'}))">`;
+function artFiltrati(){
+  const D = art.dati, parole = artNorm(art.q).split(" ").filter(Boolean);
+  const out = [];
+  D.a.forEach((x, i) => {
+    if(art.top >= 0 && x.t !== art.top) return;
+    if(art.sub >= 0 && x.s !== art.sub) return;
+    if(parole.length && !parole.every(w => art.idx[i].includes(w))) return;
+    out.push(x);
+  });
+  // con la ricerca: prima chi ha il codice uguale o il nome che inizia con la prima parola
+  if(parole.length){
+    const p0 = parole[0];
+    const peso = x => (String(x.c || "").replace(/^0+/, "") === p0.replace(/^0+/, "") ? 0 : artNorm(x.n).startsWith(p0) ? 1 : 2);
+    out.sort((a, b) => peso(a) - peso(b));
+  }
+  return out;
+}
+function renderArticoli(){
+  if(ui.view !== "articoli") return;
+  const body = $("#arBody"), D = art.dati;
+  if(!D){
+    $("#arLbl").textContent = "";
+    body.innerHTML = `<div class="ct-empty">${art.stato === "errore" ? `Non riesco a caricare gli articoli. Controlla la connessione.<br><button class="btn" type="button" id="arRetry">Riprova</button>` : "Carico gli articoli…"}</div>`;
+    return;
+  }
+  const cerca = !!art.q.trim();
+  // schermata iniziale: categorie come riquadri
+  if(!cerca && art.top < 0){
+    $("#arLbl").textContent = `${bdgEuro(D.a.length)} articoli`;
+    const conta = D.top.map((_, t) => D.a.filter(x => x.t === t).length);
+    body.innerHTML = `<p class="hint" style="margin:6px 0 10px">Catalogo di Marchi S.p.A. aggiornato al ${fmtDate(D.agg)}. Cerca per nome, codice o marca, oppure scegli una categoria.</p>
+      <div class="ct-grid">${D.top.map((n, t) => conta[t] ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${bdgEuro(conta[t])} articoli</small></button>`; })() : "").join("")}</div>`;
+    return;
+  }
+  const lista = artFiltrati();
+  $("#arLbl").textContent = cerca ? `${bdgEuro(lista.length)} di ${bdgEuro(D.a.length)}` : `${bdgEuro(lista.length)} articoli`;
+  let testa = "";
+  if(art.top >= 0){
+    const s = catStile(D.top[art.top]);
+    const subs = D.sub.map((x, k) => ({ x, k })).filter(o => o.x.t === art.top).map(o => ({ ...o, n: D.a.filter(a => a.s === o.k).length })).filter(o => o.n);
+    testa = `<button type="button" class="ct-back" data-artop="-1" style="margin:4px 0 8px">${catIndietro}Categorie</button>
+      <div class="ct-cathead" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><div><b>${esc(artCat(D.top[art.top]))}</b><small>${bdgEuro(D.a.filter(a => a.t === art.top).length)} articoli</small></div></div>
+      ${subs.length ? `<div class="ct-chips ar-subs"><button type="button" aria-pressed="${art.sub < 0}" data-arsub="-1">Tutte</button>${subs.map(o => `<button type="button" aria-pressed="${art.sub === o.k}" data-arsub="${o.k}">${esc(artCat(o.x.n))}<small>${o.n}</small></button>`).join("")}</div>` : ""}`;
+  }
+  if(cerca && art.top >= 0) testa += `<p class="hint" style="margin:6px 0">Cerco solo in ${esc(artCat(D.top[art.top]))}. <button type="button" class="link" data-artop="-1" data-artieni>Cerca in tutto il catalogo</button></p>`;
+  if(!lista.length){ body.innerHTML = testa + `<div class="ct-empty">Nessun articolo trovato.</div>`; return; }
+  const vis = lista.slice(0, art.mostra);
+  body.innerHTML = testa + `<div class="ar-grid">${vis.map(x => `<button type="button" class="ar-card" data-art="${x.i}">${artImg(x, "ar-foto")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${x.c ? "Cod. " + esc(x.c) : ""}${x.m ? " · " + esc(x.m) : ""}</small></span></button>`).join("")}</div>`
+    + (lista.length > vis.length ? `<button type="button" class="btn ar-altri" data-armore>Mostra altri ${Math.min(60, lista.length - vis.length)} (${bdgEuro(lista.length - vis.length)} rimanenti)</button>` : "");
+}
+function artApri(id){
+  const D = art.dati, x = D && D.a.find(y => y.i === id); if(!x) return;
+  const percorso = [artCat(D.top[x.t]), x.s >= 0 ? artCat(D.sub[x.s].n) : ""].filter(Boolean).join(" › ");
+  $("#artT").textContent = x.n;
+  $("#artBody").innerHTML = `${x.f === 0 ? `<div class="ar-big ar-nofoto">${catIcona}</div>` : `<img class="ar-big" src="${artFoto(x)}" alt="${esc(x.n)}">`}
+    <dl class="info">
+      ${x.c ? `<dt>Codice</dt><dd><b style="font-size:17px">${esc(x.c)}</b> <button type="button" class="chip-btn" data-arcopia="${esc(x.c)}">Copia</button></dd>` : ""}
+      <dt>Categoria</dt><dd>${esc(percorso)}</dd>
+      ${x.m ? `<dt>Marca</dt><dd>${esc(x.m)}</dd>` : ""}
+      ${x.b ? `<dt>Descrizione</dt><dd>${esc(x.b)}</dd>` : ""}
+      ${x.d ? `<dt>Dettagli</dt><dd>${esc(x.d)}</dd>` : ""}
+    </dl>
+    <p style="margin:12px 0 0"><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
+  if(!$("#dlgArt").open) $("#dlgArt").showModal();
+}
+$("#arQ").addEventListener("input", e => { art.q = e.target.value; art.mostra = 60; renderArticoli(); });
+$("#arBody").addEventListener("click", e => {
+  const t = e.target.closest("[data-artop]");
+  if(t){ art.top = +t.dataset.artop; art.sub = -1; art.mostra = 60; if(!t.hasAttribute("data-artieni") && art.top < 0){ art.q = ""; $("#arQ").value = ""; } renderArticoli(); window.scrollTo(0, 0); return; }
+  const s = e.target.closest("[data-arsub]"); if(s){ art.sub = +s.dataset.arsub; art.mostra = 60; renderArticoli(); return; }
+  if(e.target.closest("[data-armore]")){ art.mostra += 60; renderArticoli(); return; }
+  if(e.target.closest("#arRetry")){ art.stato = "idle"; artCarica(); return; }
+  const c = e.target.closest("[data-art]"); if(c) artApri(+c.dataset.art);
+});
+$("#artX").addEventListener("click", () => $("#dlgArt").close());
+$("#artBody").addEventListener("click", async e => {
+  const b = e.target.closest("[data-arcopia]"); if(!b) return;
+  try{ await navigator.clipboard.writeText(b.dataset.arcopia); toast("Codice copiato"); }catch(err){ toast("Codice: " + b.dataset.arcopia); }
+});
 
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
@@ -4097,7 +4240,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.20 (v4.20)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.0 (v5.0)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
