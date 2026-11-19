@@ -54,7 +54,7 @@ Campi: `nome` (insegna del locale), `ragioneSociale`, `codice` (codice cliente a
 `tipologia`, `piva`, `codiceFiscale`, `codiceUnivoco` (SDI), `pagamento`,
 `fornitori` (array), `giorniOrdine` e `giorniConsegna` (array di "Lunedì"…"Sabato"),
 `orarioOrdine`, `orarioConsegna`, `stato`, `ricontattare` (YYYY-MM-DD), `ricontattareOra` (HH:MM),
-`chiusoDal`/`chiusoAl` (periodo di chiusura, YYYY-MM-DD, entrambi facoltativi: nel periodo il cliente non compare nel Giro, né ordini né mappa; funzione `chiusoIl(c, iso)`; campi nel modulo e nella scheda cliente, etichetta "Chiuso fino al…" nell'elenco), `note`, `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
+`chiusoDal`/`chiusoAl` (periodo di chiusura, YYYY-MM-DD, entrambi facoltativi: nel periodo il cliente non compare nel Giro, né ordini né mappa; funzione `chiusoIl(c, iso)`; campi nel modulo e nella scheda cliente, etichetta "Chiuso fino al…" nell'elenco), `note`, `codiceReport` (codice del report target collegato a mano, se la scheda ha già un altro `codice`), `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
 centro paese), `geoFail`, `creato`, `aggiornato` (ISO).
 
 Stati: `DA CONTATTARE`, `CONTATTATO`, `CLIENTE`, `NON SERVIBILE`.
@@ -273,6 +273,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4** = v3.4 con lo **stesso layout del PC anche su iPhone/iPad**: niente barra in basso, le 8 sezioni stanno in un **menu laterale a scomparsa** aperto dal tasto a tre lineette (`.menu-btn`, inserito da JS in ogni `.top-row h1`; velo `#menuVelo`; si chiude toccando una voce, il velo o Esc). Blocco CSS `/* ===== Menu a scomparsa (iPhone/iPad) ===== */`, attivo quando NON vale `(min-width:1100px) and (hover:hover) and (pointer:fine)`. Le regole di contenuto del PC (due colonne, mappa zone grande, ecc.) valgono ora da 1100 px in su anche senza mouse (iPad in orizzontale); sotto restano una colonna. Per tornare: `v3.4`. Tag Git `v4`.
 - **v4.1** = v4 + sezione **Budget** (sotto) e Riepilogo con le schede allineate in cima su PC. Tag Git `v4.1`; la scritta in Riepilogo dice 4.1.
 - **v4.2** = v4.1 + **target di categoria** (report Marchi per semestre) in Budget e fatturato per categoria nella scheda cliente (sezione Budget). Tag Git `v4.2`; la scritta in Riepilogo dice 4.2.
+- **v4.3** = v4.2 + tasto **Collega** per i clienti dei report target senza scheda collegata. Tag Git `v4.3`; la scritta in Riepilogo dice 4.3.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -364,6 +365,7 @@ Salvataggio: `utenti/{uid}/impostazioni/target`, campo `r["2026-S1"]` / `r["2026
 oggi, tratteggio = target del semestre; verde se raggiunto, arancione se no), clienti per categoria (pillole, primi 8, "Mostra tutti") con la crescita sull'anno
 scorso e, se c'è il confronto, **"Da recuperare"** (compravano nell'anno scorso, ora zero). I clienti del report si collegano alle schede dell'app per
 **codice cliente** (`codice`, uguale o terminante con quello del report se di almeno 5 cifre) oppure per ragione sociale (`tgtTrova`): se collegati, toccandoli si apre la scheda.
+**Collega** (v4.3): le righe del report senza scheda hanno il pulsante "Collega" (e in fondo a ogni scheda c'è l'elenco "Clienti non collegati"): si sceglie il cliente dell'app da una lista con ricerca (ordinata per somiglianza del nome) e l'app scrive il codice del report nella scheda: nel campo `codice` se è vuoto, altrimenti in `codiceReport` (il codice esistente non si tocca). L'abbinamento è `tgtMatch(c, x)`: `codice` o `codiceReport` (uguali o terminanti con quello del report) oppure ragione sociale uguale.
 Nella **scheda cliente** compare "Fatturato per categoria" (`tgtDetailHTML`) con i valori dei report caricati. Se un cliente non ha il codice nell'app, non si collega.
 Provato con i due PDF veri (1° sem: 26 clienti, 2° sem: 25 clienti; scarti −319, −4.634, −2.402 e +729, +13.685, +27.700, +6.892).
 

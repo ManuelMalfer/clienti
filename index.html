@@ -1042,6 +1042,16 @@ main.view{padding-top:14px}
       <div class="dlg-foot"><button class="btn" type="button" id="catMvDel" style="color:var(--danger);margin-right:auto">Elimina</button><button class="btn" type="button" id="catMvNo">Annulla</button><button class="btn btn-primary" type="submit" id="catMvOk">Sposta</button></div>
     </form>
   </dialog>
+  <dialog id="dlgTgtLink" aria-labelledby="tlT">
+    <div class="dlg">
+      <div class="dlg-head"><h2 id="tlT">Collega a un cliente</h2><button class="close" type="button" id="tlX" aria-label="Chiudi">×</button></div>
+      <div class="dlg-body">
+        <p class="hint" id="tlNome" style="margin:0 0 10px;font-weight:600"></p>
+        <input class="input" id="tlQ" type="search" placeholder="Cerca il cliente nell'app…" autocomplete="off" aria-label="Cerca il cliente">
+        <ul class="list tg-list" id="tlList" style="margin-top:10px;max-height:46vh;overflow:auto"></ul>
+      </div>
+    </div>
+  </dialog>
   <!-- /AGGIUNGI CATALOGO -->
 
   <!-- LETTORE PDF -->
@@ -2836,18 +2846,20 @@ async function tgtCarica(){
 const tgtLista = () => Object.values(tgt).filter(r => r && r.cat && r.clienti).sort((a, b) => (b.anno - a.anno) || (b.sem - a.sem));
 const tgtDig = s => String(s || "").replace(/\D/g, "").replace(/^0+/, "");
 // collega una riga del report a un cliente dell'app: per codice cliente, altrimenti per ragione sociale
-function tgtTrova(x){
+// `codiceReport` = codice del report collegato a mano (Collega) quando la scheda ha già un altro codice
+function tgtMatch(c, x){
   const cx = tgtDig(x.c);
-  return clienti.find(c => { const k = tgtDig(c.codice); return k && (k === cx || (k.length >= 5 && cx.endsWith(k))); })
-    || clienti.find(c => c.ragioneSociale && norm(c.ragioneSociale) === norm(x.n)) || null;
+  return [c.codice, c.codiceReport].map(tgtDig).filter(Boolean).some(k => k === cx || (k.length >= 5 && cx.endsWith(k)))
+    || !!(c.ragioneSociale && norm(c.ragioneSociale) === norm(x.n));
 }
+function tgtTrova(x){ return clienti.find(c => tgtMatch(c, x)) || null; }
 const tgtSel = {}, tgtTutti = {};
 
 function tgtHTML(lista){
   if(!lista.length) return "";
   const eur = n => bdgEuro(n);
   const sgn = n => (n >= 0 ? "+" : "−") + eur(Math.abs(n));
-  const voce = (c, inner) => c ? `<button type="button" class="tg-cli" data-open="${c.id}">${inner}</button>` : `<div class="tg-cli">${inner}</div>`;
+  const voce = (c, inner, x) => c ? `<button type="button" class="tg-cli" data-open="${c.id}">${inner}</button>` : `<div class="tg-cli">${inner}<button type="button" class="chip-btn" data-tlink="${esc(x.c)}">Collega</button></div>`;
   return lista.map(r => {
     const N = r.cat.length, sel = Math.min(tgtSel[r.key] || 0, N - 1);
     const sub = [r.periodo ? "periodo " + r.periodo : "", r.agg ? "aggiornato al " + r.agg : ""].filter(Boolean).join(" · ");
@@ -2865,7 +2877,7 @@ function tgtHTML(lista){
     const cli = mostra.map(x => {
       const c = tgtTrova(x), nome = c ? c.nome : tgtTit(x.n);
       const tr = x.p ? (() => { const dd = x.v[sel] - x.p[sel]; return `<small class="${dd >= 0 ? "bdg-up" : "bdg-down"}">${sgn(dd)} sul ${r.anno - 1}</small>`; })() : "";
-      return voce(c, `<span>${esc(nome)}${tr}</span><b>${eur(x.v[sel])} €</b>`);
+      return voce(c, `<span>${esc(nome)}${tr}</span><b>${eur(x.v[sel])} €</b>`, x);
     }).join("") || `<p class="hint">Nessun cliente ha acquistato questa categoria.</p>`;
     // clienti che l'anno scorso compravano una categoria e quest'anno sono a zero
     let rec = "";
@@ -2874,30 +2886,64 @@ function tgtHTML(lista){
         .filter(o => o.perso.length).sort((a, b) => b.perso.reduce((t, k) => t + k.p, 0) - a.perso.reduce((t, k) => t + k.p, 0)).slice(0, 8);
       if(persi.length) rec = `<h3 class="tg-h3">Da recuperare</h3><p class="hint" style="margin:0 0 6px">Nel ${r.anno - 1} compravano, nel ${r.anno} per ora no.</p>` + persi.map(o => {
         const c = tgtTrova(o.x), nome = c ? c.nome : tgtTit(o.x.n);
-        return voce(c, `<span>${esc(nome)}<small>${o.perso.map(k => esc(k.nome) + " " + eur(k.p) + " € → 0").join(" · ")}</small></span>`);
+        return voce(c, `<span>${esc(nome)}<small>${o.perso.map(k => esc(k.nome) + " " + eur(k.p) + " € → 0").join(" · ")}</small></span>`, o.x);
       }).join("");
     }
+    const non = r.clienti.filter(x => !tgtTrova(x));
+    const nonColl = non.length ? `<h3 class="tg-h3">Clienti non collegati (${non.length})</h3><p class="hint" style="margin:0 0 6px">Nel report ma senza scheda nell'app: collegali a un cliente già presente.</p>` + non.map(x => voce(null, `<span>${esc(tgtTit(x.n))}<small>Cod. ${esc(x.c)}</small></span>`, x)).join("") : "";
     return `<section class="bdg-card"><h2>Target · ${r.sem}° semestre ${r.anno}</h2>${sub ? `<p class="hint" style="margin:-2px 0 10px">${esc(sub)}</p>` : ""}
       ${righe}
       <h3 class="tg-h3">Clienti per categoria</h3>
       <div class="ct-chips" style="flex-wrap:wrap;overflow:visible">${r.cat.map((nome, i) => `<button type="button" aria-pressed="${i === sel}" data-tcat="${esc(r.key)}" data-i="${i}">${esc(nome)}</button>`).join("")}</div>
       <div class="tg-list">${cli}</div>
       ${ord.length > 8 ? `<button type="button" class="link" data-ttutti="${esc(r.key)}">${tutte ? "Mostra meno" : "Mostra tutti (" + ord.length + ")"}</button>` : ""}
-      ${rec}</section>`;
+      ${rec}${nonColl}</section>`;
   }).join("");
 }
 $("#bdgBody").addEventListener("click", e => {
   const c = e.target.closest("[data-tcat]");
   if(c){ tgtSel[c.dataset.tcat] = +c.dataset.i; renderBudget(); return; }
   const t = e.target.closest("[data-ttutti]");
-  if(t){ tgtTutti[t.dataset.ttutti] = !tgtTutti[t.dataset.ttutti]; renderBudget(); }
+  if(t){ tgtTutti[t.dataset.ttutti] = !tgtTutti[t.dataset.ttutti]; renderBudget(); return; }
+  const l = e.target.closest("[data-tlink]");
+  if(l) tgtLinkApri(l.dataset.tlink);
+});
+
+/* collegare a mano un cliente del report a una scheda già presente: scrive il codice nella scheda (campo `codice` se è vuoto, altrimenti `codiceReport`) */
+let tgtLinkX = null;
+function tgtLinkLista(){
+  const q = norm($("#tlQ").value).split(/\s+/).filter(Boolean);
+  const par = new Set(norm(tgtLinkX.n).split(/\s+/).filter(w => w.length > 2));
+  let lista = clienti.map(c => {
+    const t = norm([c.nome, c.ragioneSociale, c.luogo].join(" "));
+    return { c, t, s: [...par].filter(w => t.includes(w)).length };
+  });
+  if(q.length) lista = lista.filter(o => q.every(w => o.t.includes(w)));
+  lista = lista.sort((a, b) => b.s - a.s || (a.c.nome || "").localeCompare(b.c.nome || "", "it")).slice(0, 40);
+  $("#tlList").innerHTML = lista.map(({ c }) => `<li><button type="button" class="tg-cli" data-tl="${c.id}"><span>${esc(c.nome)}<small>${esc([c.luogo, c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", c.codice ? "Cod. " + c.codice : ""].filter(Boolean).join(" · "))}</small></span></button></li>`).join("") || `<li class="hint">Nessun cliente trovato.</li>`;
+}
+function tgtLinkApri(codice){
+  const x = tgtLista().flatMap(r => r.clienti).find(y => y.c === codice); if(!x) return;
+  tgtLinkX = x;
+  $("#tlNome").textContent = tgtTit(x.n) + " · cod. " + x.c;
+  $("#tlQ").value = ""; tgtLinkLista();
+  $("#dlgTgtLink").showModal();
+}
+$("#tlQ").addEventListener("input", tgtLinkLista);
+$("#tlX").addEventListener("click", () => $("#dlgTgtLink").close());
+$("#tlList").addEventListener("click", e => {
+  const b = e.target.closest("[data-tl]"); if(!b || !tgtLinkX) return;
+  const c = byId(b.dataset.tl); if(!c) return;
+  const altro = c.codice && tgtDig(c.codice) !== tgtDig(tgtLinkX.c);
+  if(!confirm("Collego «" + tgtTit(tgtLinkX.n) + "» alla scheda «" + c.nome + "»?" + (altro ? "\n\nLa scheda ha già il codice " + c.codice + ", che resta: il codice del report " + tgtLinkX.c + " viene aggiunto a parte." : "\n\nIl codice " + tgtLinkX.c + " viene scritto nella scheda."))) return;
+  update(c.id, c.codice ? { codiceReport: tgtLinkX.c } : { codice: tgtLinkX.c });
+  $("#dlgTgtLink").close(); toast("Cliente collegato"); tgtLinkX = null;
 });
 
 // nella scheda cliente: fatturato per categoria nei report caricati
 function tgtDetailHTML(c){
-  const k = tgtDig(c.codice);
   const blocchi = tgtLista().map(r => {
-    const x = r.clienti.find(y => { const cx = tgtDig(y.c); return (k && (k === cx || (k.length >= 5 && cx.endsWith(k)))) || (c.ragioneSociale && norm(c.ragioneSociale) === norm(y.n)); });
+    const x = r.clienti.find(y => tgtMatch(c, y));
     if(!x) return "";
     const righe = r.cat.map((nome, i) => ({ nome, v: x.v[i], p: x.p ? x.p[i] : null })).filter(o => o.v > 0 || o.p > 0);
     return `<p class="tg-sub">${r.sem}° semestre ${r.anno}${r.periodo ? " (" + esc(r.periodo) + ")" : ""}</p>` + (righe.length
@@ -3372,7 +3418,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.2 (v4.2)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.3 (v4.3)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
