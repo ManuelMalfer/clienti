@@ -272,6 +272,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v3.4** = v3.3 + **elimina catalogo** dall'app (finestra della cartella, pulsante Elimina; solo account autorizzati; percorso `POST /elimina {file}` del Worker: toglie la voce da `cataloghi.json` e cancella il `.enc`; **il Worker va ricaricato su Cloudflare** con il nuovo `strumenti/worker-cataloghi.js`, altrimenti l'app avvisa). Tag Git `v3.4`.
 - **v4** = v3.4 con lo **stesso layout del PC anche su iPhone/iPad**: niente barra in basso, le 8 sezioni stanno in un **menu laterale a scomparsa** aperto dal tasto a tre lineette (`.menu-btn`, inserito da JS in ogni `.top-row h1`; velo `#menuVelo`; si chiude toccando una voce, il velo o Esc). Blocco CSS `/* ===== Menu a scomparsa (iPhone/iPad) ===== */`, attivo quando NON vale `(min-width:1100px) and (hover:hover) and (pointer:fine)`. Le regole di contenuto del PC (due colonne, mappa zone grande, ecc.) valgono ora da 1100 px in su anche senza mouse (iPad in orizzontale); sotto restano una colonna. Per tornare: `v3.4`. Tag Git `v4`.
 - **v4.1** = v4 + sezione **Budget** (sotto) e Riepilogo con le schede allineate in cima su PC. Tag Git `v4.1`; la scritta in Riepilogo dice 4.1.
+- **v4.2** = v4.1 + **target di categoria** (report Marchi per semestre) in Budget e fatturato per categoria nella scheda cliente (sezione Budget). Tag Git `v4.2`; la scritta in Riepilogo dice 4.2.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -349,6 +350,22 @@ Schermata: 3 riquadri (fatturato anno in corso, scarto sul budget, scarto sull'a
 per mese (anno precedente grigio, anno in corso colore principale, budget con solo contorno arancione; SVG inline `bdgGrafico`) e tabella di dettaglio
 con % sul budget. Nel PDF ci sono anche pressione, borsellino, perdite e obiettivi per famiglia (carni fresche, non food, pesce fresco): non usati
 per ora. Provato col PDF vero (fatturato AC 479.755, budget 368.118, AP 319.825 per gen–ott 2026).
+
+### Target di categoria (v4.2)
+
+Lo stesso pulsante **Carica scheda** accetta anche il PDF **"Report Target N Semestre"** di Marchi (se il testo contiene "Fatturato AP" è la scheda
+performance, se contiene "Target N semestre" è un report target; altrimenti errore). Lettura in `tgtAnalizza` (marcatori `TGT-PARSE-START/END`, usa `bdgNum`):
+le **categorie** si leggono dall'intestazione maiuscola (cambiano a ogni report: 1° semestre = Pesce fresco, Ittico gelo, Latticini, Salumi; 2° semestre =
+Carni fresche, Non food, Pesce fresco; nomi puliti da `tgtNomi`), poi righe "Totale Target" (target del semestre), "Target …" con i numeri (target fino alla data del
+report; l'intestazione di pagina "Target 2° semestre AREA…" non ha numeri e si salta), "Fatturato progressivo / Progressivo fatturato" (con 2N numeri = coppie
+anno scorso/anno in corso, con N+1 = categorie + totale) e una riga per cliente "codice - ragione sociale" con i valori (2N = con anno scorso).
+Salvataggio: `utenti/{uid}/impostazioni/target`, campo `r["2026-S1"]` / `r["2026-S2"]` = `{key, anno, sem, cat[], tot[], oggi[], fatt[], fatt25[]|null, periodo, agg, clienti:[{c, n, v[], p[]|null}]}`
+(un nuovo caricamento sostituisce solo lo stesso semestre). Budget mostra una scheda per semestre: barra di avanzamento per categoria (marcatore = target fino a
+oggi, tratteggio = target del semestre; verde se raggiunto, arancione se no), clienti per categoria (pillole, primi 8, "Mostra tutti") con la crescita sull'anno
+scorso e, se c'è il confronto, **"Da recuperare"** (compravano nell'anno scorso, ora zero). I clienti del report si collegano alle schede dell'app per
+**codice cliente** (`codice`, uguale o terminante con quello del report se di almeno 5 cifre) oppure per ragione sociale (`tgtTrova`): se collegati, toccandoli si apre la scheda.
+Nella **scheda cliente** compare "Fatturato per categoria" (`tgtDetailHTML`) con i valori dei report caricati. Se un cliente non ha il codice nell'app, non si collega.
+Provato con i due PDF veri (1° sem: 26 clienti, 2° sem: 25 clienti; scarti −319, −4.634, −2.402 e +729, +13.685, +27.700, +6.892).
 
 ## Rosario (assistente vocale)
 

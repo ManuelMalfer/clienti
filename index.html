@@ -779,6 +779,27 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
 .bdg-msg{margin:10px 0 0;font-size:14px;color:var(--danger)}
 @media (max-width:420px){.bdg-kpi b{font-size:21px}}
 @media (min-width:1100px){.bdg-kpis{gap:16px}.bdg-kpi b{font-size:32px}.bdg-card{padding:20px 22px}}
+.tg-row{margin:10px 0 14px}
+.tg-h{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.tg-h b{font-size:16px} .tg-h span{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.tg-bar{position:relative;height:14px;margin:7px 0 5px;border-radius:7px;background:color-mix(in srgb,var(--muted) 18%,transparent)}
+.tg-fill{position:absolute;left:0;top:0;bottom:0;border-radius:7px;min-width:3px}
+.tg-fill.ok{background:var(--st-cliente)} .tg-fill.no{background:var(--b-bd)}
+.tg-mk{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink)}
+.tg-mk2{background:transparent;border-left:2px dashed var(--muted);width:0;margin-left:-1px}
+.tg-row small{color:var(--muted);font-size:13px}
+.tg-h3{margin:18px 0 8px;font-family:var(--font-cond);font-size:17px;font-weight:600}
+.tg-list{display:flex;flex-direction:column;margin-top:8px}
+.tg-cli{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:9px 2px;border:0;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);background:none;text-align:left;color:inherit;font-size:15px}
+button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
+.tg-cli span{min-width:0;font-weight:600}
+.tg-cli small{display:block;font-weight:500;font-size:12.5px;color:var(--muted)}
+.tg-cli small.bdg-up{color:var(--st-cliente)} .tg-cli small.bdg-down{color:var(--danger)}
+.tg-cli b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tg-det{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2)}
+.tg-det h3{margin:0 0 4px;font-size:14px;color:var(--muted);font-weight:600}
+.tg-sub{margin:8px 0 2px;font-size:13px;font-weight:700}
+@media (min-width:1100px){#bdgBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}#bdgBody > .bdg-kpis,#bdgBody > .bdg-msg{grid-column:1 / -1}}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -2609,7 +2630,7 @@ addEventListener("resize", () => { if(matchMedia("(min-width:1100px) and (hover:
 const BDG_MESI = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 let bdg = null, bdgStato = "idle", bdgErr = "";
 const bdgRef = () => doc(db, "utenti", uid, "impostazioni", "budget");
-const bdgEuro = n => n == null ? "–" : Math.round(n).toLocaleString("it-IT");
+const bdgEuro = n => n == null ? "–" : String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");   // 4.634 (toLocaleString non separa i numeri a 4 cifre)
 /*BDG-PARSE-START*/
 function bdgNum(s){
   s = String(s).trim();
@@ -2638,7 +2659,7 @@ function bdgAnalizza(righe){
   return { anno, ap, ac, bd, agg: date ? date[date.length - 1] : "", nome };
 }
 /*BDG-PARSE-END*/
-async function bdgLeggiPdf(buf){
+async function bdgRighe(buf){
   await lpLib();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
   const righe = [];
@@ -2654,11 +2675,13 @@ async function bdgLeggiPdf(buf){
     });
     linee.sort((a, b) => b.y - a.y).forEach(l => righe.push(l.it.sort((a, b) => a.x - b.x).map(i => i.s)));
   }
-  return bdgAnalizza(righe);
+  return righe;
 }
+let bdgUid = null;
 async function bdgCarica(){
-  if(bdgStato === "carico" || bdgStato === "ok" || !uid) return;
-  bdgStato = "carico";
+  tgtCarica();
+  if(!uid || (bdgUid === uid && (bdgStato === "carico" || bdgStato === "ok"))) return;
+  bdgUid = uid; bdgStato = "carico"; bdg = null;
   try{
     const s = await getDoc(bdgRef());
     bdg = s.exists() ? s.data() : null;
@@ -2672,10 +2695,18 @@ $("#bdgFile").addEventListener("change", async e => {
   if(!f) return;
   bdgErr = ""; toast("Leggo la scheda…");
   try{
-    const dati = await bdgLeggiPdf(await f.arrayBuffer());
-    await setDoc(bdgRef(), { ...dati, caricato: nowISO() });
-    bdg = dati; bdgStato = "ok";
-    toast("Budget aggiornato");
+    const righe = await bdgRighe(await f.arrayBuffer());
+    if(righe.some(r => /^Fatturato AP\b/i.test(r.join(" ").trim()))){
+      const dati = bdgAnalizza(righe);
+      await setDoc(bdgRef(), { ...dati, caricato: nowISO() });
+      bdg = dati; bdgStato = "ok"; bdgUid = uid;
+      toast("Budget aggiornato");
+    } else if(righe.some(r => /Target\s+\d\s*°?\s*semestre/i.test(r.join(" ")))){
+      const dati = tgtAnalizza(righe);
+      await setDoc(tgtRef(), { r: { [dati.key]: { ...dati, caricato: nowISO() } } }, { merge: true });
+      tgt[dati.key] = dati; tgtStato = "ok"; tgtUid = uid;
+      toast("Target " + dati.sem + "° semestre " + dati.anno + " aggiornato");
+    } else throw new Error("Non riconosco questo PDF: servono la scheda performance o il report target di Marchi.");
   }catch(err){ bdgErr = err && err.message ? err.message : "Non riesco a leggere il PDF."; }
   renderBudget();
 });
@@ -2705,9 +2736,11 @@ function bdgGrafico(d){
 function renderBudget(){
   if(ui.view !== "budget") return;
   const body = $("#bdgBody");
+  const tgtL = tgtLista();
+  if(!bdg && tgtL.length){ $("#bdgLbl").textContent = "Target di categoria"; body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + tgtHTML(tgtL); return; }
   if(!bdg){
     $("#bdgLbl").textContent = "";
-    body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `<div class="bdg-vuoto">${bdgStato === "carico" || bdgStato === "idle" ? "Carico i dati…" : bdgStato === "errore" ? "Non riesco a leggere i dati. Controlla la connessione." : "Nessuna scheda caricata. Tocca <b>Carica scheda</b> e scegli il PDF della scheda performance di Marchi."}</div>`;
+    body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `<div class="bdg-vuoto">${bdgStato === "carico" || bdgStato === "idle" ? "Carico i dati…" : bdgStato === "errore" ? "Non riesco a leggere i dati. Controlla la connessione." : "Nessuna scheda caricata. Tocca <b>Carica scheda</b> e scegli il PDF della scheda performance o del report target di Marchi."}</div>`;
     return;
   }
   const d = bdg;
@@ -2736,7 +2769,142 @@ function renderBudget(){
       <h2>Dettaglio (€)</h2>
       <table class="bdg-tab"><thead><tr><th>Mese</th><th>${d.anno - 1}</th><th>${d.anno}</th><th>Budget</th><th>Vs budget</th></tr></thead><tbody>${righe}</tbody>
       <tfoot><tr><td>Totale</td><td>${bdgEuro(AP)}</td><td>${bdgEuro(AC)}</td><td>${bdgEuro(BD)}</td><td class="${cls(AC - BD)}">${fmtP(pct(AC, BD))}</td></tr></tfoot></table>
-    </section>`;
+    </section>` + tgtHTML(tgtL);
+}
+
+/* ---------- Target di categoria (report Marchi per semestre) ---------- */
+// Si carica dal pulsante "Carica scheda" di Budget (l'app riconosce da sola il tipo di PDF). Il report dà, per ogni categoria, il target del
+// semestre, il target fino alla data del report, il fatturato progressivo e il fatturato di ogni cliente (con il 2025 se c'è).
+// Le categorie cambiano da un report all'altro: si leggono dall'intestazione. Salvato in utenti/{uid}/impostazioni/target, campo r["2026-S1"]…
+let tgt = {}, tgtStato = "idle", tgtUid = null;
+const tgtRef = () => doc(db, "utenti", uid, "impostazioni", "target");
+const tgtNomi = { "CARNI FR.": "Carni fresche", "NFOOD": "Non food", "PESCE FR.": "Pesce fresco", "PESCE FRESCO": "Pesce fresco", "ITTICO GELO": "Ittico gelo", "LATTICINI": "Latticini", "SALUMI": "Salumi" };
+const tgtCat = s => tgtNomi[s] || (s.charAt(0) + s.slice(1).toLowerCase());
+const tgtTit = s => String(s || "").toLowerCase().replace(/(^|[\s.(\/-])([a-zà-ÿ])/g, (m, a, b) => a + b.toUpperCase()).replace(/\b(Srl|Srls|Snc|Sas|Spa|Ss)\b/g, m => m.toUpperCase());
+/*TGT-PARSE-START*/
+function tgtAnalizza(righe){
+  const txt = r => r.join(" ").trim();
+  const nums = r => r.map(bdgNum).filter(v => v != null);
+  const hdr = righe.find(r => r.length >= 2 && r.length <= 8 && r.every(s => /^[A-ZÀ-Ý][A-ZÀ-Ý .'\/-]*$/.test(s)) && !r.some(s => /^(CLIENTI?|AGENTE|GARA|MESE|ANNO)$/.test(s)));
+  if(!hdr) throw new Error("Non trovo le categorie nel PDF. È un report target di Marchi?");
+  const cat = hdr.filter(s => s !== "TOTALE"), N = cat.length;
+  const m = righe.map(txt).map(t => /Target\s+(\d)\s*°?\s*semestre\s+(20\d\d)/i.exec(t)).find(Boolean);
+  if(!m) throw new Error("Non trovo il semestre nel PDF.");
+  const sem = +m[1], anno = +m[2];
+  const conNum = re => righe.find(r => re.test(r[0] || "") && nums(r).length >= N);   // salta l'intestazione di pagina "Target 2° semestre AREA…" (senza numeri)
+  const rTot = conNum(/^Totale Target/i), rOggi = conNum(/^Target\b/i);
+  const tot = rTot ? nums(rTot).slice(0, N) : null, oggiV = rOggi ? nums(rOggi).slice(0, N) : null;
+  if(!(tot || oggiV)) throw new Error("Non trovo i target nel PDF.");
+  const T = tot && tot.length === N ? tot : oggiV, O = oggiV && oggiV.length === N ? oggiV : T;
+  const periodo = rOggi ? (rOggi.find(s => /^[a-zà-ù]+-[a-zà-ù]+$/i.test(s)) || "") : "";
+  const rF = righe.find(r => /^(Fatturato progressivo|Progressivo fatturato)/i.test(r[0] || ""));
+  if(!rF) throw new Error("Non trovo il fatturato progressivo nel PDF.");
+  const nf = nums(rF);
+  if(nf.length < N) throw new Error("Il fatturato progressivo è incompleto.");
+  let fatt, fatt25 = null;
+  if(nf.length >= 2 * N){ fatt = cat.map((_, i) => nf[2 * i + 1]); fatt25 = cat.map((_, i) => nf[2 * i]); } else fatt = nf.slice(0, N);
+  const dm = /al\s+(\d{2})\.(\d{2})(?:\.\d{2,4})?\s*$/i.exec(rF[0]);
+  const ag = righe.map(txt).map(t => /Aggiornamento\s+(\d{2})_(\d{2})/i.exec(t)).find(Boolean);
+  const agg = ag ? ag[1] + "/" + ag[2] : dm ? dm[1] + "/" + dm[2] : "";
+  const clienti = [], visti = new Set();
+  righe.forEach(r => {
+    const k = /^(\d{6,})\s*-\s*(.+)$/.exec(r[0] || "");
+    if(!k || visti.has(k[1])) return;
+    const n = r.slice(1).map(bdgNum);
+    if(!n.length || n.some(v => v == null)) return;
+    let v, p = null;
+    if(n.length === 2 * N){ v = cat.map((_, i) => n[2 * i + 1]); p = cat.map((_, i) => n[2 * i]); }
+    else if(n.length >= N) v = n.slice(0, N);
+    else return;
+    visti.add(k[1]); clienti.push({ c: k[1], n: k[2].trim(), v, p });
+  });
+  if(!clienti.length) throw new Error("Non trovo i clienti nel PDF.");
+  return { key: anno + "-S" + sem, anno, sem, cat: cat.map(tgtCat), tot: T, oggi: O, fatt, fatt25, periodo, agg, clienti };
+}
+/*TGT-PARSE-END*/
+
+async function tgtCarica(){
+  if(!uid || (tgtUid === uid && (tgtStato === "ok" || tgtStato === "carico"))) return;
+  tgtUid = uid; tgtStato = "carico";
+  try{
+    const s = await getDoc(tgtRef());
+    tgt = s.exists() ? (s.data().r || {}) : {};
+    tgtStato = "ok";
+  }catch(err){ tgtStato = "errore"; }
+  if(ui.view === "budget") renderBudget();
+}
+const tgtLista = () => Object.values(tgt).filter(r => r && r.cat && r.clienti).sort((a, b) => (b.anno - a.anno) || (b.sem - a.sem));
+const tgtDig = s => String(s || "").replace(/\D/g, "").replace(/^0+/, "");
+// collega una riga del report a un cliente dell'app: per codice cliente, altrimenti per ragione sociale
+function tgtTrova(x){
+  const cx = tgtDig(x.c);
+  return clienti.find(c => { const k = tgtDig(c.codice); return k && (k === cx || (k.length >= 5 && cx.endsWith(k))); })
+    || clienti.find(c => c.ragioneSociale && norm(c.ragioneSociale) === norm(x.n)) || null;
+}
+const tgtSel = {}, tgtTutti = {};
+
+function tgtHTML(lista){
+  if(!lista.length) return "";
+  const eur = n => bdgEuro(n);
+  const sgn = n => (n >= 0 ? "+" : "−") + eur(Math.abs(n));
+  const voce = (c, inner) => c ? `<button type="button" class="tg-cli" data-open="${c.id}">${inner}</button>` : `<div class="tg-cli">${inner}</div>`;
+  return lista.map(r => {
+    const N = r.cat.length, sel = Math.min(tgtSel[r.key] || 0, N - 1);
+    const sub = [r.periodo ? "periodo " + r.periodo : "", r.agg ? "aggiornato al " + r.agg : ""].filter(Boolean).join(" · ");
+    const righe = r.cat.map((nome, i) => {
+      const F = r.fatt[i], O = r.oggi[i], T = r.tot[i], sc = Math.max(F, O, T, 1);
+      const ok = F >= O, d = F - O;
+      const mT = T > O ? `<i class="tg-mk tg-mk2" style="left:${T / sc * 100}%" title="Target del semestre"></i>` : "";
+      return `<div class="tg-row"><div class="tg-h"><b>${esc(nome)}</b><span class="${ok ? "bdg-up" : "bdg-down"}">${sgn(d)} € · ${O ? Math.round(F / O * 100) : 0}%</span></div>
+        <div class="tg-bar"><i class="tg-fill ${ok ? "ok" : "no"}" style="width:${F / sc * 100}%"></i><i class="tg-mk" style="left:${O / sc * 100}%" title="Target fino a oggi"></i>${mT}</div>
+        <small>${eur(F)} € fatturato · target ${eur(O)} €${T > O ? " · semestre " + eur(T) + " €" : ""}${r.fatt25 ? " · anno scorso " + eur(r.fatt25[i]) + " €" : ""}</small></div>`;
+    }).join("");
+    const tutte = tgtTutti[r.key];
+    const ord = r.clienti.filter(x => x.v[sel] > 0).sort((a, b) => b.v[sel] - a.v[sel]);
+    const mostra = tutte ? ord : ord.slice(0, 8);
+    const cli = mostra.map(x => {
+      const c = tgtTrova(x), nome = c ? c.nome : tgtTit(x.n);
+      const tr = x.p ? (() => { const dd = x.v[sel] - x.p[sel]; return `<small class="${dd >= 0 ? "bdg-up" : "bdg-down"}">${sgn(dd)} sul ${r.anno - 1}</small>`; })() : "";
+      return voce(c, `<span>${esc(nome)}${tr}</span><b>${eur(x.v[sel])} €</b>`);
+    }).join("") || `<p class="hint">Nessun cliente ha acquistato questa categoria.</p>`;
+    // clienti che l'anno scorso compravano una categoria e quest'anno sono a zero
+    let rec = "";
+    if(r.clienti.some(x => x.p)){
+      const persi = r.clienti.filter(x => x.p).map(x => ({ x, perso: r.cat.map((nome, i) => ({ nome, p: x.p[i], v: x.v[i] })).filter(k => k.p > 0 && k.v === 0) }))
+        .filter(o => o.perso.length).sort((a, b) => b.perso.reduce((t, k) => t + k.p, 0) - a.perso.reduce((t, k) => t + k.p, 0)).slice(0, 8);
+      if(persi.length) rec = `<h3 class="tg-h3">Da recuperare</h3><p class="hint" style="margin:0 0 6px">Nel ${r.anno - 1} compravano, nel ${r.anno} per ora no.</p>` + persi.map(o => {
+        const c = tgtTrova(o.x), nome = c ? c.nome : tgtTit(o.x.n);
+        return voce(c, `<span>${esc(nome)}<small>${o.perso.map(k => esc(k.nome) + " " + eur(k.p) + " € → 0").join(" · ")}</small></span>`);
+      }).join("");
+    }
+    return `<section class="bdg-card"><h2>Target · ${r.sem}° semestre ${r.anno}</h2>${sub ? `<p class="hint" style="margin:-2px 0 10px">${esc(sub)}</p>` : ""}
+      ${righe}
+      <h3 class="tg-h3">Clienti per categoria</h3>
+      <div class="ct-chips" style="flex-wrap:wrap;overflow:visible">${r.cat.map((nome, i) => `<button type="button" aria-pressed="${i === sel}" data-tcat="${esc(r.key)}" data-i="${i}">${esc(nome)}</button>`).join("")}</div>
+      <div class="tg-list">${cli}</div>
+      ${ord.length > 8 ? `<button type="button" class="link" data-ttutti="${esc(r.key)}">${tutte ? "Mostra meno" : "Mostra tutti (" + ord.length + ")"}</button>` : ""}
+      ${rec}</section>`;
+  }).join("");
+}
+$("#bdgBody").addEventListener("click", e => {
+  const c = e.target.closest("[data-tcat]");
+  if(c){ tgtSel[c.dataset.tcat] = +c.dataset.i; renderBudget(); return; }
+  const t = e.target.closest("[data-ttutti]");
+  if(t){ tgtTutti[t.dataset.ttutti] = !tgtTutti[t.dataset.ttutti]; renderBudget(); }
+});
+
+// nella scheda cliente: fatturato per categoria nei report caricati
+function tgtDetailHTML(c){
+  const k = tgtDig(c.codice);
+  const blocchi = tgtLista().map(r => {
+    const x = r.clienti.find(y => { const cx = tgtDig(y.c); return (k && (k === cx || (k.length >= 5 && cx.endsWith(k)))) || (c.ragioneSociale && norm(c.ragioneSociale) === norm(y.n)); });
+    if(!x) return "";
+    const righe = r.cat.map((nome, i) => ({ nome, v: x.v[i], p: x.p ? x.p[i] : null })).filter(o => o.v > 0 || o.p > 0);
+    return `<p class="tg-sub">${r.sem}° semestre ${r.anno}${r.periodo ? " (" + esc(r.periodo) + ")" : ""}</p>` + (righe.length
+      ? `<table class="bdg-tab"><thead><tr><th>Categoria</th>${x.p ? `<th>${r.anno - 1}</th>` : ""}<th>${r.anno}</th></tr></thead><tbody>${righe.map(o => `<tr><td>${esc(o.nome)}</td>${x.p ? `<td>${bdgEuro(o.p)}</td>` : ""}<td>${bdgEuro(o.v)}</td></tr>`).join("")}</tbody></table>`
+      : `<p class="hint">Nessun acquisto in queste categorie.</p>`);
+  }).join("");
+  return blocchi ? `<div class="tg-det"><h3>Fatturato per categoria</h3>${blocchi}</div>` : "";
 }
 
 /* ---------- Giro ---------- */
@@ -3204,7 +3372,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.1 (v4.1)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.2 (v4.2)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -3220,6 +3388,7 @@ function openDetail(id){
   $("#noteText").value = "";
   renderDetail();
   if(!$("#dlgDetail").open) $("#dlgDetail").showModal();
+  tgtCarica().then(() => { if(ui.openId === id && $("#dlgDetail").open) renderDetail(); });
 }
 function renderDetail(){
   const c = byId(ui.openId);
@@ -3280,7 +3449,7 @@ function renderDetail(){
       ${c.chiusoDal || c.chiusoAl ? `<button class="chip-btn" type="button" id="dChTogli">Rimuovi</button>` : ""}
       <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Dal – fino al. In questi giorni il cliente non compare nel Giro.</span>
     </div>
-    ${pvDetailHTML(c)}`;
+    ${pvDetailHTML(c)}${tgtDetailHTML(c)}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
     : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
