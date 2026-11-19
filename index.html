@@ -822,6 +822,16 @@ button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
 .grp-figli .row{border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;background:none;width:100%}
 .grp-figli li:last-child .row{border-bottom:0}
 .grp-figli li.hit .row{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+dialog.sure{max-width:380px;width:calc(100% - 32px);padding:0;border:0;border-radius:var(--r-lg);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog.sure::backdrop{background:rgba(10,20,25,.5)}
+dialog.sure[open]{margin:auto;inset:0;height:fit-content;max-height:calc(100% - 32px);border-radius:var(--r-lg);animation:none}
+.sure-foot .btn-danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.sure-box{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:22px 20px 18px}
+.sure-ico{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.sure-box h2{margin:4px 0 0;font-family:var(--font-cond);font-size:21px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.sure-box p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.4}
+.sure-foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:12px}
+.sure-foot .btn{min-height:46px;justify-content:center}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -1079,6 +1089,14 @@ main.view{padding-top:14px}
       <div class="dlg-head"><h2 id="uniT">Unisci schede</h2><button class="close" type="button" id="uniX" aria-label="Chiudi">×</button></div>
       <div class="dlg-body" id="uniBody"></div>
       <div class="dlg-foot hidden" id="uniFoot"><button class="btn" type="button" id="uniNo">Annulla</button><button class="btn" type="button" id="uniOk">Unisci in una scheda</button><button class="btn btn-primary" type="button" id="uniLega">Collega (schede separate)</button></div>
+    </div>
+  </dialog>
+  <dialog id="dlgSure" class="sure" aria-labelledby="sureT" aria-describedby="sureTxt">
+    <div class="sure-box">
+      <span class="sure-ico" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+      <h2 id="sureT">Sei sicuro di voler eliminare?</h2>
+      <p id="sureTxt"></p>
+      <div class="sure-foot"><button class="btn" type="button" id="sureNo">Annulla</button><button class="btn btn-danger" type="button" id="sureOk">Elimina</button></div>
     </div>
   </dialog>
   <!-- /AGGIUNGI CATALOGO -->
@@ -1665,6 +1683,24 @@ function go(view){
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
   if(view === "budget") bdgCarica();
+}
+
+/* ---------- Conferma prima di eliminare ---------- */
+// Pop-up dell'app (non quello del browser): "Sei sicuro di voler eliminare …?" con Annulla / Elimina. Restituisce una Promise<boolean>.
+// Si chiude anche con Esc o toccando fuori (= Annulla). Funziona anche sopra un'altra finestra aperta (scheda cliente, preventivo).
+function confermaElimina(cosa, dettaglio, ok){
+  return new Promise(risolvi => {
+    const d = $("#dlgSure"); let fatto = false;
+    const fine = v => { if(fatto) return; fatto = true; d.removeEventListener("close", chiusa); if(d.open) d.close(); risolvi(v); };
+    const chiusa = () => fine(false);
+    $("#sureT").textContent = "Sei sicuro di voler eliminare " + cosa + "?";
+    $("#sureTxt").textContent = dettaglio || "L'operazione non si può annullare.";
+    $("#sureOk").textContent = ok || "Elimina";
+    $("#sureOk").onclick = () => fine(true);
+    $("#sureNo").onclick = () => fine(false);
+    d.addEventListener("close", chiusa);
+    d.showModal(); $("#sureNo").focus();
+  });
 }
 
 /* ---------- render ---------- */
@@ -2287,7 +2323,7 @@ $("#catMvNo").addEventListener("click", () => { if(!catMvInCorso) $("#dlgCatMv")
 $("#dlgCatMv").addEventListener("cancel", e => { if(catMvInCorso) e.preventDefault(); });
 $("#catMvDel").addEventListener("click", async () => {
   const x = catMvX; if(!x || catMvInCorso) return;
-  if(!confirm("Eliminare «" + x.titolo + "»? Sparisce per tutti gli account e non si può annullare (l'originale resta solo nei tuoi PDF sul PC).")) return;
+  if(!(await confermaElimina("il catalogo «" + x.titolo + "»", "Sparisce per tutti gli account e non si può annullare (l'originale resta solo nei tuoi PDF sul PC)."))) return;
   const msg = t => { const m = $("#catMvMsg"); m.textContent = t || ""; m.classList.toggle("hidden", !t); };
   msg(""); catMvInCorso = true; $("#catMvOk").disabled = true; $("#catMvDel").disabled = true; $("#catMvDel").textContent = "Elimino…";
   try{
@@ -3428,6 +3464,8 @@ $("#uniBody").addEventListener("click", e => {
 $("#uniBody").addEventListener("input", e => { if(e.target.id === "uniQ") uniLista(); });
 $("#uniOk").addEventListener("click", async () => {
   const f = byId(uni.f), ds = uni.ds.map(byId).filter(Boolean); if(!f || !ds.length) return;
+  const via = ds.length === 1 ? ds[0] : f;
+  if(!(await confermaElimina("la scheda «" + via.nome + "»", ds.length === 1 ? "Le due schede diventano una sola: i dati di «" + ds[0].nome + "» passano a «" + f.nome + "» e la scheda «" + ds[0].nome + "» viene eliminata. Non si può annullare." : "La scheda di fatturazione viene eliminata. Non si può annullare.", "Unisci ed elimina"))) return;
   const msg = t => { const m = $("#uniMsg"); if(m){ m.textContent = t || ""; m.classList.toggle("hidden", !t); } };
   $("#uniOk").disabled = true; $("#uniOk").textContent = "Unisco…"; msg("");
   try{
@@ -3816,7 +3854,7 @@ $("#rosBody").addEventListener("click", async e => {
   if(open){ openDetail(open.dataset.rosOpen); return; }
   const del = e.target.closest("[data-prom-del]");
   if(del){
-    if(!confirm("Eliminare questo promemoria?")) return;
+    if(!(await confermaElimina("questo promemoria", "Rosario non lo invierà più."))) return;
     try { await deleteDoc(doc(rosPromCol(), del.dataset.promDel)); toast("Promemoria eliminato"); } catch(err){ fail(err); }
     return;
   }
@@ -3937,7 +3975,7 @@ $("#rsCalSave").addEventListener("click", async () => {
   } catch(err){ rosErr(err); }
 });
 $("#rsCalDel").addEventListener("click", async () => {
-  if(!confirm("Scollegare il calendario? Rosario smetterà di leggere i tuoi appuntamenti.")) return;
+  if(!(await confermaElimina("il collegamento al calendario", "Rosario smetterà di leggere i tuoi appuntamenti.", "Scollega"))) return;
   try {
     await deleteDoc(doc(db, "rosario_segreti", uid));
     await setDoc(rosCfgRef("impostazioni"), { calendarioCollegato: false }, { merge: true });
@@ -4026,7 +4064,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.14 (v4.14)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.15 (v4.15)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4140,10 +4178,10 @@ $("#dBody").addEventListener("click", e => {
     update(c.id, { ricontattare: d }); toast("Richiamo il " + fmtDate(d));
   }
 });
-$("#dStorico").addEventListener("click", e => {
+$("#dStorico").addEventListener("click", async e => {
   const b = e.target.closest("[data-delnote]"); if(!b) return;
   const c = byId(ui.openId);
-  if(!confirm("Eliminare questa nota?")) return;
+  if(!(await confermaElimina("questa nota", "La nota sparisce dallo storico del cliente."))) return;
   const s = [...(c.storico||[])]; s.splice(+b.dataset.delnote, 1);
   update(c.id, { storico: s });
 });
@@ -4155,9 +4193,9 @@ $("#noteForm").addEventListener("submit", e => {
   $("#noteText").value = ""; toast("Nota aggiunta");
 });
 $("#editBtn").addEventListener("click", () => { const id = ui.openId; $("#dlgDetail").close(); openForm(id); });
-$("#delBtn").addEventListener("click", () => {
-  const c = byId(ui.openId);
-  if(!confirm(`Eliminare "${c.nome}"? L'operazione non si può annullare.`)) return;
+$("#delBtn").addEventListener("click", async () => {
+  const c = byId(ui.openId); if(!c) return;
+  if(!(await confermaElimina("«" + c.nome + "»", "La scheda del cliente, le sue note e lo storico spariscono. L'operazione non si può annullare."))) return;
   deleteDoc(ref(c.id)).catch(fail);
   $("#dlgDetail").close(); toast("Cliente eliminato");
 });
@@ -4897,8 +4935,7 @@ $("#pvList").addEventListener("click", e => {
   const d = e.target.closest("[data-pvdel]");
   if(d){
     const p = preventivi.find(x => x.id === d.dataset.pvdel); if(!p) return;
-    if(!confirm(`Eliminare il preventivo ${p.cliente ? "di " + p.cliente + " " : ""}del ${fmtDate(p.data)}? L’operazione non si può annullare.`)) return;
-    deleteDoc(doc(pvCol(), p.id)).then(() => toast("Preventivo eliminato")).catch(fail);
+    confermaElimina("il preventivo " + (p.cliente ? "di " + p.cliente + " " : "") + "del " + fmtDate(p.data)).then(ok => { if(ok) deleteDoc(doc(pvCol(), p.id)).then(() => toast("Preventivo eliminato")).catch(fail); });
     return;
   }
   const b = e.target.closest("[data-pv]"); if(b) pvOpen(b.dataset.pv);
@@ -5304,7 +5341,11 @@ pvPagesEl.addEventListener("change", e => {
 pvPagesEl.addEventListener("click", e => {
   const t = e.target, row = t.closest(".pv-row");
   if(t.closest(".pv-add")){ pvAddItem(t.closest(".pv-add").dataset.cat); return; }
-  if(t.closest(".pv-del") && row){ pvCur.items = pvCur.items.filter(i => i.id !== row.dataset.id); pvSelId = null; pvSave(); pvRender(); toast("Articolo rimosso"); return; }
+  if(t.closest(".pv-del") && row){
+    const it = pvItem(row.dataset.id), id = row.dataset.id;
+    confermaElimina(it && (it.nome || it.raw) ? "«" + (it.nome || it.raw) + "»" : "questo articolo", "L'articolo viene tolto dal preventivo.").then(ok => { if(!ok || !pvCur) return; pvCur.items = pvCur.items.filter(i => i.id !== id); pvSelId = null; pvSave(); pvRender(); toast("Articolo rimosso"); });
+    return;
+  }
   if(t.closest(".pv-unit") && row){
     const it = pvItem(row.dataset.id); if(!it) return;
     const cur = pvPriceOf(it); it.mode = it.mode === "kg" ? "pz" : "kg"; it.edited = true;
@@ -5398,8 +5439,8 @@ $("#pvDup").addEventListener("click", () => {
   copia.id = doc(pvCol()).id; copia.data = localISO(); copia.creato = nowISO();
   pvSave(true); pvOpenObj(copia); pvSave(true); toast("Preventivo duplicato: ora stai modificando la copia");
 });
-$("#pvDel").addEventListener("click", () => {
-  if(!pvCur || !confirm("Eliminare questo preventivo? L’operazione non si può annullare.")) return;
+$("#pvDel").addEventListener("click", async () => {
+  if(!pvCur || !(await confermaElimina("questo preventivo"))) return;
   const id = pvCur.id; clearTimeout(pvSaveT); pvSaveT = null;
   deleteDoc(doc(pvCol(), id)).catch(fail); pvClose(); toast("Preventivo eliminato");
 });

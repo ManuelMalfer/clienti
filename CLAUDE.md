@@ -285,6 +285,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.12** = v4.11 + la ricerca Clienti trova le schede unite anche per i codici (`codiceDest`, `codiceFatt`, `codiceReport`) e per i nomi che avevano prima (`altriNomi`; per le unioni vecchie si legge la riga di storico "Unita con la scheda «…»", `uniAlias`); sotto il nome le schede unite mostrano l'altro nome e i codici (`uniTag`). Tag Git `v4.12`; la scritta in Riepilogo dice 4.12.
 - **v4.13** = v4.12 + **Annulla unione**. Tag Git `v4.13`; la scritta in Riepilogo dice 4.13.
 - **v4.14** = v4.13 + **destinazioni collegate ma non unite**: la fatturazione è la scheda principale nell'elenco Clienti, con una freccia ▾ che apre le destinazioni come schede separate. Tag Git `v4.14`; la scritta in Riepilogo dice 4.14.
+- **v4.15** = v4.14 + **pop-up di conferma prima di ogni eliminazione** ("Sei sicuro di voler eliminare …?"). Tag Git `v4.15`; la scritta in Riepilogo dice 4.15.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -335,6 +336,10 @@ l'interfaccia cambia. Il blocco CSS è `/* ===== Versione PC ===== */`, dopo `As
   2 colonne; Riepilogo in 2 colonne bilanciate; Mappa a tutta altezza; finestre fino a 760 px; effetti al passaggio del mouse.
 - Scorciatoia da tastiera: **/** porta alla ricerca della schermata aperta (Clienti, Cataloghi, Preventivi).
 - **Mappa delle zone su iPad/iPhone**: 176 px su telefono (<600 px), 300 px su iPad (≥600 px, chip su 3 righe).
+
+## Conferma prima di eliminare (v4.15)
+
+Richiesta di Manuel: ogni eliminazione chiede conferma con un pop-up dell'app (non il `confirm()` del browser). Funzione `confermaElimina(cosa, dettaglio, testoTasto)` → `Promise<boolean>`, finestra `#dlgSure` (icona cestino, titolo "Sei sicuro di voler eliminare …?", Annulla / Elimina rosso; Esc o tocco fuori = Annulla; si apre anche sopra la scheda cliente o il preventivo). Usata per: cliente, nota dello storico, preventivo (elenco e aperto), **articolo del preventivo** (prima si toglieva senza chiedere), promemoria di Rosario, collegamento al calendario di Rosario, catalogo, **unione di due schede in una** (elimina una scheda). **Ogni nuova eliminazione deve passare da `confermaElimina`.** Gli altri `confirm()` (P.IVA, importazione, collega, annulla unione…) restano quelli del browser.
 
 ## Come lavorare su questo progetto
 
