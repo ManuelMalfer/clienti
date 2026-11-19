@@ -274,6 +274,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.1** = v4 + sezione **Budget** (sotto) e Riepilogo con le schede allineate in cima su PC. Tag Git `v4.1`; la scritta in Riepilogo dice 4.1.
 - **v4.2** = v4.1 + **target di categoria** (report Marchi per semestre) in Budget e fatturato per categoria nella scheda cliente (sezione Budget). Tag Git `v4.2`; la scritta in Riepilogo dice 4.2.
 - **v4.3** = v4.2 + tasto **Collega** per i clienti dei report target senza scheda collegata. Tag Git `v4.3`; la scritta in Riepilogo dice 4.3.
+- **v4.4** = v4.3 + Budget a **quattro schede** (Andamento, Target, Pressione, Provvigioni). Tag Git `v4.4`; la scritta in Riepilogo dice 4.4.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -368,6 +369,26 @@ scorso e, se c'è il confronto, **"Da recuperare"** (compravano nell'anno scorso
 **Collega** (v4.3): le righe del report senza scheda hanno il pulsante "Collega" (e in fondo a ogni scheda c'è l'elenco "Clienti non collegati"): si sceglie il cliente dell'app da una lista con ricerca (ordinata per somiglianza del nome) e l'app scrive il codice del report nella scheda: nel campo `codice` se è vuoto, altrimenti in `codiceReport` (il codice esistente non si tocca). L'abbinamento è `tgtMatch(c, x)`: `codice` o `codiceReport` (uguali o terminanti con quello del report) oppure ragione sociale uguale.
 Nella **scheda cliente** compare "Fatturato per categoria" (`tgtDetailHTML`) con i valori dei report caricati. Se un cliente non ha il codice nell'app, non si collega.
 Provato con i due PDF veri (1° sem: 26 clienti, 2° sem: 25 clienti; scarti −319, −4.634, −2.402 e +729, +13.685, +27.700, +6.892).
+
+### Budget a schede, Pressione e Provvigioni (v4.4)
+
+Budget ha ora quattro pillole in cima (`bdgTab`: and / tgt / prs / prv; `renderBudget` sceglie la vista). **Carica scheda** accetta **più file insieme** (PDF e Excel) e riconosce
+da solo il tipo (`bdgCaricaFile`): scheda performance, report target, **Analisi pressione**, **Provvigioni**. Il file non riconosciuto dà un errore per file.
+
+- **Pressione** (un PDF al mese, "Sales Report Analysis… Analisi performance delle vendite"; `prsAnalizza`, marcatori `PRS-PARSE-START/END`): riga TOTALE (listino, sconto
+  listino cliente, estemporaneo, borsellino, canvas, venduto netto, sconti totali) e una riga per cliente con 6 valori + % pressione. **Pressione = (sconto listino cliente + estemporaneo
+  + borsellino) / valore a listino** (il canvas non conta); limite di Marchi **5%**. Mese e anno dalle righe MESE/ANNO (o dal titolo "aggiornamento del…"). Salvato in
+  `utenti/{uid}/impostazioni/pressione`, campo `r["2026-10"]` = `{key, anno, mese, tot[7], clienti:[{c, n, v[6], p}]}` (un nuovo caricamento sostituisce solo quel mese). Schermata: tre
+  riquadri (pressione del mese, sconti, media dell'anno), grafico a barre mensile con linea tratteggiata al 5%, elenco clienti del mese scelto dal più alto (sopra il limite in rosso); i clienti
+  senza scheda hanno "Collega" (come nei target). Nella scheda cliente: pressione dell'ultimo mese e ultimi mesi (`prsDetailHTML`).
+- **Provvigioni** (file Excel "Provvigioni Anno 2026 …", un foglio "Mese di …" per mese più "Riepilogo"; `prvAnalizza`, marcatori `PRV-PARSE-START/END`, usa SheetJS già caricato): per ogni
+  riga di fattura legge cliente (col. C), capitolo (D, categoria merceologica), fatturato (H) e valore provvigione (J); controlla che la somma torni con la riga "Totale" del foglio. Si salvano solo
+  i totali per mese, per cliente e per capitolo in `utenti/{uid}/impostazioni/provvigioni` = `{anno, tot:{f[12],p[12]}, cap:[{k,n,f[12],p[12]}], cli:[{c,n,f[12],p[12]}]}`. **Nel file i valori sono
+  negativi** (es. −2,8%, totale annuo −19.080 €): nell'app si mostrano in positivo con la costante `PROV_SEGNO = -1` (da verificare con Manuel che sia il significato giusto; se no, cambiare la costante).
+  Schermata: riquadri (provvigioni dell'anno, fatturato provvigionato, % media), grafico mensile, tabella, poi elenco per cliente (primi 15) e per categoria, con scelta del mese o dell'anno.
+  Nella scheda cliente: provvigioni dell'anno su quel cliente.
+- I report crediti settimanali (fino ad aprile) NON sono usati: l'azienda non li manda più (deciso con Manuel).
+- Provato con i file veri: pressione gennaio–ottobre (totali e somme dei clienti coincidono; ottobre 6,46%), provvigioni (totali mensili uguali al foglio Riepilogo, −19.079,57 €).
 
 ## Rosario (assistente vocale)
 

@@ -799,7 +799,12 @@ button.tg-cli{cursor:pointer} button.tg-cli:active{background:var(--surface-2)}
 .tg-det{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2)}
 .tg-det h3{margin:0 0 4px;font-size:14px;color:var(--muted);font-weight:600}
 .tg-sub{margin:8px 0 2px;font-size:13px;font-weight:700}
-@media (min-width:1100px){#bdgBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}#bdgBody > .bdg-kpis,#bdgBody > .bdg-msg{grid-column:1 / -1}}
+@media (min-width:1100px){#bdgBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}#bdgBody > .bdg-kpis,#bdgBody > .bdg-msg,#bdgBody > .bdg-tabs,#bdgBody > .bdg-vuoto{grid-column:1 / -1}}
+.bdg-tabs{margin-top:8px;flex-wrap:wrap;overflow:visible}
+.tg-cli > span{flex:1 1 auto}
+.tg-cli > .chip-btn{flex:0 0 auto}
+.bdg-warn{fill:var(--b-bd)}
+.bdg-thr{stroke:var(--danger);stroke-width:1.5;stroke-dasharray:6 4}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -951,7 +956,7 @@ main.view{padding-top:14px}
   <section id="v-budget" class="view-wrap hidden">
     <header class="top"><div class="wrap">
       <div class="top-row"><h1>Budget</h1><span class="ct-head"><span class="count" id="bdgLbl"></span><button class="link" id="bdgCarica" type="button">Carica scheda</button></span></div>
-      <input type="file" id="bdgFile" accept="application/pdf,.pdf" hidden>
+      <input type="file" id="bdgFile" accept="application/pdf,.pdf,.xlsx,.xls" multiple hidden>
     </div></header>
     <main class="wrap view" id="bdgBody"></main>
   </section>
@@ -2689,7 +2694,7 @@ async function bdgRighe(buf){
 }
 let bdgUid = null;
 async function bdgCarica(){
-  tgtCarica();
+  bdgCaricaTutto();
   if(!uid || (bdgUid === uid && (bdgStato === "carico" || bdgStato === "ok"))) return;
   bdgUid = uid; bdgStato = "carico"; bdg = null;
   try{
@@ -2700,27 +2705,6 @@ async function bdgCarica(){
   renderBudget();
 }
 $("#bdgCarica").addEventListener("click", () => $("#bdgFile").click());
-$("#bdgFile").addEventListener("change", async e => {
-  const f = e.target.files[0]; e.target.value = "";
-  if(!f) return;
-  bdgErr = ""; toast("Leggo la scheda…");
-  try{
-    const righe = await bdgRighe(await f.arrayBuffer());
-    if(righe.some(r => /^Fatturato AP\b/i.test(r.join(" ").trim()))){
-      const dati = bdgAnalizza(righe);
-      await setDoc(bdgRef(), { ...dati, caricato: nowISO() });
-      bdg = dati; bdgStato = "ok"; bdgUid = uid;
-      toast("Budget aggiornato");
-    } else if(righe.some(r => /Target\s+\d\s*°?\s*semestre/i.test(r.join(" ")))){
-      const dati = tgtAnalizza(righe);
-      await setDoc(tgtRef(), { r: { [dati.key]: { ...dati, caricato: nowISO() } } }, { merge: true });
-      tgt[dati.key] = dati; tgtStato = "ok"; tgtUid = uid;
-      toast("Target " + dati.sem + "° semestre " + dati.anno + " aggiornato");
-    } else throw new Error("Non riconosco questo PDF: servono la scheda performance o il report target di Marchi.");
-  }catch(err){ bdgErr = err && err.message ? err.message : "Non riesco a leggere il PDF."; }
-  renderBudget();
-});
-
 function bdgGrafico(d){
   const W = 760, H = 290, L = 46, R = 8, T = 14, B = 28, pw = W - L - R, ph = H - T - B;
   const val = [...d.ap, ...d.ac, ...d.bd].filter(v => v != null);
@@ -2743,32 +2727,49 @@ function bdgGrafico(d){
   return s + "</svg>";
 }
 
+/* ---------- Budget: schede (Andamento, Target, Pressione, Provvigioni) ---------- */
+let bdgTab = "and";
+const BDG_TABS = [["and", "Andamento"], ["tgt", "Target"], ["prs", "Pressione"], ["prv", "Provvigioni"]];
+const bdgVuoto = t => `<div class="bdg-vuoto">${t}</div>`;
+const bdgPct = (n, d = 2) => n == null || isNaN(n) ? "–" : n.toFixed(d).replace(".", ",") + "%";
+const bdgFmtP = p => p == null ? "" : (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(1).replace(".", ",") + "%";
+const bdgFmtD = n => (n >= 0 ? "+" : "−") + bdgEuro(Math.abs(n)) + " €";
+const bdgCls = n => n >= 0 ? "bdg-up" : "bdg-down";
+// riga di un cliente del report: se esiste la scheda si apre, altrimenti c'è il tasto Collega
+const bdgVoce = (c, inner, x) => c ? `<button type="button" class="tg-cli" data-open="${c.id}">${inner}</button>` : `<div class="tg-cli">${inner}<button type="button" class="chip-btn" data-tlink="${esc(x.c)}">Collega</button></div>`;
+
 function renderBudget(){
   if(ui.view !== "budget") return;
-  const body = $("#bdgBody");
-  const tgtL = tgtLista();
-  if(!bdg && tgtL.length){ $("#bdgLbl").textContent = "Target di categoria"; body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + tgtHTML(tgtL); return; }
+  const v = bdgTab === "tgt" ? bdgVistaTarget() : bdgTab === "prs" ? prsVista() : bdgTab === "prv" ? prvVista() : bdgVistaAndamento();
+  $("#bdgLbl").textContent = v.lbl || "";
+  $("#bdgBody").innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr).replace(/\n/g, "<br>")}</p>` : "")
+    + `<div class="ct-chips bdg-tabs" role="tablist">${BDG_TABS.map(([k, l]) => `<button type="button" aria-pressed="${bdgTab === k}" data-btab="${k}">${l}</button>`).join("")}</div>` + v.html;
+}
+$("#bdgBody").addEventListener("click", e => {
+  const t = e.target.closest("[data-btab]");
+  if(t){ bdgTab = t.dataset.btab; renderBudget(); window.scrollTo(0, 0); return; }
+  const p = e.target.closest("[data-pmese]");
+  if(p){ prsMese = p.dataset.pmese; renderBudget(); return; }
+  const m = e.target.closest("[data-vmese]");
+  if(m){ prvMese = +m.dataset.vmese; renderBudget(); }
+});
+
+function bdgVistaAndamento(){
   if(!bdg){
-    $("#bdgLbl").textContent = "";
-    body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `<div class="bdg-vuoto">${bdgStato === "carico" || bdgStato === "idle" ? "Carico i dati…" : bdgStato === "errore" ? "Non riesco a leggere i dati. Controlla la connessione." : "Nessuna scheda caricata. Tocca <b>Carica scheda</b> e scegli il PDF della scheda performance o del report target di Marchi."}</div>`;
-    return;
+    return { lbl: "", html: bdgVuoto(bdgStato === "carico" || bdgStato === "idle" ? "Carico i dati…" : bdgStato === "errore" ? "Non riesco a leggere i dati. Controlla la connessione." : "Nessuna scheda caricata. Tocca <b>Carica scheda</b> e scegli il PDF della scheda performance di Marchi.") };
   }
   const d = bdg;
   const mesi = d.ac.map((v, i) => v != null ? i : -1).filter(i => i >= 0);
   const somma = a => mesi.reduce((t, i) => t + (a[i] || 0), 0);
   const AC = somma(d.ac), AP = somma(d.ap), BD = somma(d.bd);
   const pct = (a, b) => b ? (a - b) / Math.abs(b) * 100 : null;
-  const fmtP = p => p == null ? "" : (p >= 0 ? "+" : "−") + Math.abs(p).toFixed(1).replace(".", ",") + "%";
-  const fmtD = n => (n >= 0 ? "+" : "−") + bdgEuro(Math.abs(n)) + " €";
-  const cls = n => n >= 0 ? "bdg-up" : "bdg-down";
   const ultimo = mesi.length ? BDG_MESI[mesi[mesi.length - 1]] : "";
-  $("#bdgLbl").textContent = `${d.anno} · fino a ${ultimo.toLowerCase()}${d.agg ? " · scheda del " + d.agg : ""}`;
-  const righe = mesi.map(i => { const p = pct(d.ac[i], d.bd[i]); return `<tr><td>${BDG_MESI[i]}</td><td>${bdgEuro(d.ap[i])}</td><td>${bdgEuro(d.ac[i])}</td><td>${bdgEuro(d.bd[i])}</td><td class="${p == null ? "" : cls(p)}">${fmtP(p)}</td></tr>`; }).join("");
-  body.innerHTML = (bdgErr ? `<p class="bdg-msg">${esc(bdgErr)}</p>` : "") + `
+  const righe = mesi.map(i => { const p = pct(d.ac[i], d.bd[i]); return `<tr><td>${BDG_MESI[i]}</td><td>${bdgEuro(d.ap[i])}</td><td>${bdgEuro(d.ac[i])}</td><td>${bdgEuro(d.bd[i])}</td><td class="${p == null ? "" : bdgCls(p)}">${bdgFmtP(p)}</td></tr>`; }).join("");
+  return { lbl: `${d.anno} · fino a ${ultimo.toLowerCase()}${d.agg ? " · scheda del " + d.agg : ""}`, html: `
     <div class="bdg-kpis">
-      <div class="bdg-kpi"><small>Fatturato ${d.anno}</small><b>${bdgEuro(AC)} €</b><span class="${cls(AC - AP)}">${fmtP(pct(AC, AP))} sul ${d.anno - 1}</span></div>
-      <div class="bdg-kpi"><small>Rispetto al budget</small><b class="${cls(AC - BD)}">${fmtD(AC - BD)}</b><span class="${cls(AC - BD)}">${fmtP(pct(AC, BD))}</span></div>
-      <div class="bdg-kpi"><small>Rispetto al ${d.anno - 1}</small><b class="${cls(AC - AP)}">${fmtD(AC - AP)}</b><span class="${cls(AC - AP)}">${fmtP(pct(AC, AP))}</span></div>
+      <div class="bdg-kpi"><small>Fatturato ${d.anno}</small><b>${bdgEuro(AC)} €</b><span class="${bdgCls(AC - AP)}">${bdgFmtP(pct(AC, AP))} sul ${d.anno - 1}</span></div>
+      <div class="bdg-kpi"><small>Rispetto al budget</small><b class="${bdgCls(AC - BD)}">${bdgFmtD(AC - BD)}</b><span class="${bdgCls(AC - BD)}">${bdgFmtP(pct(AC, BD))}</span></div>
+      <div class="bdg-kpi"><small>Rispetto al ${d.anno - 1}</small><b class="${bdgCls(AC - AP)}">${bdgFmtD(AC - AP)}</b><span class="${bdgCls(AC - AP)}">${bdgFmtP(pct(AC, AP))}</span></div>
     </div>
     <section class="bdg-card">
       <h2>Mese per mese</h2>
@@ -2778,9 +2779,259 @@ function renderBudget(){
     <section class="bdg-card">
       <h2>Dettaglio (€)</h2>
       <table class="bdg-tab"><thead><tr><th>Mese</th><th>${d.anno - 1}</th><th>${d.anno}</th><th>Budget</th><th>Vs budget</th></tr></thead><tbody>${righe}</tbody>
-      <tfoot><tr><td>Totale</td><td>${bdgEuro(AP)}</td><td>${bdgEuro(AC)}</td><td>${bdgEuro(BD)}</td><td class="${cls(AC - BD)}">${fmtP(pct(AC, BD))}</td></tr></tfoot></table>
-    </section>` + tgtHTML(tgtL);
+      <tfoot><tr><td>Totale</td><td>${bdgEuro(AP)}</td><td>${bdgEuro(AC)}</td><td>${bdgEuro(BD)}</td><td class="${bdgCls(AC - BD)}">${bdgFmtP(pct(AC, BD))}</td></tr></tfoot></table>
+    </section>` };
 }
+function bdgVistaTarget(){
+  const l = tgtLista();
+  if(!l.length) return { lbl: "", html: bdgVuoto(tgtStato === "carico" || tgtStato === "idle" ? "Carico i dati…" : "Nessun report target caricato. Tocca <b>Carica scheda</b> e scegli il «Report Target» di Marchi (puoi sceglierne più di uno).") };
+  return { lbl: "Target di categoria", html: tgtHTML(l) };
+}
+
+// grafico a barre generico: vals = 12 valori (null = mese senza dati); soglia = linea tratteggiata (es. limite 5%)
+function bdgBarre(vals, o){
+  const W = 760, H = 250, L = 46, R = 8, T = 22, B = 26, pw = W - L - R, ph = H - T - B;
+  const mx = Math.max(...vals.filter(v => v != null), o.soglia || 0, 1);
+  const passo = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000].find(p => mx / p <= 5);
+  const top = Math.ceil(mx / passo) * passo;
+  const y = v => T + ph - Math.max(0, v) / top * ph;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.titolo)}">`;
+  for(let v = 0; v <= top; v += passo) s += `<line class="bdg-grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${o.tick(v)}</text>`;
+  const gw = pw / 12, bw = 34;
+  vals.forEach((v, i) => {
+    const cx = L + gw * i + gw / 2;
+    if(v != null) s += `<rect class="${o.classe(v)}" x="${cx - bw / 2}" y="${y(v)}" width="${bw}" height="${T + ph - y(v)}" rx="3"><title>${BDG_MESI[i]}: ${o.fmt(v)}</title></rect><text x="${cx}" y="${y(v) - 5}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${o.fmt(v)}</text>`;
+    s += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${BDG_MESI[i]}</text>`;
+  });
+  if(o.soglia) s += `<line class="bdg-thr" x1="${L}" x2="${W - R}" y1="${y(o.soglia)}" y2="${y(o.soglia)}"/><text x="${W - R}" y="${y(o.soglia) - 4}" text-anchor="end" style="fill:var(--danger)">${o.sogliaTesto}</text>`;
+  return s + "</svg>";
+}
+const bdgMeseChips = (voci, sel, attr) => `<div class="ct-chips" style="flex-wrap:wrap;overflow:visible;margin:6px 0 4px">${voci.map(([k, l]) => `<button type="button" aria-pressed="${String(sel) === String(k)}" ${attr}="${k}">${l}</button>`).join("")}</div>`;
+
+/* ---------- Pressione commerciale (Analisi pressione, un PDF al mese) ---------- */
+// Per ogni cliente: valore a listino, sconti (listino cliente, estemporaneo, borsellino, canvas), venduto netto e % di pressione.
+// Pressione = (sconto listino cliente + estemporaneo + borsellino) / listino (il canvas non conta). Limite indicato da Marchi: 5%.
+// Salvato in utenti/{uid}/impostazioni/pressione, campo r["2026-10"] = {key, anno, mese, tot[7], clienti:[{c, n, v[6], p}]}.
+let prs = {}, prsStato = "idle", prsUid = null, prsMese = null;
+const prsRef = () => doc(db, "utenti", uid, "impostazioni", "pressione");
+const PRS_LIMITE = 5;
+const PRS_MESI = { gen: 1, feb: 2, mar: 3, apr: 4, mag: 5, giu: 6, lug: 7, ago: 8, set: 9, ott: 10, nov: 11, dic: 12 };
+/*PRS-PARSE-START*/
+function prsNum(s){ return bdgNum(String(s).trim().replace(/%$/, "").replace(/\s/g, "")); }
+function prsAnalizza(righe){
+  const rt = righe.find(r => /^TOTALE$/i.test(r[0] || "") && r.slice(1).map(bdgNum).filter(v => v != null).length >= 6);
+  if(!rt) throw new Error("Non trovo la riga TOTALE nel PDF. È l'analisi pressione di Marchi?");
+  const tot = rt.slice(1).map(bdgNum).filter(v => v != null).slice(0, 7);
+  const val = k => { const r = righe.find(x => (x[0] || "").trim().toUpperCase() === k); return r ? String(r[1] || "").trim() : ""; };
+  const testo = righe.map(r => r.join(" ")).join("\n");
+  const agg = /aggiornamento del (\d{2})\.(\d{2})\.(\d{4})/i.exec(testo);
+  const mese = PRS_MESI[val("MESE").toLowerCase().slice(0, 3)] || (agg ? +agg[2] : 0);
+  const anno = +val("ANNO") || (agg ? +agg[3] : 0);
+  if(!mese || !anno) throw new Error("Non trovo il mese del report.");
+  const clienti = [], visti = new Set();
+  righe.forEach(r => {
+    const k = /^(\d{6,})\s*-\s*(.+)$/.exec(r[0] || "");
+    if(!k || visti.has(k[1]) || r.length < 8) return;
+    const v = r.slice(1, 7).map(bdgNum), p = prsNum(r[7]);
+    if(v.some(x => x == null) || p == null) return;
+    visti.add(k[1]); clienti.push({ c: k[1], n: k[2].trim(), v, p });
+  });
+  if(!clienti.length) throw new Error("Non trovo i clienti nel PDF.");
+  return { key: anno + "-" + String(mese).padStart(2, "0"), anno, mese, tot: tot.length === 7 ? tot : [...tot, tot[1] + (tot[2] || 0) + (tot[3] || 0)], clienti };
+}
+/*PRS-PARSE-END*/
+async function prsCarica(){
+  if(!uid || (prsUid === uid && (prsStato === "ok" || prsStato === "carico"))) return;
+  prsUid = uid; prsStato = "carico";
+  try{ const s = await getDoc(prsRef()); prs = s.exists() ? (s.data().r || {}) : {}; prsStato = "ok"; }catch(err){ prsStato = "errore"; }
+  if(ui.view === "budget") renderBudget();
+}
+const prsLista = () => Object.values(prs).filter(r => r && r.clienti && r.tot).sort((a, b) => a.key.localeCompare(b.key));
+const prsPerc = r => r.tot[0] ? r.tot[6] / r.tot[0] * 100 : 0;
+
+function prsVista(){
+  const L = prsLista();
+  if(!L.length) return { lbl: "", html: bdgVuoto(prsStato === "carico" || prsStato === "idle" ? "Carico i dati…" : "Nessuna analisi pressione caricata. Tocca <b>Carica scheda</b> e scegli i PDF «Analisi pressione» di Marchi (puoi sceglierne più di uno insieme).") };
+  const sel = prs[prsMese] ? prsMese : L[L.length - 1].key, r = prs[sel], anno = r.anno;
+  const nomeMese = BDG_MESI[r.mese - 1];
+  const perc = prsPerc(r), ok = perc <= PRS_LIMITE;
+  const delAnno = L.filter(x => x.anno === anno), sL = delAnno.reduce((t, x) => t + x.tot[0], 0), sS = delAnno.reduce((t, x) => t + x.tot[6], 0), media = sL ? sS / sL * 100 : 0;
+  const vals = Array(12).fill(null); delAnno.forEach(x => { vals[x.mese - 1] = prsPerc(x); });
+  const grafico = bdgBarre(vals, { titolo: "Pressione mensile", tick: v => v + "%", fmt: v => bdgPct(v, 1), classe: v => v > PRS_LIMITE ? "bdg-warn" : "bdg-ac", soglia: PRS_LIMITE, sogliaTesto: "limite " + PRS_LIMITE + "%" });
+  const cl = r.clienti.filter(x => x.v[0] > 0).sort((a, b) => b.p - a.p);
+  const sopra = cl.filter(x => x.p > PRS_LIMITE);
+  const riga = x => {
+    const c = tgtTrova(x), nome = c ? c.nome : tgtTit(x.n), sc = x.v[1] + x.v[2] + x.v[3];
+    return bdgVoce(c, `<span>${esc(nome)}<small>${bdgEuro(sc)} € di sconto su ${bdgEuro(x.v[0])} €${x.v[4] ? " · canvas " + bdgEuro(x.v[4]) + " €" : ""}</small></span><b class="${x.p > PRS_LIMITE ? "bdg-down" : ""}">${bdgPct(x.p)}</b>`, x);
+  };
+  return { lbl: `${anno} · aggiornato a ${nomeMese.toLowerCase()}`, html: `
+    <div class="bdg-kpis">
+      <div class="bdg-kpi"><small>Pressione ${nomeMese.toLowerCase()}</small><b class="${ok ? "bdg-up" : "bdg-down"}">${bdgPct(perc)}</b><span class="${ok ? "bdg-up" : "bdg-down"}">${ok ? "sotto" : "sopra"} il limite del ${PRS_LIMITE}%</span></div>
+      <div class="bdg-kpi"><small>Sconti ${nomeMese.toLowerCase()}</small><b>${bdgEuro(r.tot[6])} €</b><span>su ${bdgEuro(r.tot[0])} € a listino</span></div>
+      <div class="bdg-kpi"><small>Media ${anno}</small><b class="${media <= PRS_LIMITE ? "bdg-up" : "bdg-down"}">${bdgPct(media)}</b><span>${delAnno.length} ${delAnno.length === 1 ? "mese" : "mesi"}</span></div>
+    </div>
+    <section class="bdg-card"><h2>Pressione mese per mese</h2><div class="bdg-scroll">${grafico}</div></section>
+    <section class="bdg-card"><h2>Clienti · ${nomeMese.toLowerCase()}</h2>
+      ${bdgMeseChips(L.filter(x => x.anno === anno).map(x => [x.key, BDG_MESI[x.mese - 1]]), sel, "data-pmese")}
+      <p class="hint" style="margin:6px 0 4px">${sopra.length ? `<b>${sopra.length}</b> ${sopra.length === 1 ? "cliente è sopra" : "clienti sono sopra"} il limite del ${PRS_LIMITE}%: sono in cima.` : `Nessun cliente sopra il limite del ${PRS_LIMITE}%.`} Pressione = sconti (listino cliente, estemporaneo, borsellino) su valore a listino.</p>
+      <div class="tg-list">${cl.map(riga).join("")}</div>
+    </section>` };
+}
+
+/* ---------- Provvigioni (file Excel dell'azienda, un foglio per mese) ---------- */
+// Si legge ogni foglio "Mese di …": righe di fattura con cliente, capitolo (categoria merceologica), fatturato, % e valore provvigione.
+// Si salvano solo i totali per mese, per cliente e per capitolo (utenti/{uid}/impostazioni/provvigioni).
+// Nel file i valori sono NEGATIVI (es. −2,8%): nell'app si mostrano in positivo (PROV_SEGNO = −1). Se non è il significato giusto, basta cambiare il segno qui.
+const PROV_SEGNO = -1;
+let prv = null, prvStato = "idle", prvUid = null, prvMese = -1;
+const prvRef = () => doc(db, "utenti", uid, "impostazioni", "provvigioni");
+/*PRV-PARSE-START*/
+function prvAnalizza(wb){
+  const MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+  const fogli = wb.SheetNames.filter(n => /^Mese di /i.test(n));
+  if(!fogli.length) throw new Error("Non sembra il file delle provvigioni di Marchi (mancano i fogli «Mese di …»).");
+  const arr = () => Array(12).fill(null), r2 = n => Math.round(n * 100) / 100;
+  const tot = { f: arr(), p: arr() }, cap = new Map(), cli = new Map();
+  let anno = 0, righe = 0;
+  const add = (mappa, k, nome, mi, f, p, extra) => {
+    let o = mappa.get(k); if(!o){ o = { ...extra, n: nome, f: arr(), p: arr() }; mappa.set(k, o); }
+    o.f[mi] = (o.f[mi] || 0) + f; o.p[mi] = (o.p[mi] || 0) + p;
+  };
+  fogli.forEach(nm => {
+    const mi = MESI.indexOf(nm.replace(/^Mese di /i, "").trim().toLowerCase());
+    if(mi < 0) return;
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: "" });
+    const h = rows.findIndex(r => String(r[0]).trim() === "Agente Documento");
+    if(h < 0) return;
+    const totRiga = rows.slice(0, h).find(r => String(r[0]).trim() === "Totale");
+    let sf = 0, sp = 0, n = 0;
+    rows.slice(h + 1).forEach(r => {
+      if(r[7] === "" || r[9] === "") return;
+      const f = Number(r[7]), p = Number(r[9]);
+      if(isNaN(f) || isNaN(p)) return;
+      if(!anno){ const d = String(r[5]); if(/^20\d\d/.test(d)) anno = +d.slice(0, 4); }
+      const c = /^(\d{6,})\s*-\s*(.*)$/.exec(String(r[2]).trim());
+      const code = c ? c[1] : String(r[2]).trim(), nome = c ? c[2].trim() : String(r[2]).trim();
+      const ck = String(r[3]).replace(/\s+/g, " ").trim() || "Senza categoria";
+      sf += f; sp += p; n++;
+      add(cli, code, nome, mi, f, p, { c: code });
+      add(cap, ck, ck.replace(/^[A-Z]\d+\s*-\s*/, ""), mi, f, p, { k: ck });
+    });
+    if(!n) return;
+    if(totRiga && Math.abs(Number(totRiga[7]) - sf) > 1) throw new Error("Il foglio «" + nm + "» non quadra con il suo totale: non lo carico per non sbagliare.");
+    tot.f[mi] = sf; tot.p[mi] = sp; righe += n;
+  });
+  if(!righe) throw new Error("Non trovo righe di fattura nel file.");
+  const fin = o => ({ ...o, f: o.f.map(v => v == null ? null : r2(v)), p: o.p.map(v => v == null ? null : r2(v)) });
+  return { anno: anno || new Date().getFullYear(), tot: fin(tot), cap: [...cap.values()].map(fin), cli: [...cli.values()].map(fin) };
+}
+/*PRV-PARSE-END*/
+async function prvCarica(){
+  if(!uid || (prvUid === uid && (prvStato === "ok" || prvStato === "carico"))) return;
+  prvUid = uid; prvStato = "carico";
+  try{ const s = await getDoc(prvRef()); prv = s.exists() ? s.data() : null; prvStato = "ok"; }catch(err){ prvStato = "errore"; }
+  if(ui.view === "budget") renderBudget();
+}
+function prvVista(){
+  if(!prv) return { lbl: "", html: bdgVuoto(prvStato === "carico" || prvStato === "idle" ? "Carico i dati…" : "Nessun file di provvigioni caricato. Tocca <b>Carica scheda</b> e scegli il file Excel «Provvigioni Anno …» dell'azienda.") };
+  const S = PROV_SEGNO, d = prv, mesi = d.tot.f.map((v, i) => v != null ? i : -1).filter(i => i >= 0);
+  const somma = a => mesi.reduce((t, i) => t + (a[i] || 0), 0);
+  const F = somma(d.tot.f), P = somma(d.tot.p) * S;
+  const sel = mesi.includes(prvMese) ? prvMese : -1;
+  const val = o => sel < 0 ? { f: somma(o.f), p: somma(o.p) * S } : { f: o.f[sel] || 0, p: (o.p[sel] || 0) * S };
+  const ultimo = mesi[mesi.length - 1];
+  const grafico = bdgBarre(d.tot.p.map(v => v == null ? null : v * S), { titolo: "Provvigioni per mese", tick: v => v >= 1000 ? (v / 1000) + "k" : v, fmt: v => bdgEuro(v), classe: () => "bdg-ac" });
+  const righe = mesi.map(i => `<tr><td>${BDG_MESI[i]}</td><td>${bdgEuro(d.tot.f[i])}</td><td>${bdgPct(d.tot.f[i] ? d.tot.p[i] * S / d.tot.f[i] * 100 : null)}</td><td>${bdgEuro(d.tot.p[i] * S)}</td></tr>`).join("");
+  const lista = (a, nome) => a.map(o => ({ o, ...val(o) })).filter(x => x.f || x.p).sort((x, y) => y.p - x.p);
+  const cap = lista(d.cap), cli = lista(d.cli);
+  const periodo = sel < 0 ? "tutto l'anno" : BDG_MESI[sel].toLowerCase();
+  const rCap = cap.map(x => `<div class="tg-cli"><span>${esc(tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b></div>`).join("");
+  const rCli = cli.slice(0, 15).map(x => {
+    const c = tgtTrova({ c: x.o.c, n: x.o.n });
+    return bdgVoce(c, `<span>${esc(c ? c.nome : tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b>`, { c: x.o.c });
+  }).join("");
+  return { lbl: `${d.anno} · fino a ${BDG_MESI[ultimo].toLowerCase()}`, html: `
+    <div class="bdg-kpis">
+      <div class="bdg-kpi"><small>Provvigioni ${d.anno}</small><b>${bdgEuro(P)} €</b><span>${mesi.length} ${mesi.length === 1 ? "mese" : "mesi"}</span></div>
+      <div class="bdg-kpi"><small>Fatturato provvigionato</small><b>${bdgEuro(F)} €</b><span>${d.cli.length} clienti</span></div>
+      <div class="bdg-kpi"><small>Provvigione media</small><b>${bdgPct(F ? P / F * 100 : null)}</b><span>${BDG_MESI[ultimo]}: ${bdgPct(d.tot.f[ultimo] ? d.tot.p[ultimo] * S / d.tot.f[ultimo] * 100 : null)}</span></div>
+    </div>
+    <section class="bdg-card"><h2>Provvigioni mese per mese (€)</h2><div class="bdg-scroll">${grafico}</div>
+      <table class="bdg-tab" style="margin-top:10px"><thead><tr><th>Mese</th><th>Fatturato</th><th>%</th><th>Provvigione</th></tr></thead><tbody>${righe}</tbody>
+      <tfoot><tr><td>Totale</td><td>${bdgEuro(F)}</td><td>${bdgPct(F ? P / F * 100 : null)}</td><td>${bdgEuro(P)}</td></tr></tfoot></table>
+      <p class="hint" style="margin:8px 0 0">Gli importi sono mostrati in positivo; nel file dell'azienda hanno il segno meno.</p></section>
+    <section class="bdg-card"><h2>Per cliente · ${periodo}</h2>
+      ${bdgMeseChips([[-1, "Anno"], ...mesi.map(i => [i, BDG_MESI[i]])], sel, "data-vmese")}
+      <div class="tg-list">${rCli || `<p class="hint">Nessun dato.</p>`}</div>
+      ${cli.length > 15 ? `<p class="hint" style="margin:6px 0 0">Primi 15 clienti su ${cli.length}.</p>` : ""}
+      <h3 class="tg-h3">Per categoria · ${periodo}</h3>
+      <div class="tg-list">${rCap || `<p class="hint">Nessun dato.</p>`}</div>
+    </section>` };
+}
+
+// nella scheda cliente: pressione e provvigioni
+function prsDetailHTML(c){
+  let out = "";
+  const L = prsLista();
+  const serie = L.map(r => ({ r, x: r.clienti.find(y => tgtMatch(c, y)) })).filter(o => o.x);
+  if(serie.length){
+    const u = serie[serie.length - 1];
+    out += `<p class="tg-sub">Pressione commerciale</p><p class="hint" style="margin:0 0 2px"><b class="${u.x.p > PRS_LIMITE ? "bdg-down" : "bdg-up"}">${bdgPct(u.x.p)}</b> a ${BDG_MESI[u.r.mese - 1].toLowerCase()} (limite ${PRS_LIMITE}%)</p><p class="hint" style="margin:0">${serie.slice(-6).map(o => BDG_MESI[o.r.mese - 1] + " " + bdgPct(o.x.p, 1)).join(" · ")}</p>`;
+  }
+  if(prv){
+    const x = prv.cli.find(y => tgtMatch(c, { c: y.c, n: y.n }));
+    if(x){
+      const m = x.f.map((v, i) => v != null ? i : -1).filter(i => i >= 0), F = m.reduce((t, i) => t + x.f[i], 0), P = m.reduce((t, i) => t + (x.p[i] || 0), 0) * PROV_SEGNO;
+      out += `<p class="tg-sub">Provvigioni ${prv.anno}</p><p class="hint" style="margin:0"><b>${bdgEuro(P)} €</b> su ${bdgEuro(F)} € di fatturato (${bdgPct(F ? P / F * 100 : null)})</p>`;
+    }
+  }
+  return out ? `<div class="tg-det"><h3>Pressione e provvigioni</h3>${out}</div>` : "";
+}
+function bdgCaricaTutto(){ tgtCarica(); prsCarica(); prvCarica(); }
+
+// un file scelto da "Carica scheda": riconosce da solo di che documento si tratta
+async function bdgCaricaFile(f){
+  if(/\.xlsx?$/i.test(f.name)){
+    if(!window.XLSX) throw new Error("Libreria Excel non ancora caricata, riprova tra un attimo.");
+    const d = prvAnalizza(XLSX.read(await f.arrayBuffer()));
+    await setDoc(prvRef(), { ...d, caricato: nowISO() });
+    prv = d; prvStato = "ok"; prvUid = uid; bdgTab = "prv";
+    return "Provvigioni " + d.anno + " aggiornate";
+  }
+  const righe = await bdgRighe(await f.arrayBuffer());
+  const testo = righe.map(r => r.join(" ")).join("\n");
+  if(righe.some(r => /^Fatturato AP\b/i.test(r.join(" ").trim()))){
+    const d = bdgAnalizza(righe);
+    await setDoc(bdgRef(), { ...d, caricato: nowISO() });
+    bdg = d; bdgStato = "ok"; bdgUid = uid; bdgTab = "and";
+    return "Budget aggiornato";
+  }
+  if(/Target\s+\d\s*°?\s*semestre/i.test(testo)){
+    const d = tgtAnalizza(righe);
+    await setDoc(tgtRef(), { r: { [d.key]: { ...d, caricato: nowISO() } } }, { merge: true });
+    tgt[d.key] = d; tgtStato = "ok"; tgtUid = uid; bdgTab = "tgt";
+    return "Target " + d.sem + "° semestre " + d.anno + " aggiornato";
+  }
+  if(/% Pressione|Sales Report Analysis/i.test(testo)){
+    const d = prsAnalizza(righe);
+    await setDoc(prsRef(), { r: { [d.key]: { ...d, caricato: nowISO() } } }, { merge: true });
+    prs[d.key] = d; prsStato = "ok"; prsUid = uid; prsMese = d.key; bdgTab = "prs";
+    return "Pressione " + BDG_MESI[d.mese - 1].toLowerCase() + " " + d.anno + " aggiornata";
+  }
+  throw new Error("Non riconosco questo file (servono la scheda performance, i report target, l'analisi pressione o le provvigioni di Marchi).");
+}
+$("#bdgFile").addEventListener("change", async e => {
+  const files = [...e.target.files]; e.target.value = "";
+  if(!files.length) return;
+  bdgErr = ""; toast(files.length > 1 ? "Leggo " + files.length + " file…" : "Leggo il file…");
+  const ok = [], ko = [];
+  for(const f of files){
+    try{ ok.push(await bdgCaricaFile(f)); }catch(err){ ko.push(f.name + ": " + (err && err.message ? err.message : "non riesco a leggerlo")); }
+  }
+  if(ko.length) bdgErr = ko.join("\n");
+  toast(ok.length ? (ok.length === 1 ? ok[0] : ok.length + " file caricati") : "Nessun file caricato");
+  renderBudget();
+});
 
 /* ---------- Target di categoria (report Marchi per semestre) ---------- */
 // Si carica dal pulsante "Carica scheda" di Budget (l'app riconosce da sola il tipo di PDF). Il report dà, per ogni categoria, il target del
@@ -2923,7 +3174,7 @@ function tgtLinkLista(){
   $("#tlList").innerHTML = lista.map(({ c }) => `<li><button type="button" class="tg-cli" data-tl="${c.id}"><span>${esc(c.nome)}<small>${esc([c.luogo, c.ragioneSociale && norm(c.ragioneSociale) !== norm(c.nome) ? c.ragioneSociale : "", c.codice ? "Cod. " + c.codice : ""].filter(Boolean).join(" · "))}</small></span></button></li>`).join("") || `<li class="hint">Nessun cliente trovato.</li>`;
 }
 function tgtLinkApri(codice){
-  const x = tgtLista().flatMap(r => r.clienti).find(y => y.c === codice); if(!x) return;
+  const x = [...tgtLista().flatMap(r => r.clienti), ...prsLista().flatMap(r => r.clienti), ...(prv ? prv.cli : [])].find(y => y.c === codice); if(!x) return;
   tgtLinkX = x;
   $("#tlNome").textContent = tgtTit(x.n) + " · cod. " + x.c;
   $("#tlQ").value = ""; tgtLinkLista();
@@ -3418,7 +3669,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.3 (v4.3)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.4 (v4.4)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -3434,7 +3685,7 @@ function openDetail(id){
   $("#noteText").value = "";
   renderDetail();
   if(!$("#dlgDetail").open) $("#dlgDetail").showModal();
-  tgtCarica().then(() => { if(ui.openId === id && $("#dlgDetail").open) renderDetail(); });
+  Promise.all([tgtCarica(), prsCarica(), prvCarica()]).then(() => { if(ui.openId === id && $("#dlgDetail").open) renderDetail(); });
 }
 function renderDetail(){
   const c = byId(ui.openId);
@@ -3495,7 +3746,7 @@ function renderDetail(){
       ${c.chiusoDal || c.chiusoAl ? `<button class="chip-btn" type="button" id="dChTogli">Rimuovi</button>` : ""}
       <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Dal – fino al. In questi giorni il cliente non compare nel Giro.</span>
     </div>
-    ${pvDetailHTML(c)}${tgtDetailHTML(c)}`;
+    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
     : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
