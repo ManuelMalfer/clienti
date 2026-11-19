@@ -671,8 +671,10 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="riepilogo"]{order:7}
   .tabs button[data-view="rosario"]{order:8}
 
-  /* contenuto: a destra del menu, più largo */
   .view-wrap,#offline{margin-left:var(--side)}
+}
+@media (min-width:1100px){
+  /* contenuto più largo */
   .wrap{max-width:1320px;padding:0 40px}
   header.top{padding:20px 0 16px}
   .top h1{font-size:40px}
@@ -716,6 +718,38 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   #v-clienti .top-row,#v-richiami .top-row,#v-giro .top-row,#v-preventivi .top-row{padding-right:150px}
 }
 /* ===== /Versione PC ===== */
+/* ===== Menu a scomparsa (iPhone/iPad) ===== */
+.menu-btn{display:none}
+#menuVelo{display:none}
+@media not all and (min-width:1100px) and (hover:hover) and (pointer:fine){
+  :root{--tabbar:0px;--side:min(300px,84vw)}
+  nav.tabs{top:0;bottom:0;left:0;right:auto;width:var(--side);display:flex;flex-direction:column;overflow-y:auto;padding:calc(22px + env(safe-area-inset-top,0px)) 12px calc(18px + env(safe-area-inset-bottom,0px));border-top:0;border-right:1px solid color-mix(in srgb,var(--line) 70%,transparent);z-index:60;background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;transform:translateX(-104%);visibility:hidden;transition:transform .26s ease,visibility .26s}
+  body.menu-open nav.tabs{transform:none;visibility:visible;box-shadow:0 0 40px rgba(0,0,0,.28)}
+  nav.tabs::before{content:"Clienti";display:block;font-family:var(--font-cond);font-weight:700;font-size:32px;line-height:1;letter-spacing:-.015em;padding:2px 14px 22px;color:var(--accent)}
+  .tabs-inner{display:flex;flex-direction:column;gap:4px;height:auto;width:100%;max-width:none;margin:0}
+  .tabs button{flex-direction:row;justify-content:flex-start;gap:13px;height:50px;padding:0 14px;border-radius:12px;font-size:16px;font-weight:600;text-align:left;color:var(--ink);letter-spacing:0}
+  .tabs button::before{display:none}
+  .tabs button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+  .tabs button svg{width:22px;height:22px;flex:0 0 auto}
+  .tabs .num{position:static;margin:0 0 0 auto;top:auto;left:auto;box-shadow:none}
+  .tabs button[data-view="altro"]{display:none}
+  .only-desk{display:flex}
+  .tabs button[data-view="clienti"]{order:1}
+  .tabs button[data-view="mappa"]{order:2}
+  .tabs button[data-view="giro"]{order:3}
+  .tabs button[data-view="richiami"]{order:4}
+  .tabs button[data-view="cataloghi"]{order:5}
+  .tabs button[data-view="preventivi"]{order:6}
+  .tabs button[data-view="riepilogo"]{order:7}
+  .tabs button[data-view="rosario"]{order:8}
+  #menuVelo{display:block;position:fixed;inset:0;z-index:55;background:rgba(10,20,25,.42);opacity:0;pointer-events:none;transition:opacity .26s}
+  body.menu-open #menuVelo{opacity:1;pointer-events:auto}
+  body.menu-open{overflow:hidden}
+  .menu-btn{display:inline-grid;place-items:center;width:42px;height:42px;margin:0 8px 0 -8px;padding:0;border:0;border-radius:12px;background:none;color:var(--ink);vertical-align:middle;position:relative;top:-2px}
+  .menu-btn:active{background:var(--surface-2)}
+  .menu-btn svg{width:24px;height:24px}
+}
+/* ===== /Menu a scomparsa ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
 .giro-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:6px}
@@ -982,6 +1016,7 @@ main.view{padding-top:14px}
   </div>
   <!-- /LETTORE PDF -->
 
+  <div id="menuVelo"></div>
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
     <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
     <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
@@ -2512,6 +2547,21 @@ addEventListener("keydown", e => {
   else if(e.key === "ArrowLeft" && LP.zoom <= 1.05) lpGo(LP.cur - 1);
 });
 
+/* ---------- Menu a scomparsa (tre lineette) ---------- */
+// su iPhone/iPad le sezioni stanno in un menu laterale; su PC con mouse il menu è sempre visibile e il tasto è nascosto dal CSS
+$$(".top-row h1").forEach(t => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "menu-btn"; b.setAttribute("aria-label", "Apri il menu");
+  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  t.prepend(b);
+});
+const menuChiudi = () => document.body.classList.remove("menu-open");
+document.addEventListener("click", e => { if(e.target.closest(".menu-btn")) document.body.classList.add("menu-open"); });
+$("#menuVelo").addEventListener("click", menuChiudi);
+$("nav.tabs").addEventListener("click", e => { if(e.target.closest("button")) menuChiudi(); });
+addEventListener("keydown", e => { if(e.key === "Escape") menuChiudi(); });
+addEventListener("resize", () => { if(matchMedia("(min-width:1100px) and (hover:hover) and (pointer:fine)").matches) menuChiudi(); });
+
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
 const giroData = i => addDays((new Date().getDay() === 0 ? 1 : 1 - new Date().getDay()) + i);
@@ -2977,7 +3027,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 3.4 (v3.4)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4 (v4)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
