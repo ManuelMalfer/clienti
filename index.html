@@ -3287,6 +3287,15 @@ function tgtDetailHTML(c){
 // si tiene la scheda di fatturazione (codice `codice`), il codice della destinazione va in `codiceDest`, il nome del locale è quello della destinazione.
 const UNI_PRIORITA = ["CLIENTE", "CONTATTATO", "DA CONTATTARE", "NON SERVIBILE"];
 const uniCod = c => String(c.codice || "").replace(/\D/g, "");
+// Il gestionale Marchi numera le destinazioni partendo dal codice di fatturazione: 10010XXXXX -> 1202XXXXXN (N = 1, 2, 3… numero della destinazione).
+// Es. ALPI 1001006644 -> Ristorante Pizzeria Firenze 1202066441; ARIKI 1001090070 -> Niky's 1202900703/04/05. Verificato su Contatti_053 e Contatti_025.
+const uniChiaveF = cod => { const k = String(cod || "").replace(/\D/g, ""); return /^10010\d{5}$/.test(k) ? k.slice(5) : ""; };
+const uniChiaveD = cod => { const k = String(cod || "").replace(/\D/g, ""); return /^1202\d{6}$/.test(k) ? k.slice(4, 9) : ""; };
+const uniNomeSimile = (a, b) => {
+  const x = norm(a), y = norm(b); if(!x || !y) return false;
+  if(x === y || (x.length >= 5 && y.includes(x)) || (y.length >= 5 && x.includes(y))) return true;
+  const p = uniParole(a), q = uniParole(b); return [...p].filter(w => q.has(w)).length >= 2;
+};
 const uniTipo = c => { const k = uniCod(c); return k.startsWith("120") ? "dest" : k.startsWith("100") ? "fatt" : ""; };
 /*UNI-PARSE-START*/
 function unisciSchede(f, d, oggi){
@@ -3351,6 +3360,7 @@ function uniCoppie(){
       if(d.piva && f.piva && norm(d.piva) === norm(f.piva)) p += 3;
       if(d.indirizzo && f.indirizzo && norm(d.indirizzo) === norm(f.indirizzo) && norm(d.luogo) === norm(f.luogo)) p += 3;
       if(uniCod(d).slice(-6) === uniCod(f).slice(-6)) p += 2;
+      if(uniChiaveD(d.codice) && uniChiaveD(d.codice) === uniChiaveF(f.codice)) p += 6;
       const a = uniParole(d.nome + " " + (d.ragioneSociale || "")), b = uniParole(f.nome + " " + (f.ragioneSociale || ""));
       const comuni = [...a].filter(w => b.has(w)).length;
       p += comuni >= 2 ? 3 : comuni === 1 ? 1 : 0;
@@ -4064,7 +4074,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.17 (v4.17)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.18 (v4.18)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4498,7 +4508,7 @@ $("#fileImport").addEventListener("change", async e => {
     const trova = (c, presi = new Set()) => {
       // stesso conto = stesso codice proprio (o codice di destinazione di una scheda unita).
       // NON basta il codice di fatturazione collegato (`codiceFatt`): quelle sono le sue destinazioni, schede diverse.
-      if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => e.codiceDest && String(e.codiceDest) === String(c.codice)); if(x) return x; }
+      if(c.codice){ const x = clienti.find(e => !presi.has(e.id) && e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => !presi.has(e.id) && e.codiceDest && String(e.codiceDest) === String(c.codice)); if(x) return x; }
       // una scheda che ha già un ALTRO codice cliente è un altro conto: telefono, ragione sociale o nome uguali non bastano
       // e una scheda già abbinata a un'altra riga di questo file non si abbina di nuovo per somiglianza
       const libero = e => !presi.has(e.id) && (!c.codice || !e.codice || String(e.codice) === String(c.codice));
@@ -4522,12 +4532,19 @@ $("#fileImport").addEventListener("change", async e => {
       if(/^marchispa/.test(norm(c.nome))){ esclusi++; continue; }
       if(c.luogo && luoghi[norm(c.luogo)]) c.luogo = luoghi[norm(c.luogo)];
       const gest = c._gestionale; delete c._gestionale;
-      const old = gest ? trova(c, presi) : null;
+      let old = null, codiceGiusto = false;
+      const kd = gest ? uniChiaveD(c.codice) : "";
+      if(kd && !clienti.some(e => String(e.codice) === String(c.codice) || String(e.codiceDest || "") === String(c.codice))){
+        old = clienti.find(e => !presi.has(e.id) && uniChiaveF(e.codice) === kd && uniNomeSimile(e.nome, c.nome)) || null;
+        codiceGiusto = !!old;
+      }
+      if(!old) old = gest ? trova(c, presi) : null;
       if(old){
         presi.add(old.id);
-        if(gest && c.codice) righe.push({ c, id: old.id, old });
+        if(gest && c.codice) righe.push({ c, id: old.id, old: codiceGiusto ? { ...old, fattId: "", codiceFatt: "" } : old });
         const patch = {};
         CAMPI.forEach(f => { if(c[f] && !String(old[f] || "").trim()) patch[f] = c[f]; });
+        if(codiceGiusto) patch.codice = c.codice;          // aveva il codice della fatturazione: ora quello della destinazione
         if(c.note && !String(old.note || "").includes(c.note)) patch.note = [old.note, c.note].filter(Boolean).join(". ");
         if(Object.keys(patch).length) aggiornamenti.push([old, patch]); else saltati++;
         continue;
@@ -4543,6 +4560,14 @@ $("#fileImport").addEventListener("change", async e => {
     const cod = c => String(c.codice || "").replace(/\D/g, "");
     const fatt = righe.filter(x => cod(x.c).startsWith("100"));
     righe.filter(x => cod(x.c).startsWith("120")).forEach(d => {
+      // 1) regola dei codici Marchi: è sicura, quindi corregge anche un collegamento sbagliato fatto prima (es. per telefono)
+      const kd = uniChiaveD(d.c.codice);
+      if(kd){
+        const f = fatt.find(x => uniChiaveF(x.c.codice) === kd), e = f ? null : clienti.find(y => uniChiaveF(y.codice) === kd);
+        const fid = f ? f.id : e ? e.id : "", fcod = f ? f.c.codice : e ? e.codice : "";
+        if(fid && fid !== d.id){ if(!(d.old && d.old.fattId === fid && d.old.codiceFatt === fcod)) legami.set(d.id, { fattId: fid, codiceFatt: fcod }); return; }
+      }
+      // 2) altrimenti stesso telefono o stesso indirizzo, solo se non è già collegata
       if(d.old && (d.old.fattId || d.old.codiceFatt)) return;            // già collegata
       const td = tel(d.c);
       const cand = fatt.filter(f => f.id !== d.id && (tel(f.c).some(t => td.includes(t)) || (d.c.indirizzo && norm(d.c.indirizzo) === norm(f.c.indirizzo) && norm(d.c.luogo) === norm(f.c.luogo))));
