@@ -292,6 +292,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.19** = v4.18 **senza più l'unione delle schede**: fatturazione e destinazione si possono solo **collegare** (richiesta di Manuel). Tag Git `v4.19`; la scritta in Riepilogo dice 4.19.
 - **v4.20** = v4.19 + nella **Pressione** la vista **Anno** (tutti i mesi caricati sommati). Tag Git `v4.20`; la scritta in Riepilogo dice 4.20.
 - **v5.0** = v4.20 + nuova pagina **Articoli** (tutto il catalogo prodotti di Marchi copiato da marchispa.it, con foto, categorie e ricerca). Tag Git `v5.0`; la scritta in Riepilogo dice 5.0.
+- **v5.1** = v5.0 + Articoli con tasto **Indietro** in testa e vista **riquadri/elenco**; tasto **modalità chiara/scura** in basso a sinistra. Tag Git `v5.1`; la scritta in Riepilogo dice 5.1.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -364,6 +365,17 @@ pubblico, ma sono già pubblici sul sito di Marchi).
   categorie, per pezzi di parola; prima i codici uguali e i nomi che iniziano con la parola cercata. Dentro una categoria la ricerca resta nella categoria ("Cerca in tutto il
   catalogo" per uscire). Dettaglio (`#dlgArt`): foto grande, codice con **Copia**, categoria, descrizioni, "Apri su marchispa.it" (`index.php?id_product=…&controller=product`).
   Tasto **/** porta alla ricerca anche qui.
+- **v5.1**: dentro una categoria il tasto **‹ Indietro** sta nella testa fissa (`#arChips`, resta visibile scorrendo) e riporta alle categorie. In testa due tasti per la
+  **vista a riquadri** (foto grandi) o **a elenco** (righe con miniatura, codice, marca e sottocategoria; su PC in due colonne): la scelta si ricorda nell'account
+  (`preferenze.articoliVista`).
+
+## Tema chiaro/scuro e preferenze (v5.1)
+
+Tasto rotondo **in basso a sinistra** (`#temaBtn`, sole/luna) per passare da modalità chiara a scura e viceversa. Di base l'app segue il telefono/PC
+(`prefers-color-scheme`); scegliendo a mano si mette `data-theme="light"|"dark"` su `<html>` e le variabili scure valgono per `:root[data-theme="dark"]` e,
+senza scelta, per `@media (prefers-color-scheme:dark) :root:not([data-theme="light"])`. **Ogni nuova regola per il tema scuro va scritta in entrambi i modi.**
+La scelta si salva nell'account (non in localStorage), documento `utenti/{uid}/impostazioni/preferenze` (`tema`, `articoliVista`), letto da `prefCarica()` subito dopo
+il login: vale su tutti i dispositivi dell'account; prima del login l'app segue il sistema.
 
 ## Conferma prima di eliminare (v4.15)
 
