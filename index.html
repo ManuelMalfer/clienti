@@ -2959,7 +2959,7 @@ function prvVista(){
   const cap = lista(d.cap), cli = lista(d.cli);
   const periodo = sel < 0 ? "tutto l'anno" : BDG_MESI[sel].toLowerCase();
   const rCap = cap.map(x => `<div class="tg-cli"><span>${esc(tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b></div>`).join("");
-  const rCli = cli.slice(0, 15).map(x => {
+  const rCli = cli.map(x => {
     const c = tgtTrova({ c: x.o.c, n: x.o.n });
     return bdgVoce(c, `<span>${esc(c ? c.nome : tgtTit(x.o.n))}<small>${bdgEuro(x.f)} € di fatturato · ${bdgPct(x.f ? x.p / x.f * 100 : null)}</small></span><b>${bdgEuro(x.p)} €</b>`, { c: x.o.c });
   }).join("");
@@ -2976,7 +2976,7 @@ function prvVista(){
     <section class="bdg-card"><h2>Per cliente · ${periodo}</h2>
       ${bdgMeseChips([[-1, "Anno"], ...mesi.map(i => [i, BDG_MESI[i]])], sel, "data-vmese")}
       <div class="tg-list">${rCli || `<p class="hint">Nessun dato.</p>`}</div>
-      ${cli.length > 15 ? `<p class="hint" style="margin:6px 0 0">Primi 15 clienti su ${cli.length}.</p>` : ""}
+      <p class="hint" style="margin:6px 0 0">${cli.length} ${cli.length === 1 ? "cliente" : "clienti"} con provvigioni in questo periodo.</p>
       <h3 class="tg-h3">Per categoria · ${periodo}</h3>
       <div class="tg-list">${rCap || `<p class="hint">Nessun dato.</p>`}</div>
     </section>` };
@@ -3834,7 +3834,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.6 (v4.6)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.7 (v4.7)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
