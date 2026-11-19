@@ -4064,7 +4064,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.16 (v4.16)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 4.17 (v4.17)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4495,12 +4495,13 @@ $("#fileImport").addEventListener("change", async e => {
     // Località già presenti: riuso la stessa scrittura (es. "Nago-Torbole")
     const luoghi = {}; clienti.forEach(c => { if(c.luogo) luoghi[norm(c.luogo)] = c.luogo; });
     const digits = t => String(t || "").replace(/[^\d]/g, "").replace(/^0039|^39(?=3\d{9}$)/, "");
-    const trova = c => {
+    const trova = (c, presi = new Set()) => {
       // stesso conto = stesso codice proprio (o codice di destinazione di una scheda unita).
       // NON basta il codice di fatturazione collegato (`codiceFatt`): quelle sono le sue destinazioni, schede diverse.
       if(c.codice){ const x = clienti.find(e => e.codice && String(e.codice) === String(c.codice)) || clienti.find(e => e.codiceDest && String(e.codiceDest) === String(c.codice)); if(x) return x; }
       // una scheda che ha già un ALTRO codice cliente è un altro conto: telefono, ragione sociale o nome uguali non bastano
-      const libero = e => !c.codice || !e.codice || String(e.codice) === String(c.codice);
+      // e una scheda già abbinata a un'altra riga di questo file non si abbina di nuovo per somiglianza
+      const libero = e => !presi.has(e.id) && (!c.codice || !e.codice || String(e.codice) === String(c.codice));
       const tels = [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
       if(tels.length){ const x = clienti.find(e => libero(e) && [e.tel, e.cellulare].map(digits).some(t => tels.includes(t))); if(x) return x; }
       if(c.ragioneSociale){ const x = clienti.find(e => libero(e) && e.ragioneSociale && norm(e.ragioneSociale) === norm(c.ragioneSociale)); if(x) return x; }
@@ -4509,14 +4510,22 @@ $("#fileImport").addEventListener("change", async e => {
     };
     const CAMPI = ["codice","referente","ragioneSociale","tel","cellulare","email","pec","cap","prov","indirizzo","luogo","piva"];
     const nuovi = [], aggiornamenti = []; let saltati = 0, esclusi = 0;
-    for(const r of rows){
+    // Export del gestionale con fatturazione (100…) e destinazioni (120…): prima le destinazioni, così ognuna "prende" la scheda del suo locale;
+    // una scheda già presa in questo import non può essere presa anche dalla fatturazione (prima finivano unite in una scheda sola).
+    const prima = r => String(fromRow(r).codice || "").replace(/\D/g, "").startsWith("100") ? 1 : 0;
+    const ordinate = rows.map((r, i) => ({ r, i, p: prima(r) })).sort((a, b) => a.p - b.p || a.i - b.i).map(o => o.r);
+    const presi = new Set();           // schede già abbinate a una riga di questo file
+    const righe = [];                  // righe del gestionale con codice: { c, id } per collegare fatturazione e destinazioni
+    for(const r of ordinate){
       const c = fromRow(r);
       if(!c.nome) continue;
       if(/^marchispa/.test(norm(c.nome))){ esclusi++; continue; }
       if(c.luogo && luoghi[norm(c.luogo)]) c.luogo = luoghi[norm(c.luogo)];
       const gest = c._gestionale; delete c._gestionale;
-      const old = gest ? trova(c) : null;
+      const old = gest ? trova(c, presi) : null;
       if(old){
+        presi.add(old.id);
+        if(gest && c.codice) righe.push({ c, id: old.id, old });
         const patch = {};
         CAMPI.forEach(f => { if(c[f] && !String(old[f] || "").trim()) patch[f] = c[f]; });
         if(c.note && !String(old.note || "").includes(c.note)) patch.note = [old.note, c.note].filter(Boolean).join(". ");
@@ -4525,21 +4534,37 @@ $("#fileImport").addEventListener("change", async e => {
       }
       const k = keyOf(c);
       if(seen.has(k)){ saltati++; continue; }
-      seen.add(k); nuovi.push(c);
+      seen.add(k); c._id = doc(col()).id; nuovi.push(c);
+      if(gest && c.codice) righe.push({ c, id: c._id });
     }
-    if(!nuovi.length && !aggiornamenti.length){ toast(`Nessun locale nuovo da importare (${saltati} già presenti)`); return; }
-    const parti = [nuovi.length ? `${nuovi.length} locali nuovi` : "", aggiornamenti.length ? `${aggiornamenti.length} già presenti da completare con i dati mancanti` : "", saltati ? `${saltati} già presenti senza novità` : ""].filter(Boolean);
+    // collega ogni destinazione (120…) alla fatturazione (100…) dello stesso file con lo stesso telefono o lo stesso indirizzo (solo se è una sola)
+    const tel = c => [c.tel, c.cellulare].map(digits).filter(t => t.length >= 8);
+    const legami = new Map();          // id destinazione -> { fattId, codiceFatt }
+    const cod = c => String(c.codice || "").replace(/\D/g, "");
+    const fatt = righe.filter(x => cod(x.c).startsWith("100"));
+    righe.filter(x => cod(x.c).startsWith("120")).forEach(d => {
+      if(d.old && (d.old.fattId || d.old.codiceFatt)) return;            // già collegata
+      const td = tel(d.c);
+      const cand = fatt.filter(f => f.id !== d.id && (tel(f.c).some(t => td.includes(t)) || (d.c.indirizzo && norm(d.c.indirizzo) === norm(f.c.indirizzo) && norm(d.c.luogo) === norm(f.c.luogo))));
+      const ids = [...new Set(cand.map(f => f.id))];
+      if(ids.length === 1){ const f = cand[0]; legami.set(d.id, { fattId: f.id, codiceFatt: f.c.codice }); }
+    });
+    nuovi.forEach(c => { const l = legami.get(c._id); if(l) Object.assign(c, l); });
+    const legaVecchie = [...legami.entries()].filter(([id]) => !nuovi.some(c => c._id === id));
+    if(!nuovi.length && !aggiornamenti.length && !legaVecchie.length){ toast(`Nessun locale nuovo da importare (${saltati} già presenti)`); return; }
+    const parti = [nuovi.length ? `${nuovi.length} locali nuovi` : "", aggiornamenti.length ? `${aggiornamenti.length} già presenti da completare con i dati mancanti` : "", saltati ? `${saltati} già presenti senza novità` : "", legami.size ? `${legami.size} ${legami.size === 1 ? "destinazione da collegare alla sua fatturazione" : "destinazioni da collegare alla loro fatturazione"}` : ""].filter(Boolean);
     if(!confirm(`Trovati ${parti.join(", ")}. Importo?`)) return;
     const ops = [
-      ...nuovi.map(c => b => b.set(doc(col()), { ...c, creato: nowISO(), aggiornato: nowISO() })),
-      ...aggiornamenti.map(([old, patch]) => b => b.update(ref(old.id), { ...patch, storico: [...(old.storico || []), { d: localISO(), t: "Dati completati dall’export contatti del gestionale" }], aggiornato: nowISO() }))
+      ...nuovi.map(c => b => { const { _id, ...dati } = c; b.set(doc(col(), _id), { ...dati, creato: nowISO(), aggiornato: nowISO() }); }),
+      ...aggiornamenti.map(([old, patch]) => b => b.update(ref(old.id), { ...patch, ...(legami.get(old.id) || {}), storico: [...(old.storico || []), { d: localISO(), t: "Dati completati dall’export contatti del gestionale" }], aggiornato: nowISO() })),
+      ...legaVecchie.filter(([id]) => !aggiornamenti.some(([old]) => old.id === id)).map(([id, l]) => b => b.update(ref(id), { ...l, aggiornato: nowISO() }))
     ];
     for(let i = 0; i < ops.length; i += 400){
       const b = writeBatch(db);
       ops.slice(i, i+400).forEach(op => op(b));
       await b.commit();
     }
-    toast([nuovi.length ? `Importati ${nuovi.length} locali` : "", aggiornamenti.length ? `${aggiornamenti.length} schede completate` : ""].filter(Boolean).join(", "));
+    toast([nuovi.length ? `Importati ${nuovi.length} locali` : "", aggiornamenti.length ? `${aggiornamenti.length} schede completate` : "", legami.size ? `${legami.size} destinazioni collegate` : ""].filter(Boolean).join(", "));
   } catch(err){ fail(err); }
 });
 function exportExcel(){
