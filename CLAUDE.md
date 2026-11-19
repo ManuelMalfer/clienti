@@ -54,7 +54,7 @@ Campi: `nome` (insegna del locale), `ragioneSociale`, `codice` (codice cliente a
 `tipologia`, `piva`, `codiceFiscale`, `codiceUnivoco` (SDI), `pagamento`,
 `fornitori` (array), `giorniOrdine` e `giorniConsegna` (array di "Lunedì"…"Sabato"),
 `orarioOrdine`, `orarioConsegna`, `stato`, `ricontattare` (YYYY-MM-DD), `ricontattareOra` (HH:MM),
-`chiusoDal`/`chiusoAl` (periodo di chiusura, YYYY-MM-DD, entrambi facoltativi: nel periodo il cliente non compare nel Giro, né ordini né mappa; funzione `chiusoIl(c, iso)`; campi nel modulo e nella scheda cliente, etichetta "Chiuso fino al…" nell'elenco), `note`, `codiceReport` (codice del report target collegato a mano, se la scheda ha già un altro `codice`), `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
+`chiusoDal`/`chiusoAl` (periodo di chiusura, YYYY-MM-DD, entrambi facoltativi: nel periodo il cliente non compare nel Giro, né ordini né mappa; funzione `chiusoIl(c, iso)`; campi nel modulo e nella scheda cliente, etichetta "Chiuso fino al…" nell'elenco), `note`, `codiceDest` (codice di destinazione, dopo l'unione di due schede), `codiceReport` (codice del report target collegato a mano, se la scheda ha già un altro `codice`), `ordiniFatti` (date in cui l'ordine del giorno è stato raccolto, dal Giro), `storico` (array di `{d: "YYYY-MM-DD", t: "testo"}`), `lat`, `lng`, `approx` (posizione al
 centro paese), `geoFail`, `creato`, `aggiornato` (ISO).
 
 Stati: `DA CONTATTARE`, `CONTATTATO`, `CLIENTE`, `NON SERVIBILE`.
@@ -275,6 +275,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.2** = v4.1 + **target di categoria** (report Marchi per semestre) in Budget e fatturato per categoria nella scheda cliente (sezione Budget). Tag Git `v4.2`; la scritta in Riepilogo dice 4.2.
 - **v4.3** = v4.2 + tasto **Collega** per i clienti dei report target senza scheda collegata. Tag Git `v4.3`; la scritta in Riepilogo dice 4.3.
 - **v4.4** = v4.3 + Budget a **quattro schede** (Andamento, Target, Pressione, Provvigioni). Tag Git `v4.4`; la scritta in Riepilogo dice 4.4.
+- **v4.5** = v4.4 + **unione delle schede doppie** (fatturazione + destinazione). Tag Git `v4.5`; la scritta in Riepilogo dice 4.5.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -389,6 +390,22 @@ da solo il tipo (`bdgCaricaFile`): scheda performance, report target, **Analisi 
   Nella scheda cliente: provvigioni dell'anno su quel cliente.
 - I report crediti settimanali (fino ad aprile) NON sono usati: l'azienda non li manda più (deciso con Manuel).
 - Provato con i file veri: pressione gennaio–ottobre (totali e somme dei clienti coincidono; ottobre 6,46%), provvigioni (totali mensili uguali al foglio Riepilogo, −19.079,57 €).
+
+### Unire le schede doppie (v4.5)
+
+L'export del gestionale può creare **due clienti per lo stesso locale**: la **fatturazione** (codice che inizia per **100…**, ragione sociale e dati fiscali) e la **destinazione**
+(codice che inizia per **120…**, di solito col nome vero del locale). Segnalato dal papà di Manuel. Funzioni (blocco "Unire due schede" in `index.html`, `unisciSchede` pura tra i marcatori `UNI-PARSE-START/END`):
+
+- **Riepilogo → Dati → "Cerca doppioni"** (`uniCoppie`): per ogni scheda con codice 120… cerca una 100… con stessa P.IVA (+3), stesso indirizzo e località (+3), stessa coda di 6 cifre del codice (+2)
+  o nome simile (+1/+3); propone le coppie con almeno 3 punti, con avviso se una fatturazione ha più destinazioni. **Nella scheda cliente → "Doppione? Unisci a…"**: si cerca a mano l'altra scheda.
+- Prima di unire si vede un'anteprima con i ruoli (si possono **scambiare**) e il risultato. L'unione tiene la scheda di **fatturazione** (stesso id, `codice` = quello di fatturazione) e mette il codice
+  della destinazione in `codiceDest`. Per ogni campo: dati del locale (nome, indirizzo, cap, località, prov, tipologia, referente, telefoni, email, orari) prevale la **destinazione**; dati fiscali
+  e amministrativi (ragione sociale, P.IVA, codice fiscale, SDI, PEC, pagamento) prevale la **fatturazione**; se uno è vuoto si prende l'altro. Fornitori e `ordiniFatti` si sommano, giorni dalla
+  destinazione se presenti, stato = il più "avanzato" (Cliente > Contattato > Da contattare > Non servibile), richiamo = il più vicino, note e storico sommati (con una riga "Unita con la scheda…"),
+  posizione = la più precisa (si ricalcola se l'indirizzo scelto non è quello della scheda da cui viene).
+- Poi si **eliminano** la scheda della destinazione e si spostano sulla scheda unita i preventivi (`clienteId`) e le proposte di Rosario. Non si può annullare (l'anteprima lo dice).
+- `tgtMatch` (report target/pressione/provvigioni) e l'importazione Excel (`trova`) riconoscono anche `codiceDest`, così un nuovo import non ricrea la scheda doppia.
+- Provato con clienti inventati (coppie trovate, anteprima, unione, ricerca manuale). Con i dati veri conviene controllare la prima unione prima di farne molte.
 
 ## Rosario (assistente vocale)
 
