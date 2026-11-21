@@ -434,7 +434,7 @@ body.pv-open{overflow:hidden}
 .pv-shead .t small{font-size:13px;letter-spacing:.04em;text-transform:none;font-weight:500;opacity:.85;margin-left:8px}
 .pv-shead .l{display:flex;gap:14px;align-items:center;font-size:12px;letter-spacing:.04em}
 .pv-add{border:1px solid rgba(255,255,255,.6);background:transparent;color:#fff;border-radius:4px;font-size:12px;line-height:1.3;padding:0 8px;margin:0;font-weight:600}
-.pv-row{display:grid;grid-template-columns:52px minmax(0,1fr) 124px 38px;column-gap:14px;align-items:center;padding:8px 4px;border-bottom:1px solid #D3DED8;position:relative}
+.pv-row{display:grid;grid-template-columns:52px 44px minmax(0,1fr) 124px 38px;column-gap:14px;align-items:center;padding:8px 4px;border-bottom:1px solid #D3DED8;position:relative}
 .pv-row.sel{background:#F2F7F4;box-shadow:inset 3px 0 0 #005A3C}
 .pv-code{font-size:12px;color:#5B6761}
 .pv-desc{display:flex;flex-direction:column;gap:1px;min-width:0}
@@ -878,6 +878,27 @@ span.ar-mini.ar-nofoto{display:grid}
 .tema-btn.scuro .sole{display:block}
 .tema-btn.scuro .luna{display:none}
 #login:not(.hidden) ~ .tema-btn{display:none}
+body.pv-open .tema-btn{display:none}
+.ar-card{position:relative}
+.ar-add{display:grid;place-items:center;flex:0 0 auto;width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:22px;font-weight:700;line-height:1;box-shadow:var(--sh1);cursor:pointer}
+.ar-add.on{background:var(--st-cliente);font-size:18px}
+.ar-card .ar-add{position:absolute;top:8px;right:8px;z-index:1}
+.ar-row.gia{opacity:.65}
+.ar-cart{position:fixed;left:76px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:44;display:flex;align-items:center;gap:8px;padding:10px 10px 10px 16px;border-radius:var(--r-lg);background:var(--surface);border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));box-shadow:var(--sh2);max-width:640px;margin:0 auto}
+.ar-cart-txt{flex:1;min-width:0;font-size:15px;line-height:1.2}
+.ar-cart-txt small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ar-cart .btn{min-height:42px;white-space:nowrap}
+#v-articoli main.view{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.ar-cart-x{width:42px;padding:0;justify-content:center;font-size:16px}
+@media (min-width:1100px) and (hover:hover) and (pointer:fine){.ar-cart{left:calc(248px + 76px)}}
+.pva-list{margin-top:10px;max-height:56vh;overflow:auto}
+#pvaBtn{width:100%;margin-top:2px}
+.pv-img{width:44px;height:44px;display:grid;place-items:center}
+.pv-img img{width:44px;height:44px;object-fit:contain;border-radius:4px;background:#fff}
+.pv-nofoto .pv-row{grid-template-columns:52px minmax(0,1fr) 124px 38px}
+.pv-nofoto .pv-img{display:none}
+.ar-row.scelto{border-color:var(--st-cliente);background:color-mix(in srgb,var(--st-cliente) 8%,var(--surface))}
+#dlgPvArt .ar-row .ar-add{width:32px;height:32px;font-size:20px}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -1036,7 +1057,7 @@ main.view{padding-top:14px}
 
   <section id="v-preventivi" class="view-wrap hidden">
     <header class="top"><div class="wrap">
-      <div class="top-row"><h1>Preventivi</h1><span class="count" id="pvLbl"></span></div>
+      <div class="top-row"><h1>Preventivi</h1><span class="ct-head"><span class="count" id="pvLbl"></span><button class="link" type="button" id="pvDaArt">+ Dagli articoli</button></span></div>
       <div class="search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <input class="input" id="pvQ" type="search" placeholder="Cerca cliente o articolo…" autocomplete="off" aria-label="Cerca nei preventivi">
@@ -1055,6 +1076,11 @@ main.view{padding-top:14px}
       <div class="ct-chips hidden" id="arChips"></div>
     </div></header>
     <main class="wrap view" id="arBody"></main>
+    <div class="ar-cart hidden" id="arCart" role="region" aria-label="Preventivo in preparazione">
+      <span class="ar-cart-txt" id="arCartTxt"></span>
+      <button class="btn ar-cart-x" type="button" id="arCartSvuota" aria-label="Svuota la selezione" title="Svuota la selezione">✕</button>
+      <button class="btn btn-primary" type="button" id="arCartCrea">Crea preventivo</button>
+    </div>
   </section>
 
   <section id="v-cataloghi" class="view-wrap hidden">
@@ -1440,6 +1466,8 @@ main.view{padding-top:14px}
         <label class="field"><span>Aggiungi un articolo in</span>
           <span class="pv-inline"><select class="input" id="pvAddCat"></select><button class="btn" type="button" id="pvAddBtn">Aggiungi</button></span>
         </label>
+        <button class="btn btn-primary" type="button" id="pvaBtn">+ Aggiungi da Articoli</button>
+        <label class="chk"><input type="checkbox" id="pvFoto" checked><span>Foto degli articoli nel preventivo</span></label>
         <div class="pv-ai hidden" id="pvAi"><i></i><span></span></div>
       </div>
       <div class="pv-grp">
@@ -1467,6 +1495,16 @@ main.view{padding-top:14px}
       <ul class="list" id="pvCliList"></ul>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" id="pvCliNone">Continua senza cliente</button></div>
+  </div>
+</dialog>
+<dialog id="dlgPvArt" aria-labelledby="pvaT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="pvaT">Aggiungi dagli articoli<span class="sub" id="pvaSub">Cerca o sfoglia le categorie e tocca gli articoli per selezionarli.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <input class="input" id="pvaQ" type="search" placeholder="Cerca articolo, codice, marca…" autocomplete="off" aria-label="Cerca articolo">
+      <div class="ar-list pva-list" id="pvaList"></div>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" id="pvaVuoto">Articolo a mano</button><button class="btn btn-primary" type="button" id="pvaOk" disabled>Aggiungi</button></div>
   </div>
 </dialog>
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
@@ -1749,7 +1787,7 @@ function go(view){
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
   if(view === "budget") bdgCarica();
-  if(view === "articoli") artCarica();
+  if(view === "articoli"){ artCarica(); artCartRender(); }
 }
 
 /* ---------- Conferma prima di eliminare ---------- */
@@ -3715,6 +3753,9 @@ async function artCarica(){
     const D = art.dati;
     // testo di ricerca di ogni articolo (anche il codice senza zeri iniziali: "1205" trova "01205")
     art.idx = D.a.map(x => " " + artNorm([x.c, String(x.c || "").replace(/^0+/, ""), x.n, x.b, x.d, x.m, D.top[x.t], x.s >= 0 ? D.sub[x.s].n : ""].join(" ")) + " ");
+    // codice → articolo (anche senza zeri iniziali), per le foto nei preventivi
+    art.perCodice = new Map();
+    D.a.forEach(x => { const k = String(x.c || "").trim(); if(!k) return; if(!art.perCodice.has(k)) art.perCodice.set(k, x); const k2 = "~" + k.replace(/^0+/, ""); if(!art.perCodice.has(k2)) art.perCodice.set(k2, x); });
     art.stato = "ok";
   }catch(err){ art.stato = "errore"; }
   renderArticoli();
@@ -3723,12 +3764,13 @@ const artFoto = x => x.f === 0 ? "" : `articoli/img/${x.i}.jpg`;
 const artImg = (x, cls) => x.f === 0
   ? `<span class="${cls} ar-nofoto" aria-hidden="true">${catIcona}</span>`
   : `<img class="${cls}" src="${artFoto(x)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} ar-nofoto'}))">`;
-function artFiltrati(){
-  const D = art.dati, parole = artNorm(art.q).split(" ").filter(Boolean);
+function artFiltrati(){ return artTrova(art.q, art.top, art.sub); }
+function artTrova(q, top, sub){
+  const D = art.dati, parole = artNorm(q).split(" ").filter(Boolean);
   const out = [];
   D.a.forEach((x, i) => {
-    if(art.top >= 0 && x.t !== art.top) return;
-    if(art.sub >= 0 && x.s !== art.sub) return;
+    if(top >= 0 && x.t !== top) return;
+    if(sub >= 0 && x.s !== sub) return;
     if(parole.length && !parole.every(w => art.idx[i].includes(w))) return;
     out.push(x);
   });
@@ -3775,8 +3817,8 @@ function renderArticoli(){
   const vis = lista.slice(0, art.mostra);
   const sottotitolo = x => [x.c ? "Cod. " + esc(x.c) : "", x.m ? esc(x.m) : "", art.vista === "elenco" && x.s >= 0 ? esc(artCat(D.sub[x.s].n)) : ""].filter(Boolean).join(" · ");
   body.innerHTML = testa + (art.vista === "elenco"
-    ? `<div class="ar-list">${vis.map(x => `<button type="button" class="ar-row" data-art="${x.i}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span><svg class="ar-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`).join("")}</div>`
-    : `<div class="ar-grid">${vis.map(x => `<button type="button" class="ar-card" data-art="${x.i}">${artImg(x, "ar-foto")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span></button>`).join("")}</div>`)
+    ? `<div class="ar-list">${vis.map(x => `<button type="button" class="ar-row" data-art="${x.i}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span><span class="ar-add${art.sel.includes(x.i) ? " on" : ""}" role="button" tabindex="0" data-arsel="${x.i}" aria-label="${art.sel.includes(x.i) ? "Togli dal preventivo" : "Aggiungi al preventivo"}">${art.sel.includes(x.i) ? "✓" : "+"}</span><svg class="ar-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`).join("")}</div>`
+    : `<div class="ar-grid">${vis.map(x => `<button type="button" class="ar-card" data-art="${x.i}"><span class="ar-add${art.sel.includes(x.i) ? " on" : ""}" role="button" tabindex="0" data-arsel="${x.i}" aria-label="${art.sel.includes(x.i) ? "Togli dal preventivo" : "Aggiungi al preventivo"}">${art.sel.includes(x.i) ? "✓" : "+"}</span>${artImg(x, "ar-foto")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span></button>`).join("")}</div>`)
     + (lista.length > vis.length ? `<button type="button" class="btn ar-altri" data-armore>Mostra altri ${Math.min(60, lista.length - vis.length)} (${bdgEuro(lista.length - vis.length)} rimanenti)</button>` : "");
 }
 function artApri(id){
@@ -3791,7 +3833,7 @@ function artApri(id){
       ${x.b ? `<dt>Descrizione</dt><dd>${esc(x.b)}</dd>` : ""}
       ${x.d ? `<dt>Dettagli</dt><dd>${esc(x.d)}</dd>` : ""}
     </dl>
-    <p style="margin:12px 0 0"><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
+    <p style="margin:12px 0 0;display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn ${art.sel.includes(x.i) ? "" : "btn-primary"}" data-ardet="${x.i}">${art.sel.includes(x.i) ? "✓ Nel preventivo (togli)" : "+ Aggiungi al preventivo"}</button><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
   if(!$("#dlgArt").open) $("#dlgArt").showModal();
 }
 $("#arChips").addEventListener("click", e => {
@@ -3802,7 +3844,9 @@ function artVista(v){ if(art.vista === v) return; art.vista = v; renderArticoli(
 $("#arVistaBox").addEventListener("click", () => artVista("box"));
 $("#arVistaElenco").addEventListener("click", () => artVista("elenco"));
 $("#arQ").addEventListener("input", e => { art.q = e.target.value; art.mostra = 60; renderArticoli(); });
+$("#arBody").addEventListener("keydown", e => { const s = e.target.closest && e.target.closest("[data-arsel]"); if(s && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); e.stopPropagation(); artSel(+s.dataset.arsel); } });
 $("#arBody").addEventListener("click", e => {
+  const sel = e.target.closest("[data-arsel]"); if(sel){ e.preventDefault(); artSel(+sel.dataset.arsel); return; }
   const t = e.target.closest("[data-artop]");
   if(t){ art.top = +t.dataset.artop; art.sub = -1; art.mostra = 60; if(!t.hasAttribute("data-artieni") && art.top < 0){ art.q = ""; $("#arQ").value = ""; } renderArticoli(); window.scrollTo(0, 0); return; }
   const s = e.target.closest("[data-arsub]"); if(s){ art.sub = +s.dataset.arsub; art.mostra = 60; renderArticoli(); return; }
@@ -3811,10 +3855,170 @@ $("#arBody").addEventListener("click", e => {
   const c = e.target.closest("[data-art]"); if(c) artApri(+c.dataset.art);
 });
 $("#artX").addEventListener("click", () => $("#dlgArt").close());
+$("#artBody").addEventListener("click", e => { const d = e.target.closest("[data-ardet]"); if(d){ artSel(+d.dataset.ardet); artApri(+d.dataset.ardet); } });
 $("#artBody").addEventListener("click", async e => {
   const b = e.target.closest("[data-arcopia]"); if(!b) return;
   try{ await navigator.clipboard.writeText(b.dataset.arcopia); toast("Codice copiato"); }catch(err){ toast("Codice: " + b.dataset.arcopia); }
 });
+
+/* ---------- Preventivi dagli Articoli ---------- */
+// Negli Articoli il tasto + mette l'articolo nel "carrello" (art.sel); "Crea preventivo" apre l'editor dei Preventivi già pieno.
+// Dentro un preventivo, "+ Aggiungi da Articoli" cerca nel catalogo e aggiunge. Il prezzo si propone dai preventivi già fatti:
+// prima l'ultimo prezzo dato a QUEL cliente, altrimenti l'ultimo prezzo usato con chiunque (nessun dato in più da salvare).
+art.sel = []; art.cliente = null;     // id articoli scelti, in ordine; cliente già deciso (se si parte dalla sua scheda)
+const PVA_CAT = { "SALUMI": "Salumi", "LATTICINI FRESCHI": "Latticini e formaggi", "FORMAGGI STAGIONATI": "Latticini e formaggi", "SURGELATI": "Verdure e surgelati",
+  "VERDURE SURGELATE": "Verdure e surgelati", "PESCE GELO": "Pesce e crostacei", "PESCE FRESCO": "Pesce e crostacei", "PESCE GELO CROSTACEI": "Pesce e crostacei",
+  "PESCE GELO MOLLUSCHI": "Pesce e crostacei", "CARNI ROSSE FRESCHE": "Carni", "CARNI BIANCHE FRESCHE": "Carni", "CARNI GELO": "Carni", "FINGER E DESSERT": "Dolci e forno",
+  "NON FOOD": "Altri prodotti", "SPEZIE": "Conserve e condimenti", "PASTA E RISO": "Pasta, riso e cereali", "FARINE, PANE E DERIVATI": "Farine e semole",
+  "CREME E SALSE": "Conserve e condimenti", "UOVA": "Latticini e formaggi", "OLI E CONDIMENTI": "Oli e aceti", "PRIMA COLAZIONE": "Dolci e forno",
+  "PASTA RIPIENA E GNOCCHI": "Pasta, riso e cereali", "CONSERVE VEGETALI": "Conserve e condimenti", "FRUTTA E VERDURA": "Verdure e surgelati",
+  "PASTA FRESCA": "Pasta, riso e cereali", "GASTRONOMIA PRONTA": "Altri prodotti", "SNACK VARI": "Dolci e forno", "BEVANDE": "Bevande" };
+const PVA_AL_KG = ["CARNI ROSSE FRESCHE", "CARNI BIANCHE FRESCHE", "PESCE FRESCO", "SALUMI", "FORMAGGI STAGIONATI"];   // freschi a peso: prezzo al kg
+
+// ultimo prezzo di un codice nei preventivi già fatti: prima per quel cliente, poi per chiunque
+function pvaUltimo(codice, clienteId){
+  if(!codice) return null;
+  const lista = preventivi.filter(p => !pvCur || p.id !== pvCur.id).sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.aggiornato || "").localeCompare(a.aggiornato || ""));
+  const cerca = arr => { for(const p of arr){ const it = (p.items || []).find(i => i.codice === codice && pvPriceOf(i) != null); if(it) return { it, p }; } return null; };
+  const c = clienteId ? cerca(lista.filter(p => p.clienteId === clienteId)) : null;
+  if(c) return { ...c, da: "cliente" };
+  const g = cerca(lista);
+  return g ? { ...g, da: "ultimo" } : null;
+}
+// riga di preventivo da un articolo del catalogo (stesse regole del PDF del gestionale per nome, formato e contenitore)
+function pvDaArticolo(x, clienteId){
+  const D = art.dati, top = D.top[x.t] || "", desc = x.n || "";
+  const guess = pvGuessCat(desc), mapped = PVA_CAT[top.toUpperCase()] || "Altri prodotti";
+  const cat = (mapped === "Altri prodotti" || top.toUpperCase() === "OLI E CONDIMENTI") && guess !== "Altri prodotti" ? guess : mapped;
+  const it = { id: pvNewId(), codice: x.c || "", raw: desc, rawNote: "", iva: top.toUpperCase() === "NON FOOD" ? "22%" : "10%", weight: pvPackWeight(desc),
+    mode: PVA_AL_KG.includes(top.toUpperCase()) ? "kg" : "pz", priceKg: null, pricePz: null, conv: false, cat, nota: "", edited: false, artId: x.i };
+  it.nome = pvPrettyName(desc);
+  it.formato = pvFormat(desc, it);
+  it.contenitore = pvContainer(desc, it.cat)[1];
+  pvApplyLearned(it);                       // nome, formato, categoria e unità corretti in passato per quel codice
+  const u = pvaUltimo(it.codice, clienteId);
+  if(u){
+    it.mode = u.it.mode; it.priceKg = u.it.priceKg ?? null; it.pricePz = u.it.pricePz ?? null; it.conv = !!u.it.conv;
+    if(u.it.weight != null) it.weight = u.it.weight;
+    if(u.it.iva) it.iva = u.it.iva;
+    it.prezzoDa = u.da;
+  }
+  return it;
+}
+const pvaRiepilogo = items => {
+  const c = items.filter(i => i.prezzoDa === "cliente").length, u = items.filter(i => i.prezzoDa === "ultimo").length, n = items.length - c - u;
+  return [c ? `${c} ${c === 1 ? "prezzo" : "prezzi"} dall'ultimo preventivo di questo cliente` : "", u ? `${u} dall'ultimo prezzo che hai usato` : "", n ? `${n} da compilare` : ""].filter(Boolean).join(", ") + ".";
+};
+
+// carrello negli Articoli
+function artSel(id){
+  const k = art.sel.indexOf(id);
+  if(k >= 0) art.sel.splice(k, 1); else art.sel.push(id);
+  artCartRender(); renderArticoli();
+  if(k < 0) toast("Aggiunto al preventivo (" + art.sel.length + ")");
+}
+function artCartRender(){
+  const n = art.sel.length, c = art.cliente && byId(art.cliente);
+  $("#arCart").classList.toggle("hidden", !n && !c);
+  $("#arCartTxt").innerHTML = `<b>${n}</b> ${n === 1 ? "articolo scelto" : "articoli scelti"}${c ? ` <small>per ${esc(c.nome)}</small>` : ""}`;
+  $("#arCartCrea").disabled = !n;
+}
+function pvaCrea(clienteId){
+  if(!art.dati || !art.sel.length) return;
+  const c = clienteId ? byId(clienteId) : null;
+  const items = art.sel.map(id => art.dati.a.find(x => x.i === id)).filter(Boolean).map(x => pvDaArticolo(x, c && c.id));
+  const p = { id: doc(pvCol()).id, cliente: c ? c.nome : "", clienteId: c ? c.id : "", data: localISO(), validita: "", pagamento: (c && c.pagamento) || "",
+    condizioni: PV_COND, general: "", items, creato: nowISO(), daArticoli: true };
+  art.sel = []; art.cliente = null; artCartRender(); renderArticoli();
+  pvOpenObj(p); pvSave(true);
+  pvInfo(`${items.length} ${items.length === 1 ? "articolo" : "articoli"} dal catalogo: ${pvaRiepilogo(items)} Tocca un prezzo per cambiarlo.`);
+}
+$("#arCartCrea").addEventListener("click", () => { if(art.cliente) pvaCrea(art.cliente); else pvOpenPicker("art"); });
+$("#arCartSvuota").addEventListener("click", async () => {
+  if(art.sel.length && !(await confermaElimina("gli articoli scelti", "Si svuota solo la selezione: il catalogo non cambia.", "Svuota"))) return;
+  art.sel = []; art.cliente = null; artCartRender(); renderArticoli();
+});
+
+// dentro l'editor: finestra Articoli (dal "+ Articolo" di una categoria, dal tasto "Aggiungi" o da "+ Aggiungi da Articoli")
+// Si sfogliano le categorie Marchi o si cerca; si toccano gli articoli per sceglierne quanti si vuole (✓), poi "Aggiungi".
+// Se si è partiti dal "+" di una categoria del preventivo, gli articoli finiscono in quella categoria; "Articolo a mano" aggiunge una riga vuota come prima.
+const pva = { cat: null, top: -1, scelti: [], mostra: 80 };
+async function pvaApri(cat){
+  if(!pvCur) return;
+  pva.cat = cat || null; pva.top = -1; pva.scelti = []; pva.mostra = 80;
+  $("#pvaQ").value = "";
+  $("#pvaSub").textContent = pva.cat ? `Gli articoli scelti vanno in «${pva.cat}». Cerca o sfoglia le categorie e tocca per selezionare.` : "Cerca o sfoglia le categorie e tocca gli articoli per selezionarli.";
+  pvaLista();
+  $("#dlgPvArt").showModal();
+  if(matchMedia("(pointer:fine)").matches) $("#pvaQ").focus();
+  if(!art.dati){ await artCarica(); pvaLista(); }
+}
+function pvaPulsanti(){
+  const n = pva.scelti.length;
+  $("#pvaOk").disabled = !n;
+  $("#pvaOk").textContent = n ? `Aggiungi ${n} ${n === 1 ? "articolo" : "articoli"}` : "Aggiungi";
+}
+function pvaLista(){
+  const box = $("#pvaList");
+  pvaPulsanti();
+  if(!art.dati){ box.innerHTML = `<p class="hint">${art.stato === "errore" ? "Non riesco a caricare gli articoli. Controlla la connessione." : "Carico gli articoli…"}</p>`; return; }
+  const D = art.dati, q = $("#pvaQ").value.trim();
+  const gia = new Set((pvCur ? pvCur.items : []).map(i => i.codice).filter(Boolean));
+  const riga = x => {
+    const sel = pva.scelti.includes(x.i), ok = x.c && gia.has(x.c);
+    return `<button type="button" class="ar-row${sel ? " scelto" : ""}" data-pva="${x.i}" aria-pressed="${sel}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${[x.c ? "Cod. " + esc(x.c) : "", esc(artCat(D.top[x.t])), ok ? "già nel preventivo" : ""].filter(Boolean).join(" · ")}</small></span><span class="ar-add${sel ? " on" : ""}" aria-hidden="true">${sel ? "✓" : "+"}</span></button>`;
+  };
+  // ricerca su tutto il catalogo
+  if(q.length >= 2){
+    const L = artTrova(q, -1, -1);
+    box.innerHTML = L.slice(0, 60).map(riga).join("") + (L.length > 60 ? `<p class="hint" style="margin:8px 0 0">Primi 60 di ${L.length}: scrivi qualcosa in più per restringere.</p>` : "") || `<p class="hint">Nessun articolo trovato.</p>`;
+    return;
+  }
+  // elenco di una categoria Marchi
+  if(pva.top >= 0){
+    const L = D.a.filter(x => x.t === pva.top);
+    box.innerHTML = `<button type="button" class="ct-back" data-pvatop="-1" style="margin:0 0 8px">${catIndietro}Categorie</button><p class="hint" style="margin:0 0 6px"><b>${esc(artCat(D.top[pva.top]))}</b> · ${L.length} articoli</p>`
+      + L.slice(0, pva.mostra).map(riga).join("")
+      + (L.length > pva.mostra ? `<button type="button" class="btn ar-altri" data-pvapiu>Mostra altri (${L.length - pva.mostra})</button>` : "");
+    return;
+  }
+  // categorie Marchi: prima quelle che corrispondono alla categoria del preventivo da cui si è partiti
+  const conta = D.top.map((_, t) => D.a.filter(x => x.t === t).length);
+  const tops = D.top.map((n, t) => ({ n, t, giusta: pva.cat && PVA_CAT[n.toUpperCase()] === pva.cat })).filter(o => conta[o.t]);
+  const giuste = tops.filter(o => o.giusta), altre = tops.filter(o => !o.giusta);
+  const voce = o => `<button type="button" class="ar-row" data-pvatop="${o.t}"><span class="ar-mini ar-nofoto" style="--c:${catStile(o.n).colore};color:var(--c)">${catStile(o.n).svg(22)}</span><span class="ar-txt"><b>${esc(artCat(o.n))}</b><small>${conta[o.t]} articoli</small></span><svg class="ar-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`;
+  box.innerHTML = (giuste.length ? `<p class="hint" style="margin:0 0 6px">Per «${esc(pva.cat)}»</p>` + giuste.map(voce).join("") + `<p class="hint" style="margin:12px 0 6px">Altre categorie</p>` : "") + altre.map(voce).join("");
+}
+$("#pvaQ").addEventListener("input", () => { pvaLista(); });
+$("#pvaList").addEventListener("click", e => {
+  const t = e.target.closest("[data-pvatop]"); if(t){ pva.top = +t.dataset.pvatop; pva.mostra = 80; pvaLista(); $("#pvaList").scrollTop = 0; return; }
+  if(e.target.closest("[data-pvapiu]")){ pva.mostra += 80; pvaLista(); return; }
+  const b = e.target.closest("[data-pva]"); if(!b) return;
+  const id = +b.dataset.pva, k = pva.scelti.indexOf(id);
+  if(k >= 0) pva.scelti.splice(k, 1); else pva.scelti.push(id);
+  const sel = k < 0; b.classList.toggle("scelto", sel); b.setAttribute("aria-pressed", sel);
+  const s = b.querySelector(".ar-add"); s.classList.toggle("on", sel); s.textContent = sel ? "✓" : "+";
+  pvaPulsanti();
+});
+$("#pvaOk").addEventListener("click", () => {
+  if(!pvCur || !art.dati || !pva.scelti.length) return;
+  const nuovi = pva.scelti.map(id => art.dati.a.find(y => y.i === id)).filter(Boolean).map(x => { const it = pvDaArticolo(x, pvCur.clienteId); if(pva.cat) it.cat = pva.cat; return it; });
+  nuovi.forEach(it => { const li = pvCur.items.map(i => i.cat).lastIndexOf(it.cat); if(li >= 0) pvCur.items.splice(li + 1, 0, it); else pvCur.items.push(it); });
+  pvSelId = nuovi.length ? nuovi[nuovi.length - 1].id : null;
+  $("#dlgPvArt").close(); pvSave(); pvRender();
+  toast(nuovi.length === 1 ? "Aggiunto: " + nuovi[0].nome : nuovi.length + " articoli aggiunti");
+  if(nuovi.length) pvInfo(`${nuovi.length} ${nuovi.length === 1 ? "articolo aggiunto" : "articoli aggiunti"} dal catalogo: ${pvaRiepilogo(nuovi)}`);
+});
+$("#pvaVuoto").addEventListener("click", () => { $("#dlgPvArt").close(); pvAddItem(pva.cat || $("#pvAddCat").value); });
+$("#pvaBtn").addEventListener("click", () => pvaApri(null));
+// dalla scheda cliente: preventivo dagli articoli già per quel cliente
+function pvaPerCliente(id){
+  art.cliente = id; if($("#dlgDetail").open) $("#dlgDetail").close();
+  go("articoli"); artCartRender();
+  toast("Tocca + sugli articoli, poi «Crea preventivo»");
+}
+
+$("#pvDaArt").addEventListener("click", () => { go("articoli"); artCartRender(); toast("Tocca + sugli articoli, poi «Crea preventivo»"); });
 
 /* ---------- Preferenze (per account, su tutti i dispositivi): utenti/{uid}/impostazioni/preferenze ---------- */
 // tema: "" (come il telefono/PC) | "light" | "dark"; articoliVista: "box" | "elenco"
@@ -4304,7 +4508,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.1 (v5.1)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.3 (v5.3)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5237,9 +5441,9 @@ function pvRenderCli(){
 }
 function pvOpenPicker(mode){
   pvCliMode = mode;
-  $("#pvCliTitle").firstChild.textContent = mode === "new" ? "Per quale cliente?" : "Collega a un cliente";
-  $("#pvCliSub").textContent = mode === "new" ? "Il preventivo verrà salvato nella sua scheda. Poi scegli il PDF dell’ordine." : "Il preventivo comparirà nella scheda del cliente scelto.";
-  $("#pvCliNone").textContent = mode === "new" ? "Continua senza cliente" : (pvCur && pvCur.clienteId ? "Scollega dal cliente" : "Annulla");
+  $("#pvCliTitle").firstChild.textContent = mode === "link" ? "Collega a un cliente" : "Per quale cliente?";
+  $("#pvCliSub").textContent = mode === "new" ? "Il preventivo verrà salvato nella sua scheda. Poi scegli il PDF dell’ordine." : mode === "art" ? "Il preventivo verrà salvato nella sua scheda; i prezzi si propongono dai suoi preventivi precedenti." : "Il preventivo comparirà nella scheda del cliente scelto.";
+  $("#pvCliNone").textContent = mode === "new" || mode === "art" ? "Continua senza cliente" : (pvCur && pvCur.clienteId ? "Scollega dal cliente" : "Annulla");
   $("#pvCliQ").value = ""; pvRenderCli();
   $("#dlgPvCli").showModal();
   if(matchMedia("(pointer:fine)").matches) $("#pvCliQ").focus();
@@ -5249,6 +5453,7 @@ $("#pvCliList").addEventListener("click", e => {
   const b = e.target.closest("[data-cli]"); if(!b) return;
   const c = byId(b.dataset.cli); $("#dlgPvCli").close();
   if(pvCliMode === "new"){ pvPreset = c.id; $("#pvFile").click(); return; }
+  if(pvCliMode === "art"){ pvaCrea(c.id); return; }
   if(!pvCur) return;
   const vecchio = pvCur.clienteId && byId(pvCur.clienteId);
   if(!pvCur.cliente || (vecchio && norm(vecchio.nome) === norm(pvCur.cliente))) pvCur.cliente = c.nome;
@@ -5258,6 +5463,7 @@ $("#pvCliList").addEventListener("click", e => {
 $("#pvCliNone").addEventListener("click", () => {
   $("#dlgPvCli").close();
   if(pvCliMode === "new"){ pvPreset = null; $("#pvFile").click(); return; }
+  if(pvCliMode === "art"){ pvaCrea(null); return; }
   if(pvCur && pvCur.clienteId){ pvCur.clienteId = ""; pvSyncSide(); pvSave(); toast("Preventivo scollegato dal cliente"); }
 });
 $("#pvLinkBtn").addEventListener("click", () => pvOpenPicker("link"));
@@ -5265,11 +5471,12 @@ $("#pvLinkBtn").addEventListener("click", () => pvOpenPicker("link"));
 /* Preventivi nella scheda cliente */
 function pvDetailHTML(c){
   const mine = preventivi.filter(p => p.clienteId === c.id).sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-  return `<div class="pv-detail"><h3>Preventivi <button class="chip-btn" type="button" data-pvnew="${c.id}">Nuovo da PDF</button></h3>${mine.length ? `<ul>${mine.map(p => `<li><button type="button" data-pvopen="${p.id}">${esc(fmtDate(p.data))} <span>${(p.items || []).length} articoli ›</span></button></li>`).join("")}</ul>` : `<p class="pv-hint">Nessun preventivo per questo cliente.</p>`}</div>`;
+  return `<div class="pv-detail"><h3>Preventivi <span style="display:inline-flex;gap:6px;flex-wrap:wrap"><button class="chip-btn" type="button" data-pvart="${c.id}">Dagli articoli</button><button class="chip-btn" type="button" data-pvnew="${c.id}">Nuovo da PDF</button></span></h3>${mine.length ? `<ul>${mine.map(p => `<li><button type="button" data-pvopen="${p.id}">${esc(fmtDate(p.data))} <span>${(p.items || []).length} articoli ›</span></button></li>`).join("")}</ul>` : `<p class="pv-hint">Nessun preventivo per questo cliente.</p>`}</div>`;
 }
 $("#dBody").addEventListener("click", e => {
   const o = e.target.closest("[data-pvopen]"); if(o){ $("#dlgDetail").close(); pvOpen(o.dataset.pvopen); return; }
-  const n = e.target.closest("[data-pvnew]"); if(n){ pvPick(n.dataset.pvnew); }
+  const n = e.target.closest("[data-pvnew]"); if(n){ pvPick(n.dataset.pvnew); return; }
+  const a = e.target.closest("[data-pvart]"); if(a) pvaPerCliente(a.dataset.pvart);
 });
 
 /* ----- lettura del PDF del gestionale ----- */
@@ -5504,6 +5711,7 @@ function pvOpenObj(p){
   $("#pvEditor").scrollTop = 0;
   pvSyncSide();
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(pvRender);
+  if(!art.dati) artCarica().then(() => { if(pvCur) pvRender(); });     // per le foto delle righe
 }
 function pvClose(){
   if(pvSaveT){ clearTimeout(pvSaveT); pvSave(true); }
@@ -5524,10 +5732,14 @@ function pvSyncSide(){
   ln.textContent = lc ? [lc.nome, lc.luogo].filter(Boolean).join(" · ") : "Nessun cliente collegato";
   ln.classList.toggle("none", !lc);
   $("#pvLinkBtn").textContent = lc ? "Cambia" : "Scegli";
+  $("#pvFoto").checked = pvCur.foto !== false;
 }
+$("#pvFoto").addEventListener("change", e => { if(!pvCur) return; pvCur.foto = e.target.checked; pvSave(); pvRender(); });
 $("#pvAddCat").innerHTML = PV_CATS.map(c => `<option>${esc(c)}</option>`).join("");
 
 const pvPriceOf = it => it.mode === "kg" ? it.priceKg : it.pricePz;
+// foto piccola della riga: dall'articolo del catalogo con lo stesso codice (quello scritto nel preventivo)
+const pvFoto = it => { const k = String(it.codice || "").trim(); if(!k || !art.perCodice) return ""; const x = art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")); return x && x.f !== 0 ? "articoli/img/" + x.i + ".jpg" : ""; };
 // Prezzo della singola confezione/cartone accanto al formato: disattivato su richiesta (si mostra solo il prezzo principale)
 const pvPack = it => "";
 function pvRowHTML(it){
@@ -5536,6 +5748,7 @@ function pvRowHTML(it){
 <label class="pv-move" title="Sposta in un’altra categoria"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M7 4v16M7 4 3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/></svg><select class="pv-cat" aria-label="Sposta in un’altra categoria">${PV_CATS.map(c => `<option${c === it.cat ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
 <div class="pv-pill"><button class="pv-del" type="button">Rimuovi articolo</button></div>
 <div class="pv-code" contenteditable="true" data-f="codice" data-key="${it.id}:codice">${esc(it.codice)}</div>
+<div class="pv-img">${pvFoto(it) ? `<img src="${pvFoto(it)}" alt="">` : ""}</div>
 <div class="pv-desc"><div class="pv-name" contenteditable="true" data-f="nome" data-key="${it.id}:nome">${esc(it.nome)}</div>
 <div class="pv-fmt"><span contenteditable="true" data-f="formato" data-key="${it.id}:formato">${esc(it.formato)}</span><span class="pv-packp">${esc(pvPack(it))}</span></div>
 <div class="pv-note" contenteditable="true" data-f="nota" data-key="${it.id}:nota" data-ph="Aggiungi una nota per il cliente">${esc(it.nota)}</div></div>
@@ -5565,6 +5778,7 @@ function pvRender(){
   const ae = document.activeElement, aKey = ae && ae.dataset ? ae.dataset.key : null;
   host.style.zoom = "";
   host.innerHTML = "";
+  host.classList.toggle("pv-nofoto", pvCur.foto === false);
   let n = 1, body = pvNewPage(n);
   for(const cat of PV_CATS){
     const its = pvCur.items.filter(i => (PV_CATS.includes(i.cat) ? i.cat : "Altri prodotti") === cat);
@@ -5624,7 +5838,7 @@ pvPagesEl.addEventListener("change", e => {
 });
 pvPagesEl.addEventListener("click", e => {
   const t = e.target, row = t.closest(".pv-row");
-  if(t.closest(".pv-add")){ pvAddItem(t.closest(".pv-add").dataset.cat); return; }
+  if(t.closest(".pv-add")){ pvaApri(t.closest(".pv-add").dataset.cat); return; }
   if(t.closest(".pv-del") && row){
     const it = pvItem(row.dataset.id), id = row.dataset.id;
     confermaElimina(it && (it.nome || it.raw) ? "«" + (it.nome || it.raw) + "»" : "questo articolo", "L'articolo viene tolto dal preventivo.").then(ok => { if(!ok || !pvCur) return; pvCur.items = pvCur.items.filter(i => i.id !== id); pvSelId = null; pvSave(); pvRender(); toast("Articolo rimosso"); });
@@ -5659,7 +5873,8 @@ $("#pvCliente").addEventListener("input", e => {
 });
 [["#pvData", "data"], ["#pvValid", "validita"]].forEach(([s, k]) => $(s).addEventListener("input", e => { if(!pvCur) return; pvCur[k] = e.target.value; pvSave(); pvLater(); }));
 [["#pvANome", "nome"], ["#pvAEmail", "email"], ["#pvATel", "tel"]].forEach(([s, k]) => $(s).addEventListener("input", e => { agente[k] = e.target.value.trim(); pvSaveAgent(); pvLater(); }));
-$("#pvAddBtn").addEventListener("click", () => pvAddItem($("#pvAddCat").value));
+pvPagesEl.addEventListener("focusout", e => { const t = e.target; if(t.dataset && t.dataset.f === "codice"){ const r = t.closest(".pv-row"), it = r && pvItem(r.dataset.id); if(it){ const f = pvFoto(it), box = r.querySelector(".pv-img"); if(box) box.innerHTML = f ? `<img src="${f}" alt="">` : ""; } } });
+$("#pvAddBtn").addEventListener("click", () => pvaApri($("#pvAddCat").value));
 $("#pvBack").addEventListener("click", pvClose);
 $("#pvPrint").addEventListener("click", () => {
   pvSelect(null); if(document.activeElement) document.activeElement.blur(); pvSave(true);
@@ -5680,6 +5895,8 @@ async function pvMakePdf(){
     if(document.fonts) await document.fonts.ready;
     host.querySelectorAll(".pv-client,.pv-note,.pv-name").forEach(e => e.classList.toggle("pv-empty", !e.textContent.trim()));
     document.body.classList.add("pv-capture"); host.style.zoom = "";
+    // aspetta che le foto delle righe siano caricate, altrimenti nel PDF resterebbero vuote
+    await Promise.all([...host.querySelectorAll(".pv-img img")].map(im => im.complete ? null : new Promise(r => { im.addEventListener("load", r, { once: true }); im.addEventListener("error", r, { once: true }); setTimeout(r, 8000); })));
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
     const pages = [...host.querySelectorAll(".pv-page")];

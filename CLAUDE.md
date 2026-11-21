@@ -293,6 +293,8 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v4.20** = v4.19 + nella **Pressione** la vista **Anno** (tutti i mesi caricati sommati). Tag Git `v4.20`; la scritta in Riepilogo dice 4.20.
 - **v5.0** = v4.20 + nuova pagina **Articoli** (tutto il catalogo prodotti di Marchi copiato da marchispa.it, con foto, categorie e ricerca). Tag Git `v5.0`; la scritta in Riepilogo dice 5.0.
 - **v5.1** = v5.0 + Articoli con tasto **Indietro** in testa e vista **riquadri/elenco**; tasto **modalità chiara/scura** in basso a sinistra. Tag Git `v5.1`; la scritta in Riepilogo dice 5.1.
+- **v5.2** = v5.1 + **preventivi dagli Articoli** (carrello negli Articoli, "+ Aggiungi da Articoli" nell'editor, prezzo proposto dai preventivi precedenti). Tag Git `v5.2`; la scritta in Riepilogo dice 5.2.
+- **v5.3** = v5.2 + il **+ Articolo** del preventivo apre la finestra Articoli con **selezione multipla**; **foto piccola su ogni riga** del preventivo (anche nel PDF, con interruttore). Tag Git `v5.3`; la scritta in Riepilogo dice 5.3.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -368,6 +370,32 @@ pubblico, ma sono già pubblici sul sito di Marchi).
 - **v5.1**: dentro una categoria il tasto **‹ Indietro** sta nella testa fissa (`#arChips`, resta visibile scorrendo) e riporta alle categorie. In testa due tasti per la
   **vista a riquadri** (foto grandi) o **a elenco** (righe con miniatura, codice, marca e sottocategoria; su PC in due colonne): la scelta si ricorda nell'account
   (`preferenze.articoliVista`).
+
+### Preventivi dagli Articoli (v5.2)
+
+Riusa l'editor dei Preventivi (stesso PDF finale); blocco `pva*` in `index.html`.
+- **Carrello negli Articoli**: ogni articolo (riquadri, elenco, dettaglio) ha il tasto **+** (`data-arsel`, diventa ✓); `art.sel` = id scelti in ordine. In basso la barra
+  `#arCart` "N articoli scelti · ✕ · **Crea preventivo**" (resta cambiando categoria o ricerca; ✕ svuota con conferma). **Crea preventivo** chiede il cliente
+  (`pvOpenPicker("art")`, anche "Continua senza cliente") e apre l'editor già pieno (`pvaCrea`); se si è partiti dalla scheda cliente ("Preventivi → **Dagli articoli**",
+  `art.cliente`) il cliente è già deciso. Anche in Preventivi c'è "+ Dagli articoli" in testa.
+- **Nell'editor**: tasto **+ Aggiungi da Articoli** (`#pvaBtn`, finestra `#dlgPvArt`): ricerca nel catalogo (stessa `artTrova` della pagina Articoli, da 2 lettere, primi 40),
+  tocco = aggiunge l'articolo nella sua categoria; quelli già nel preventivo hanno ✓. Funziona anche sui preventivi nati dal PDF del gestionale.
+- **Riga dal catalogo** (`pvDaArticolo`): codice e nome dal catalogo, nome pulito con `pvPrettyName`, formato con `pvFormat`, contenitore `pvContainer` (stesse regole
+  del PDF); categoria del preventivo dalla categoria Marchi (`PVA_CAT`; per Oli e condimenti e Non food vale prima `pvGuessCat`); IVA 22% per Non food, altrimenti 10%;
+  "al kg" per carni e pesce freschi, salumi, formaggi stagionati (`PVA_AL_KG`), altrimenti "al pz"; poi le correzioni ricordate per codice (`pvApplyLearned`).
+- **Prezzo proposto** (`pvaUltimo`): nessun dato in più salvato, si cerca nei preventivi già fatti (`preventivi`): prima l'ultimo prezzo dato **a quel cliente** per quel
+  codice, altrimenti l'ultimo usato con chiunque (con unità, IVA e peso). L'editor dice quanti prezzi vengono dal cliente, quanti dall'ultimo uso e quanti sono da compilare.
+  Marchi non pubblica prezzi: senza preventivi precedenti il prezzo resta vuoto.
+- **v5.3 – finestra Articoli nell'editor** (`pvaApri(cat)`, stato `pva`): si apre dal **+ Articolo** di ogni categoria del preventivo, dal tasto "Aggiungi" del pannello e da
+  "+ Aggiungi da Articoli". Senza ricerca mostra le categorie Marchi (in cima quelle che corrispondono alla categoria del preventivo, via `PVA_CAT`), dentro una categoria
+  gli articoli (80 per volta); con 2+ lettere cerca in tutto il catalogo. Tocco = seleziona/deseleziona (✓, verde), anche più articoli e da categorie diverse; **Aggiungi N
+  articoli** li mette nel preventivo (nella categoria del "+" da cui si è partiti, altrimenti nella loro); **Articolo a mano** aggiunge la riga vuota come prima.
+- **v5.3 – foto nelle righe** (`pvFoto(it)`): colonna da 44 px tra codice e nome; la foto è quella dell'articolo del catalogo con lo **stesso codice scritto nella riga**
+  (`art.perCodice`, anche senza zeri iniziali), quindi vale anche per i preventivi nati dal PDF del gestionale; se il codice si cambia a mano la foto si aggiorna uscendo dal
+  campo. L'editor carica il catalogo da solo all'apertura. Il PDF aspetta che le foto siano caricate prima della cattura (html2canvas, stesso sito). Interruttore
+  **"Foto degli articoli nel preventivo"** nel pannello (`pvCur.foto`, di base sì; spento = classe `pv-nofoto`, colonna nascosta). Il tasto del tema si nasconde a editor aperto.
+- Provato con finto Firebase, due preventivi finti e il catalogo vero: prezzo del cliente (18,50) preferito a quello più recente di un altro cliente (20), ultimo prezzo
+  generale (9,90), articolo nuovo vuoto; "Aggiungi da Articoli" con guanti in Non food al 22%.
 
 ## Tema chiaro/scuro e preferenze (v5.1)
 
