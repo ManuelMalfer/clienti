@@ -899,6 +899,7 @@ body.pv-open .tema-btn{display:none}
 .pv-nofoto .pv-img{display:none}
 .ar-row.scelto{border-color:var(--st-cliente);background:color-mix(in srgb,var(--st-cliente) 8%,var(--surface))}
 #dlgPvArt .ar-row .ar-add{width:32px;height:32px;font-size:20px}
+.ar-sch{display:inline-block;padding:0 6px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:11.5px}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -2055,6 +2056,8 @@ async function catImportaChiave(testo){
 }
 async function catEnsureKey(){
   if(catKey) return catKey;
+  // il "sigillo" si legge anche se non si è ancora aperta la pagina Cataloghi (es. scheda tecnica dagli Articoli)
+  if(!catMeta){ try{ const m = await fetch("cataloghi/cifratura.json", { cache: "no-cache" }); catMeta = m.ok ? await m.json() : null; }catch(err){ catMeta = null; } }
   if(!catMeta){ toast("Non riesco a leggere la protezione dei cataloghi. Controlla la connessione."); return null; }
   let trovata = false;
   try{                                              // 1) la chiave è già nel tuo account: nessuna domanda
@@ -3747,6 +3750,8 @@ async function artCarica(){
   if(art.stato === "carico" || art.stato === "ok") return;
   art.stato = "carico"; renderArticoli();
   try{
+    // schede tecniche: elenco dei codici che hanno la scheda (i PDF cifrati stanno su Cloudflare R2, vedi strumenti/schede-tecniche.mjs)
+    fetch("schede.json", { cache: "no-cache" }).then(s => s.ok ? s.json() : null).then(j => { if(j && Array.isArray(j.codici) && j.base){ art.schede = new Set(j.codici); art.schedeBase = String(j.base).replace(/\/+$/, ""); if(ui.view === "articoli") renderArticoli(); } }).catch(() => {});
     const r = await fetch("articoli.json", { cache: "no-cache" });
     if(!r.ok) throw new Error("HTTP " + r.status);
     art.dati = await r.json();
@@ -3759,6 +3764,12 @@ async function artCarica(){
     art.stato = "ok";
   }catch(err){ art.stato = "errore"; }
   renderArticoli();
+}
+const artHaScheda = x => !!(art.schede && x.c && art.schede.has(String(x.c).trim()));
+function artScheda(x){
+  if(!artHaScheda(x)) return;
+  if($("#dlgArt").open) $("#dlgArt").close();
+  catApri({ file: art.schedeBase + "/" + encodeURIComponent(String(x.c).trim()) + ".pdf.enc", titolo: "Scheda tecnica · " + x.n, fornitore: "Cod. " + x.c });
 }
 const artFoto = x => x.f === 0 ? "" : `articoli/img/${x.i}.jpg`;
 const artImg = (x, cls) => x.f === 0
@@ -3815,7 +3826,7 @@ function renderArticoli(){
   if(cerca && art.top >= 0) testa += `<p class="hint" style="margin:6px 0">Cerco solo in ${esc(artCat(D.top[art.top]))}. <button type="button" class="link" data-artop="-1" data-artieni>Cerca in tutto il catalogo</button></p>`;
   if(!lista.length){ body.innerHTML = testa + `<div class="ct-empty">Nessun articolo trovato.</div>`; return; }
   const vis = lista.slice(0, art.mostra);
-  const sottotitolo = x => [x.c ? "Cod. " + esc(x.c) : "", x.m ? esc(x.m) : "", art.vista === "elenco" && x.s >= 0 ? esc(artCat(D.sub[x.s].n)) : ""].filter(Boolean).join(" · ");
+  const sottotitolo = x => [x.c ? "Cod. " + esc(x.c) : "", artHaScheda(x) ? `<span class="ar-sch">scheda tecnica</span>` : "", x.m ? esc(x.m) : "", art.vista === "elenco" && x.s >= 0 ? esc(artCat(D.sub[x.s].n)) : ""].filter(Boolean).join(" · ");
   body.innerHTML = testa + (art.vista === "elenco"
     ? `<div class="ar-list">${vis.map(x => `<button type="button" class="ar-row" data-art="${x.i}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span><span class="ar-add${art.sel.includes(x.i) ? " on" : ""}" role="button" tabindex="0" data-arsel="${x.i}" aria-label="${art.sel.includes(x.i) ? "Togli dal preventivo" : "Aggiungi al preventivo"}">${art.sel.includes(x.i) ? "✓" : "+"}</span><svg class="ar-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`).join("")}</div>`
     : `<div class="ar-grid">${vis.map(x => `<button type="button" class="ar-card" data-art="${x.i}"><span class="ar-add${art.sel.includes(x.i) ? " on" : ""}" role="button" tabindex="0" data-arsel="${x.i}" aria-label="${art.sel.includes(x.i) ? "Togli dal preventivo" : "Aggiungi al preventivo"}">${art.sel.includes(x.i) ? "✓" : "+"}</span>${artImg(x, "ar-foto")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${sottotitolo(x)}</small></span></button>`).join("")}</div>`)
@@ -3833,7 +3844,7 @@ function artApri(id){
       ${x.b ? `<dt>Descrizione</dt><dd>${esc(x.b)}</dd>` : ""}
       ${x.d ? `<dt>Dettagli</dt><dd>${esc(x.d)}</dd>` : ""}
     </dl>
-    <p style="margin:12px 0 0;display:flex;flex-wrap:wrap;gap:8px"><button type="button" class="btn ${art.sel.includes(x.i) ? "" : "btn-primary"}" data-ardet="${x.i}">${art.sel.includes(x.i) ? "✓ Nel preventivo (togli)" : "+ Aggiungi al preventivo"}</button><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
+    <p style="margin:12px 0 0;display:flex;flex-wrap:wrap;gap:8px">${artHaScheda(x) ? `<button type="button" class="btn" data-arscheda="${x.i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;vertical-align:-3px"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Scheda tecnica</button>` : ""}<button type="button" class="btn ${art.sel.includes(x.i) ? "" : "btn-primary"}" data-ardet="${x.i}">${art.sel.includes(x.i) ? "✓ Nel preventivo (togli)" : "+ Aggiungi al preventivo"}</button><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
   if(!$("#dlgArt").open) $("#dlgArt").showModal();
 }
 $("#arChips").addEventListener("click", e => {
@@ -3855,7 +3866,7 @@ $("#arBody").addEventListener("click", e => {
   const c = e.target.closest("[data-art]"); if(c) artApri(+c.dataset.art);
 });
 $("#artX").addEventListener("click", () => $("#dlgArt").close());
-$("#artBody").addEventListener("click", e => { const d = e.target.closest("[data-ardet]"); if(d){ artSel(+d.dataset.ardet); artApri(+d.dataset.ardet); } });
+$("#artBody").addEventListener("click", e => { const sc = e.target.closest("[data-arscheda]"); if(sc){ const x = art.dati && art.dati.a.find(y => y.i === +sc.dataset.arscheda); if(x) artScheda(x); return; } const d = e.target.closest("[data-ardet]"); if(d){ artSel(+d.dataset.ardet); artApri(+d.dataset.ardet); } });
 $("#artBody").addEventListener("click", async e => {
   const b = e.target.closest("[data-arcopia]"); if(!b) return;
   try{ await navigator.clipboard.writeText(b.dataset.arcopia); toast("Codice copiato"); }catch(err){ toast("Codice: " + b.dataset.arcopia); }
@@ -4513,7 +4524,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.4 (v5.4)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.5 (v5.5)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;

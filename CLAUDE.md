@@ -296,6 +296,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.2** = v5.1 + **preventivi dagli Articoli** (carrello negli Articoli, "+ Aggiungi da Articoli" nell'editor, prezzo proposto dai preventivi precedenti). Tag Git `v5.2`; la scritta in Riepilogo dice 5.2.
 - **v5.3** = v5.2 + il **+ Articolo** del preventivo apre la finestra Articoli con **selezione multipla**; **foto piccola su ogni riga** del preventivo (anche nel PDF, con interruttore). Tag Git `v5.3`; la scritta in Riepilogo dice 5.3.
 - **v5.4** = v5.3 + gli articoli aggiunti al preventivo vanno **da soli nella loro categoria** (non più in quella del "+" da cui si parte). Tag Git `v5.4`; la scritta in Riepilogo dice 5.4.
+- **v5.5** = v5.4 + **schede tecniche** degli articoli (PDF cifrati su Cloudflare R2). Tag Git `v5.5`; la scritta in Riepilogo dice 5.5.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -399,6 +400,23 @@ Riusa l'editor dei Preventivi (stesso PDF finale); blocco `pva*` in `index.html`
   **"Foto degli articoli nel preventivo"** nel pannello (`pvCur.foto`, di base sì; spento = classe `pv-nofoto`, colonna nascosta). Il tasto del tema si nasconde a editor aperto.
 - Provato con finto Firebase, due preventivi finti e il catalogo vero: prezzo del cliente (18,50) preferito a quello più recente di un altro cliente (20), ultimo prezzo
   generale (9,90), articolo nuovo vuoto; "Aggiungi da Articoli" con guanti in Non food al 22%.
+
+### Schede tecniche (v5.5)
+
+Manuel ha le schede tecniche Marchi in PDF sul Desktop, cartella **"schede tecniche"** con 8 sottocartelle (MARCHI SPA _ ALIMENTARE GELO, NON FOOD, ALIMENTARE SECCO,
+CARNE, ITTICO GELO, SALUMI E LATTICINI, ALIMENTARE FRESCO, BEVANDE): ~4.070 PDF, 1,3 GB; il **nome del file è il codice articolo** (es. `01205.pdf`).
+- **Abbinate al catalogo**: 2.746 codici (≈ 880 MB cifrati): troppi per GitHub Pages (limite 1 GB del sito, già ~330 MB usati), quindi stanno su **Cloudflare R2**
+  (scelta di Manuel), bucket `schede-tecniche`, letti dall'indirizzo pubblico `https://schede.malfer.it/<codice>.pdf.enc` (dominio collegato al bucket, CORS solo per clienti.malfer.it).
+  **Cifrati** come i cataloghi (stessa chiave, AES-GCM, 12 byte iv + testo): chi ha il link scarica byte illeggibili.
+- **Strumento** `node strumenti/schede-tecniche.mjs`: sceglie i file (ignora `-old`, `-old2`, `-temp`; "12044-12045.pdf" vale per i due codici; "13942-1.pdf" solo se manca
+  13942.pdf; stesso codice in due cartelle → il più recente; solo codici presenti in `articoli.json`), cifra in `cataloghi-originali/schede-enc/`, carica su R2 con l'API S3
+  (firma AWS v4 scritta a mano, 4 alla volta) e scrive **`schede.json`** nella radice del sito = `{agg, base, codici:[…]}`. Carica solo le schede nuove o cambiate
+  (`cataloghi-originali/schede-caricate.json`). Credenziali R2 in `cataloghi-originali/r2.json` (`accountId`, `accessKeyId`, `secretAccessKey`, `bucket`, `pubblico`; cartella in
+  .gitignore, mai su GitHub). `--cifra` solo cifratura, `--prova` carica una scheda e controlla lettura e CORS. **Per aggiornare**: rilanciare lo strumento e pubblicare `schede.json`.
+- **Nell'app**: `schede.json` si legge con `articoli.json` (`art.schede`, `art.schedeBase`; se manca, nessuna scheda). Negli Articoli gli articoli con scheda hanno l'etichetta
+  "scheda tecnica"; nel dettaglio il tasto **Scheda tecnica** (`artScheda`) apre il PDF nel lettore dei cataloghi (`catApri` con `file` = indirizzo R2, decifrato in memoria).
+  `catEnsureKey` ora legge da sé `cataloghi/cifratura.json` se la pagina Cataloghi non è ancora stata aperta (prima falliva aprendo una scheda dagli Articoli).
+- Provato in locale con un finto R2 (server sul PC) e la chiave vera: la scheda 01205 si apre decifrata nel lettore.
 
 ## Tema chiaro/scuro e preferenze (v5.1)
 
