@@ -295,6 +295,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.1** = v5.0 + Articoli con tasto **Indietro** in testa e vista **riquadri/elenco**; tasto **modalità chiara/scura** in basso a sinistra. Tag Git `v5.1`; la scritta in Riepilogo dice 5.1.
 - **v5.2** = v5.1 + **preventivi dagli Articoli** (carrello negli Articoli, "+ Aggiungi da Articoli" nell'editor, prezzo proposto dai preventivi precedenti). Tag Git `v5.2`; la scritta in Riepilogo dice 5.2.
 - **v5.3** = v5.2 + il **+ Articolo** del preventivo apre la finestra Articoli con **selezione multipla**; **foto piccola su ogni riga** del preventivo (anche nel PDF, con interruttore). Tag Git `v5.3`; la scritta in Riepilogo dice 5.3.
+- **v5.4** = v5.3 + gli articoli aggiunti al preventivo vanno **da soli nella loro categoria** (non più in quella del "+" da cui si parte). Tag Git `v5.4`; la scritta in Riepilogo dice 5.4.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -381,7 +382,9 @@ Riusa l'editor dei Preventivi (stesso PDF finale); blocco `pva*` in `index.html`
 - **Nell'editor**: tasto **+ Aggiungi da Articoli** (`#pvaBtn`, finestra `#dlgPvArt`): ricerca nel catalogo (stessa `artTrova` della pagina Articoli, da 2 lettere, primi 40),
   tocco = aggiunge l'articolo nella sua categoria; quelli già nel preventivo hanno ✓. Funziona anche sui preventivi nati dal PDF del gestionale.
 - **Riga dal catalogo** (`pvDaArticolo`): codice e nome dal catalogo, nome pulito con `pvPrettyName`, formato con `pvFormat`, contenitore `pvContainer` (stesse regole
-  del PDF); categoria del preventivo dalla categoria Marchi (`PVA_CAT`; per Oli e condimenti e Non food vale prima `pvGuessCat`); IVA 22% per Non food, altrimenti 10%;
+  del PDF); **categoria automatica** (v5.4): (1) gelati, sorbetti, semifreddi, tiramisù, croissant, brioche, cornetti, muffin, torte, crostate → sempre "Dolci e forno"
+  (regex con ``, perché "SURGELATO" contiene "GELAT"); (2) per le categorie Marchi generiche (Non food, Oli e condimenti, Surgelati, Gastronomia pronta, Snack vari,
+  Finger e dessert) decide prima il nome (`pvGuessCat`); (3) altrimenti la categoria Marchi (`PVA_CAT`); (4) infine vale la categoria corretta a mano in passato per quel codice (`pvApplyLearned`); IVA 22% per Non food, altrimenti 10%;
   "al kg" per carni e pesce freschi, salumi, formaggi stagionati (`PVA_AL_KG`), altrimenti "al pz"; poi le correzioni ricordate per codice (`pvApplyLearned`).
 - **Prezzo proposto** (`pvaUltimo`): nessun dato in più salvato, si cerca nei preventivi già fatti (`preventivi`): prima l'ultimo prezzo dato **a quel cliente** per quel
   codice, altrimenti l'ultimo usato con chiunque (con unità, IVA e peso). L'editor dice quanti prezzi vengono dal cliente, quanti dall'ultimo uso e quanti sono da compilare.
@@ -389,7 +392,7 @@ Riusa l'editor dei Preventivi (stesso PDF finale); blocco `pva*` in `index.html`
 - **v5.3 – finestra Articoli nell'editor** (`pvaApri(cat)`, stato `pva`): si apre dal **+ Articolo** di ogni categoria del preventivo, dal tasto "Aggiungi" del pannello e da
   "+ Aggiungi da Articoli". Senza ricerca mostra le categorie Marchi (in cima quelle che corrispondono alla categoria del preventivo, via `PVA_CAT`), dentro una categoria
   gli articoli (80 per volta); con 2+ lettere cerca in tutto il catalogo. Tocco = seleziona/deseleziona (✓, verde), anche più articoli e da categorie diverse; **Aggiungi N
-  articoli** li mette nel preventivo (nella categoria del "+" da cui si è partiti, altrimenti nella loro); **Articolo a mano** aggiunge la riga vuota come prima.
+  articoli** li mette nel preventivo, **ognuno nella sua categoria** (dalla v5.4; il "+" da cui si parte serve solo a mettere in cima le categorie Marchi giuste); **Articolo a mano** aggiunge la riga vuota come prima.
 - **v5.3 – foto nelle righe** (`pvFoto(it)`): colonna da 44 px tra codice e nome; la foto è quella dell'articolo del catalogo con lo **stesso codice scritto nella riga**
   (`art.perCodice`, anche senza zeri iniziali), quindi vale anche per i preventivi nati dal PDF del gestionale; se il codice si cambia a mano la foto si aggiorna uscendo dal
   campo. L'editor carica il catalogo da solo all'apertura. Il PDF aspetta che le foto siano caricate prima della cattura (html2canvas, stesso sito). Interruttore

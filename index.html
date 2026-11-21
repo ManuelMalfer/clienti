@@ -3889,7 +3889,11 @@ function pvaUltimo(codice, clienteId){
 function pvDaArticolo(x, clienteId){
   const D = art.dati, top = D.top[x.t] || "", desc = x.n || "";
   const guess = pvGuessCat(desc), mapped = PVA_CAT[top.toUpperCase()] || "Altri prodotti";
-  const cat = (mapped === "Altri prodotti" || top.toUpperCase() === "OLI E CONDIMENTI") && guess !== "Altri prodotti" ? guess : mapped;
+  // categorie Marchi generiche (surgelati, oli e condimenti, gastronomia, snack, non food): decide prima il nome dell articolo (es. gelato → Dolci e forno)
+  const generica = mapped === "Altri prodotti" || ["OLI E CONDIMENTI", "SURGELATI", "GASTRONOMIA PRONTA", "SNACK VARI", "FINGER E DESSERT"].includes(top.toUpperCase());
+  // parole che decidono sempre (prima di tutto il resto): gelati e dolci da forno
+  const dolce = /\b(GELAT|SORBETT|SEMIFREDD|TIRAMIS|CROISSANT|BRIOCHE|CORNETT|MUFFIN|PROFITEROL|CHEESECAKE|TORTA|CROSTAT)/.test(desc.toUpperCase());
+  const cat = dolce ? "Dolci e forno" : generica && guess !== "Altri prodotti" ? guess : mapped;
   const it = { id: pvNewId(), codice: x.c || "", raw: desc, rawNote: "", iva: top.toUpperCase() === "NON FOOD" ? "22%" : "10%", weight: pvPackWeight(desc),
     mode: PVA_AL_KG.includes(top.toUpperCase()) ? "kg" : "pz", priceKg: null, pricePz: null, conv: false, cat, nota: "", edited: false, artId: x.i };
   it.nome = pvPrettyName(desc);
@@ -3947,7 +3951,7 @@ async function pvaApri(cat){
   if(!pvCur) return;
   pva.cat = cat || null; pva.top = -1; pva.scelti = []; pva.mostra = 80;
   $("#pvaQ").value = "";
-  $("#pvaSub").textContent = pva.cat ? `Gli articoli scelti vanno in «${pva.cat}». Cerca o sfoglia le categorie e tocca per selezionare.` : "Cerca o sfoglia le categorie e tocca gli articoli per selezionarli.";
+  $("#pvaSub").textContent = "Cerca o sfoglia le categorie e tocca gli articoli per selezionarli: ognuno va da solo nella sua categoria del preventivo.";
   pvaLista();
   $("#dlgPvArt").showModal();
   if(matchMedia("(pointer:fine)").matches) $("#pvaQ").focus();
@@ -4002,11 +4006,12 @@ $("#pvaList").addEventListener("click", e => {
 });
 $("#pvaOk").addEventListener("click", () => {
   if(!pvCur || !art.dati || !pva.scelti.length) return;
-  const nuovi = pva.scelti.map(id => art.dati.a.find(y => y.i === id)).filter(Boolean).map(x => { const it = pvDaArticolo(x, pvCur.clienteId); if(pva.cat) it.cat = pva.cat; return it; });
+  // ogni articolo va da solo nella sua categoria (dalla categoria Marchi e dal nome, o da quella corretta a mano in passato per quel codice)
+  const nuovi = pva.scelti.map(id => art.dati.a.find(y => y.i === id)).filter(Boolean).map(x => pvDaArticolo(x, pvCur.clienteId));
   nuovi.forEach(it => { const li = pvCur.items.map(i => i.cat).lastIndexOf(it.cat); if(li >= 0) pvCur.items.splice(li + 1, 0, it); else pvCur.items.push(it); });
   pvSelId = nuovi.length ? nuovi[nuovi.length - 1].id : null;
   $("#dlgPvArt").close(); pvSave(); pvRender();
-  toast(nuovi.length === 1 ? "Aggiunto: " + nuovi[0].nome : nuovi.length + " articoli aggiunti");
+  toast(nuovi.length === 1 ? "Aggiunto in «" + nuovi[0].cat + "»: " + nuovi[0].nome : nuovi.length + " articoli aggiunti, ognuno nella sua categoria");
   if(nuovi.length) pvInfo(`${nuovi.length} ${nuovi.length === 1 ? "articolo aggiunto" : "articoli aggiunti"} dal catalogo: ${pvaRiepilogo(nuovi)}`);
 });
 $("#pvaVuoto").addEventListener("click", () => { $("#dlgPvArt").close(); pvAddItem(pva.cat || $("#pvAddCat").value); });
@@ -4508,7 +4513,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.3 (v5.3)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.4 (v5.4)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
