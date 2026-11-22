@@ -24,7 +24,7 @@
   --bg:#F3F5F4; --surface:#FFFFFF; --surface-2:#EAEFEE; --ink:#1C2B2E; --muted:#5E6F72; --line:#DCE3E1;
   --accent:#17607A; --accent-ink:#FFFFFF; --accent-soft:#E1EEF2; --danger:#B5524A;
   --st-dacontattare:#8A969A; --st-contattato:#C98A12; --st-cliente:#3F8F4A; --st-clientemax:#1F6B3A;
-  --st-clientelutteri:#2C8C8C; --st-nonservibile:#B5524A;
+  --st-clientelutteri:#2C8C8C; --st-nonservibile:#B5524A; --st-clienteperso:#7A4E9E;
   --font:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --font-cond:"Barlow Semi Condensed","Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
   --tabbar:64px;
@@ -38,7 +38,7 @@
     --bg:#121A1C; --surface:#1B2528; --surface-2:#243034; --ink:#E6EDEC; --muted:#93A3A5; --line:#2C393C;
     --accent:#5DB3CF; --accent-ink:#0E1A1D; --accent-soft:#1D3A44; --danger:#E07A70;
     --st-dacontattare:#8A969A; --st-contattato:#E0A43A; --st-cliente:#62B26C; --st-clientemax:#3E9C5E;
-    --st-clientelutteri:#4FB3B3; --st-nonservibile:#E07A70;
+    --st-clientelutteri:#4FB3B3; --st-nonservibile:#E07A70; --st-clienteperso:#B08AD6;
     color-scheme:dark;
   }
 }
@@ -46,7 +46,7 @@
     --bg:#121A1C; --surface:#1B2528; --surface-2:#243034; --ink:#E6EDEC; --muted:#93A3A5; --line:#2C393C;
     --accent:#5DB3CF; --accent-ink:#0E1A1D; --accent-soft:#1D3A44; --danger:#E07A70;
     --st-dacontattare:#8A969A; --st-contattato:#E0A43A; --st-cliente:#62B26C; --st-clientemax:#3E9C5E;
-    --st-clientelutteri:#4FB3B3; --st-nonservibile:#E07A70;
+    --st-clientelutteri:#4FB3B3; --st-nonservibile:#E07A70; --st-clienteperso:#B08AD6;
     color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -124,7 +124,7 @@ main.view{padding-bottom:calc(var(--tabbar) + 96px + env(safe-area-inset-bottom,
 .flag.late{color:var(--danger)}
 .badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--surface-2)}
 .st-dacontattare{--c:var(--st-dacontattare)} .st-contattato{--c:var(--st-contattato)} .st-cliente{--c:var(--st-cliente)}
-.st-clientemax{--c:var(--st-clientemax)} .st-clientelutteri{--c:var(--st-clientelutteri)} .st-nonservibile{--c:var(--st-nonservibile)}
+.st-clientemax{--c:var(--st-clientemax)} .st-clientelutteri{--c:var(--st-clientelutteri)} .st-nonservibile{--c:var(--st-nonservibile)} .st-clienteperso{--c:var(--st-clienteperso)}
 .dot[class*="st-"]{background:var(--c)}
 .empty{color:var(--muted);padding:40px 8px;text-align:center}
 .giro-li{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
@@ -1557,7 +1557,7 @@ const firebaseConfig = {
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
 const DAY_SHORT = ["Lun","Mar","Mer","Gio","Ven","Sab"];
 const DAY_KEY = ["lun","mar","mer","gio","ven","sab"];
-const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["NON SERVIBILE","Non servibile"]];
+const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["CLIENTE PERSO","Cliente perso"],["NON SERVIBILE","Non servibile"]];
 const ATTIVI = ["CLIENTE"];
 // Vecchie categorie convertite in "Non servibile" con una nota
 const EX_CLIENTI = { "CLIENTE MAX": "Cliente di Massimiliano", "CLIENTE LUTTERI": "Cliente di Lutteri" };
@@ -3442,7 +3442,7 @@ function tgtDetailHTML(c){
 // L'export del gestionale può creare due clienti per lo stesso locale: la FATTURAZIONE (codice che inizia per 100, ragione sociale e dati fiscali)
 // e la DESTINAZIONE (codice che inizia per 120, di solito col nome vero del locale). Qui si uniscono in una scheda sola:
 // si tiene la scheda di fatturazione (codice `codice`), il codice della destinazione va in `codiceDest`, il nome del locale è quello della destinazione.
-const UNI_PRIORITA = ["CLIENTE", "CONTATTATO", "DA CONTATTARE", "NON SERVIBILE"];
+const UNI_PRIORITA = ["CLIENTE", "CONTATTATO", "DA CONTATTARE", "CLIENTE PERSO", "NON SERVIBILE"];
 const uniCod = c => String(c.codice || "").replace(/\D/g, "");
 // Il gestionale Marchi numera le destinazioni partendo dal codice di fatturazione: 10010XXXXX -> 1202XXXXXN (N = 1, 2, 3… numero della destinazione).
 // Es. ALPI 1001006644 -> Ristorante Pizzeria Firenze 1202066441; ARIKI 1001090070 -> Niky's 1202900703/04/05. Verificato su Contatti_053 e Contatti_025.
@@ -4564,7 +4564,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.9 (v5.9)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.0 (v6.0)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5124,9 +5124,10 @@ const MAP_GROUPS = [
   { k: "attivi", label: "Clienti", color: "#2E9E48", match: c => ATTIVI.includes(c.stato) },
   { k: "contattato", label: "Contattati", color: "#E39B12", match: c => c.stato === "CONTATTATO" },
   { k: "dacontattare", label: "Da contattare", color: "#D93A2F", match: c => (c.stato || "DA CONTATTARE") === "DA CONTATTARE" },
+  { k: "persi", label: "Clienti persi", color: "#8E5CB8", match: c => c.stato === "CLIENTE PERSO" },
   { k: "nonservibile", label: "Non servibili", color: "#8A969A", match: c => c.stato === "NON SERVIBILE" }
 ];
-ui.mapOn = { attivi: true, contattato: true, dacontattare: true, nonservibile: false };
+ui.mapOn = { attivi: true, contattato: true, dacontattare: true, persi: true, nonservibile: false };
 ui.zona = true;            // colori solo nella zona di lavoro
 const ZONA_KM = 1;        // raggio attorno a ogni locale
 let map = null, markers = new Map(), fitted = false, meMarker = null;
@@ -5241,7 +5242,7 @@ function renderMap(){
   if(!initMap()) { setTimeout(renderMap, 300); return; }
   setTimeout(() => { map.invalidateSize(); if(ui.zona && zonaLayer && map.hasLayer(zonaLayer)) zonaLayer._draw(); }, 0);
   const visible = new Set();
-  const order = ["nonservibile", "dacontattare", "contattato", "attivi"];
+  const order = ["nonservibile", "persi", "dacontattare", "contattato", "attivi"];
   placed.filter(c => ui.mapOn[groupOf(c).k])
     .sort((a,b) => order.indexOf(groupOf(a).k) - order.indexOf(groupOf(b).k))
     .forEach(c => {
