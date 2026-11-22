@@ -1020,6 +1020,25 @@ main.view{padding-top:14px}
   #v-richiami .cal-day .list{grid-template-columns:1fr}
   .cal-c{min-height:100px}
 }
+.cal-g{background:color-mix(in srgb,#4285F4 22%,transparent);color:#3B78E7}
+.cal-leg i.cal-g{background:#4285F4}
+.cal-gdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px;flex:none}
+.gc-row{text-decoration:none;color:inherit}
+.gc-row > .cal-gdot{width:12px;height:12px;margin:0 6px 0 4px}
+.gc-ora{white-space:nowrap}
+.gc-box{border:1px solid var(--line);border-radius:var(--r-md,14px);padding:14px;margin-bottom:14px}
+.gc-t{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:17px;font-family:var(--font-cond)}
+.gc-t small{font-family:var(--font);font-size:12.5px;font-weight:600;color:var(--muted);margin-left:auto}
+.gc-logo{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#4285F4;color:#fff;font-weight:800;font-size:14px;font-family:Arial,sans-serif}
+.gc-logo.gc-apple{background:var(--ink);color:var(--bg)}
+.gc-acc{margin:0 0 10px;font-size:14.5px}
+.gc-vedi{margin:4px 0 10px}
+.gc-vedi > span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.gc-chk{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:14.5px}
+.gc-chk i{width:11px;height:11px;border-radius:50%;flex:none}
+.gc-st{font-size:13.5px;color:var(--muted);margin:6px 0 10px;line-height:1.45}
+.gc-st.err{color:var(--danger);font-weight:600}
+.gc-az{display:flex;gap:8px;flex-wrap:wrap}
 /* ===== /Calendario ===== */
 </style>
 </head>
@@ -1592,17 +1611,35 @@ main.view{padding-top:14px}
 </dialog>
 <dialog id="dlgCal" aria-labelledby="calT">
   <div class="dlg">
-    <div class="dlg-head"><h2 id="calT">Collega il calendario<span class="sub">Richiami e giri compaiono da soli nel calendario del telefono e del PC, e si aggiornano.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-head"><h2 id="calT">Collega il calendario<span class="sub">I richiami dei clienti nel tuo calendario, e i tuoi appuntamenti qui nell’app.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
       <p class="cal-msg" id="calStato">Controllo il servizio…</p>
       <div id="calOn" class="hidden">
-        <label class="chk cal-chk"><input type="checkbox" id="calGiro" checked><span>Metti anche i giri (ordini da raccogliere, un promemoria al giorno)</span></label>
-        <button class="btn btn-primary cal-big" type="button" id="calApple">iPhone / iPad / Mac (iCloud)</button>
-        <p class="pv-hint">Si apre il Calendario: tocca <b>Iscriviti</b> e come account scegli <b>iCloud</b>, così lo vedi su tutti i tuoi dispositivi Apple.</p>
-        <button class="btn btn-primary cal-big" type="button" id="calGoogle">Google Calendar</button>
-        <p class="pv-hint">Si apre Google Calendar: conferma con <b>Aggiungi</b>. Google aggiorna i calendari collegati ogni qualche ora (non si può rendere più veloce).</p>
-        <div class="field cal-link"><span>Link personale (per Outlook o altri calendari)</span><div class="cal-link-r"><input class="input" id="calUrl" readonly aria-label="Link del calendario"><button class="btn" type="button" id="calCopia">Copia</button></div></div>
-        <p class="pv-hint">Funziona in una direzione: richiami e giri si cambiano dall’app e il calendario si adegua. Il link è personale: non condividerlo.</p>
+        <section class="gc-box">
+          <h3 class="gc-t"><span class="gc-logo" aria-hidden="true">G</span>Google Calendar <small>nei due sensi</small></h3>
+          <div id="gcOff">
+            <p class="pv-hint">I richiami diventano eventi nel tuo Google Calendar; se li sposti o li cancelli in Google, cambiano anche qui. I tuoi appuntamenti Google si vedono nel Calendario dell’app.</p>
+            <button class="btn btn-primary cal-big" type="button" id="gcCollega">Collega il mio Google Calendar</button>
+            <p class="pv-hint">Si apre Google: scegli il tuo account e consenti l’accesso al calendario. Se compare “App non verificata”, tocca <b>Avanzate</b> › <b>Vai a…</b>: l’app è solo tua.</p>
+          </div>
+          <div id="gcOn" class="hidden">
+            <p class="gc-acc" id="gcAcc"></p>
+            <label class="field"><span>Calendario dove mettere i richiami</span>
+              <select class="input" id="gcCal"></select>
+            </label>
+            <div class="gc-vedi"><span>Calendari da vedere nell’app</span><div id="gcMostra"></div></div>
+            <p class="gc-st" id="gcSt"></p>
+            <div class="gc-az"><button class="btn" type="button" id="gcSync">Sincronizza ora</button><button class="btn btn-danger" type="button" id="gcStacca">Scollega Google</button></div>
+          </div>
+        </section>
+        <section class="gc-box">
+          <h3 class="gc-t"><span class="gc-logo gc-apple" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>iPhone / iCloud e altri calendari <small>sola lettura</small></h3>
+          <label class="chk cal-chk"><input type="checkbox" id="calGiro" checked><span>Metti anche i giri (ordini da raccogliere, un promemoria al giorno)</span></label>
+          <button class="btn cal-big" type="button" id="calApple">Aggiungi al Calendario di iPhone / iPad / Mac</button>
+          <p class="pv-hint">Si apre il Calendario: tocca <b>Iscriviti</b> e scegli l’account <b>iCloud</b>. Se sull’iPhone hai già l’account Google, i richiami li vedi già da lì: non serve anche questo.</p>
+          <div class="field cal-link"><span>Link personale (per Outlook o altri calendari)</span><div class="cal-link-r"><input class="input" id="calUrl" readonly aria-label="Link del calendario"><button class="btn" type="button" id="calCopia">Copia</button></div></div>
+          <p class="pv-hint">Funziona in una direzione: si cambia dall’app e il calendario si adegua. Il link è personale: non condividerlo.</p>
+        </section>
       </div>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" id="calScarica">Scarica i richiami (.ics)</button><button class="btn hidden" type="button" id="calNuovo">Crea un nuovo link</button></div>
@@ -1813,8 +1850,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); gLoad(); }
-    else { pvStop(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); gLoad(); subscribeGcal(); }
+    else { pvStop(); unsubscribeGcal(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -1836,6 +1873,10 @@ $("#resetBtn").addEventListener("click", async () => {
 function subscribe(){
   if(unsub) return;
   unsub = onSnapshot(col(), snap => {
+    // un richiamo cambiato da QUESTO dispositivo (scrittura non ancora confermata): avvisa il servizio di Google Calendar
+    if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
+      const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
+      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || p.nome !== n.nome; })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
     renderAll();
@@ -4275,6 +4316,13 @@ function renderCalendario(all, t){
   const prossimi = all.filter(c => c.ricontattare >= t).length;
   $("#richLbl").textContent = prossimi ? prossimi + " in programma" : "";
   const perData = {}; all.forEach(c => (perData[c.ricontattare] = perData[c.ricontattare] || []).push(c));
+  // appuntamenti Google (sola lettura): uno per ogni giorno che occupano
+  const gPer = {}, gCal = Array.isArray(gcal.calendari) ? gcal.calendari : [];
+  for(const e of gcalEv){
+    const d0 = e.s.slice(0, 10); let d1 = e.e.slice(0, 10);
+    if(e.g) d1 = localISO(new Date(new Date(d1 + "T12:00:00").getTime() - 864e5)); else if(e.e.slice(11) === "00:00" && d1 > d0) d1 = localISO(new Date(new Date(d1 + "T12:00:00").getTime() - 864e5));
+    for(let d = d0, n = 0; d <= d1 && n < 62; d = localISO(new Date(new Date(d + "T12:00:00").getTime() + 864e5)), n++) (gPer[d] = gPer[d] || []).push(e);
+  }
 
   // griglia: da lunedì della prima settimana a domenica dell'ultima
   const primo = new Date(Y, M - 1, 1, 12), spost = (primo.getDay() + 6) % 7;
@@ -4284,12 +4332,13 @@ function renderCalendario(all, t){
   for(let i = 0; i < celle; i++){
     const d = new Date(inizio); d.setDate(inizio.getDate() + i);
     const iso = localISO(d), r = perData[iso] || [], o = calOrdini(iso).length;
-    const nomi = r.slice(0, 2).map(c => `<span class="cal-nm">${c.ricontattareOra ? esc(c.ricontattareOra) + " " : ""}${esc(c.nome || "")}</span>`).join("") + (r.length > 2 ? `<span class="cal-nm cal-piu">+${r.length - 2}</span>` : "");
+    const gg = gPer[iso] || [], righe = [...r.map(c => (c.ricontattareOra ? esc(c.ricontattareOra) + " " : "") + esc(c.nome || "")), ...gg.map(e => `<i class="cal-gdot" style="background:${esc((gCal[e.c] || {}).colore || "#4285F4")}"></i>` + (e.g ? "" : esc(e.s.slice(11)) + " ") + esc(e.t))];
+    const nomi = righe.slice(0, 3).map(x => `<span class="cal-nm">${x}</span>`).join("") + (righe.length > 3 ? `<span class="cal-nm cal-piu">+${righe.length - 3}</span>` : "");
     const cls = ["cal-c", d.getMonth() !== M - 1 && "fuori", iso === t && "oggi", iso === ui.calSel && "sel", iso < t && "passato", d.getDay() === 0 && "dom"].filter(Boolean).join(" ");
     const etich = `${CAL_GIORNI[d.getDay()]} ${d.getDate()} ${CAL_MESI[d.getMonth()].toLowerCase()}: ${r.length} richiami, ${o} ordini`;
     html += `<button type="button" class="${cls}" data-cal="${iso}" aria-label="${etich}" aria-pressed="${iso === ui.calSel}">
       <span class="cal-n">${d.getDate()}</span>
-      <span class="cal-ev">${r.length ? `<span class="cal-r" title="Richiami">${r.length}</span>` : ""}${o ? `<span class="cal-o" title="Ordini del giro">${o}</span>` : ""}</span>
+      <span class="cal-ev">${r.length ? `<span class="cal-r" title="Richiami">${r.length}</span>` : ""}${o ? `<span class="cal-o" title="Ordini del giro">${o}</span>` : ""}${gg.length ? `<span class="cal-g" title="Appuntamenti Google">${gg.length}</span>` : ""}</span>
       <span class="cal-nomi">${nomi}</span>
     </button>`;
   }
@@ -4305,6 +4354,11 @@ function renderCalendario(all, t){
   const giorno = `<section class="cal-day" aria-live="polite">
     <h2 class="cal-day-t">${titolo}</h2>
     ${sel === t && scad.length ? `<h2 class="sec">Richiami scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag)}` : ""}
+    ${(() => { const gs = gPer[sel] || []; if(!gs.length) return "";
+      return `<h2 class="sec">Appuntamenti Google <small>${gs.length}</small></h2><ul class="list gc-list">${gs.map(e => { const c = gCal[e.c] || {};
+        const ora = e.g ? "tutto il giorno" : (e.s.slice(0, 10) === sel ? e.s.slice(11) : "…") + (e.e.slice(0, 10) === sel ? "–" + e.e.slice(11) : "");
+        return `<li><${e.u ? `a href="${esc(e.u)}" target="_blank" rel="noopener"` : "div"} class="row gc-row"><i class="cal-gdot" style="background:${esc(c.colore || "#4285F4")}"></i>
+          <span class="row-main"><span class="row-name">${esc(e.t)}</span><span class="row-sub">${esc([c.nome, e.l].filter(Boolean).join(" · "))}</span></span><span class="row-side"><span class="flag gc-ora">${esc(ora)}</span></span></${e.u ? "a" : "div"}></li>`; }).join("")}</ul>`; })()}
     <h2 class="sec">Richiami <small>${rs.length}</small></h2>
     ${rs.length ? lista(rs, oraFlag) : `<p class="empty cal-vuoto">Nessun richiamo. Lo fissi dalla scheda del cliente con “Richiama il”.</p>`}
     ${ds.getDay() === 0 ? "" : `<h2 class="sec">Ordini del giro <small>${ord.length}</small></h2>
@@ -4315,7 +4369,7 @@ function renderCalendario(all, t){
     <div class="cal-card">
       <div class="cal-wd">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(x => `<span>${x}</span>`).join("")}</div>
       <div class="cal-grid">${html}</div>
-      <div class="cal-leg"><span><i class="cal-r"></i>Richiami</span><span><i class="cal-o"></i>Ordini del giro</span></div>
+      <div class="cal-leg"><span><i class="cal-r"></i>Richiami</span><span><i class="cal-o"></i>Ordini del giro</span>${gcal.collegato ? `<span><i class="cal-g"></i>Google</span>` : ""}</div>
     </div>
     ${giorno}
   </div>`;
@@ -4712,7 +4766,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.2 (v6.2)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.3 (v6.3)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5583,11 +5637,89 @@ async function calApri(){
   $("#calGiro").checked = calImp.giro !== false;
   $("#calUrl").value = calLink();
   $("#calStato").classList.add("hidden"); $("#calOn").classList.remove("hidden"); $("#calNuovo").classList.remove("hidden");
+  gcRender();
+  if(gcal.collegato) gcChiama("sincronizza", { calendari: true }).catch(() => {});
 }
 $("#calAllBtn").addEventListener("click", calApri);
+
+/* ----- Google Calendar nei due sensi (v6.3): il lavoro lo fa il servizio (worker-calendario.js); qui stato, scelte e appuntamenti ----- */
+let gcal = {}, gcalEv = [], unsubGcal = [], gcTimer = null;
+const gcRef = n => doc(db, "utenti", uid, "impostazioni", n);
+function subscribeGcal(){
+  if(unsubGcal.length) return;
+  unsubGcal = [
+    onSnapshot(gcRef("gcal"), s => { gcal = s.exists() ? s.data() : {}; if($("#dlgCal").open) gcRender(); }, () => {}),
+    onSnapshot(gcRef("gcal_eventi"), s => { gcalEv = s.exists() && Array.isArray(s.data().ev) ? s.data().ev : []; if(ui.view === "richiami") renderRichiami(); }, () => {})
+  ];
+}
+function unsubscribeGcal(){ unsubGcal.forEach(f => f()); unsubGcal = []; gcal = {}; gcalEv = []; }
+async function gcChiama(percorso, corpo = {}){
+  const r = await fetch(CAL_SERVIZIO + "/google/" + percorso, { method: "POST",
+    headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken(), "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(j.errore || "il servizio non risponde (" + r.status + ")");
+  return j;
+}
+// dopo una modifica fatta da questo dispositivo a un richiamo: sincronizza dopo qualche secondo
+function gcPresto(){
+  if(!gcal.collegato || !gcal.calId) return;
+  clearTimeout(gcTimer);
+  gcTimer = setTimeout(() => gcChiama("sincronizza").catch(err => console.warn("Google Calendar:", err.message)), 2500);
+}
+const gcQuando = iso => { if(!iso) return "mai"; const d = new Date(iso); return (localISO(d) === localISO() ? "oggi" : fmtDate(localISO(d))) + " alle " + d.toTimeString().slice(0, 5); };
+function gcRender(){
+  const on = !!gcal.collegato;
+  $("#gcOff").classList.toggle("hidden", on); $("#gcOn").classList.toggle("hidden", !on);
+  if(!on) return;
+  const cal = Array.isArray(gcal.calendari) ? gcal.calendari : [];
+  $("#gcAcc").innerHTML = `Collegato all’account <b>${esc(gcal.email || "Google")}</b>`;
+  const scr = cal.filter(c => c.scrivibile);
+  $("#gcCal").innerHTML = (gcal.calId ? "" : `<option value="" selected>Scegli il calendario…</option>`) +
+    scr.map(c => `<option value="${esc(c.id)}" ${c.id === gcal.calId ? "selected" : ""}>${esc(c.nome)}${c.principale ? " (principale)" : ""}</option>`).join("") +
+    `<option value="__nuovo">＋ Crea un nuovo calendario…</option>`;
+  const mostra = Array.isArray(gcal.mostra) ? gcal.mostra : [];
+  $("#gcMostra").innerHTML = cal.map(c => `<label class="chk gc-chk"><input type="checkbox" data-gcm="${esc(c.id)}" ${mostra.includes(c.id) ? "checked" : ""}><i style="background:${esc(c.colore || "#4285F4")}"></i><span>${esc(c.nome)}</span></label>`).join("") || `<p class="pv-hint">Nessun calendario trovato.</p>`;
+  $("#gcSt").className = "gc-st" + (gcal.errore ? " err" : "");
+  $("#gcSt").textContent = !gcal.calId ? "Scegli qui sopra dove mettere i richiami: finché non lo scegli, i richiami non vanno su Google."
+    : gcal.errore ? gcal.errore : "Ultima sincronizzazione: " + gcQuando(gcal.ultimo) + ". Si aggiorna da sola ogni 5 minuti e subito dopo ogni tuo cambio.";
+}
+$("#gcCollega").addEventListener("click", async () => {
+  const w = window.open("", "_blank");                   // aperta subito, altrimenti il browser la blocca
+  try {
+    const { url } = await gcChiama("inizio");
+    if(w && !w.closed) w.location.href = url; else location.href = url;
+    toast("Completa il collegamento nella pagina di Google, poi torna qui");
+  } catch(err){ if(w) w.close(); toast("Non riesco a collegare Google: " + err.message); }
+});
+$("#gcCal").addEventListener("change", async e => {
+  let v = e.target.value, corpo;
+  if(v === "__nuovo"){
+    const nome = prompt("Nome del nuovo calendario Google:", "Clienti");
+    if(!nome || !nome.trim()){ gcRender(); return; }
+    corpo = { nuovo: nome.trim() };
+  } else if(v) corpo = { calId: v }; else return;
+  if(gcal.calId && !confirm("Sposto i richiami nel calendario scelto? Gli eventi dei richiami verranno tolti dal calendario di prima e creati in quello nuovo.")){ gcRender(); return; }
+  $("#gcSt").className = "gc-st"; $("#gcSt").textContent = "Preparo il calendario e copio i richiami…";
+  try { await gcChiama("scegli", corpo); $("#gcSt").textContent = "Fatto: i richiami sono nel calendario scelto."; toast("Calendario dei richiami impostato"); }
+  catch(err){ toast("Non riuscito: " + err.message); gcRender(); }
+});
+$("#gcMostra").addEventListener("change", async () => {
+  const mostra = $$("#gcMostra [data-gcm]").filter(x => x.checked).map(x => x.dataset.gcm);
+  if(mostra.length > 4){ toast("Puoi vedere al massimo 4 calendari"); gcRender(); return; }
+  try { await gcChiama("scegli", { mostra }); } catch(err){ toast("Non riuscito: " + err.message); gcRender(); }
+});
+$("#gcSync").addEventListener("click", async () => {
+  $("#gcSync").disabled = true; $("#gcSt").className = "gc-st"; $("#gcSt").textContent = "Sincronizzo…";
+  try { const r = await gcChiama("sincronizza", { calendari: true }); const n = (r.creati || 0) + (r.cambiati || 0) + (r.tolti || 0); toast(n || r.daGoogle ? `Fatto: ${n} su Google, ${r.daGoogle || 0} dall’app` : "Tutto già allineato"); }
+  catch(err){ toast("Non riuscito: " + err.message); }
+  finally { $("#gcSync").disabled = false; gcRender(); }
+});
+$("#gcStacca").addEventListener("click", async () => {
+  if(!confirm("Scollego Google Calendar? Gli eventi già creati restano nel tuo calendario Google, ma non si aggiorneranno più.")) return;
+  try { await gcChiama("scollega"); toast("Google Calendar scollegato"); } catch(err){ toast("Non riuscito: " + err.message); }
+});
 $("#calGiro").addEventListener("change", e => { if(!calImp) return; calImp.giro = e.target.checked; setDoc(calImpRef(), { giro: calImp.giro }, { merge: true }).catch(fail); toast(calImp.giro ? "I giri compariranno nel calendario" : "I giri non compariranno più nel calendario"); });
 $("#calApple").addEventListener("click", () => { const l = calLink(); if(l) location.href = l.replace(/^https:/, "webcal:"); });
-$("#calGoogle").addEventListener("click", () => { const l = calLink(); if(l) window.open("https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(l.replace(/^https:/, "webcal:")), "_blank", "noopener"); });
 $("#calCopia").addEventListener("click", async () => {
   const l = calLink(); if(!l) return;
   try { await navigator.clipboard.writeText(l); toast("Link copiato"); } catch(e){ $("#calUrl").select(); toast("Seleziona il link e copialo"); }

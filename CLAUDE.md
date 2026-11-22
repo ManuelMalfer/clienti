@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.3** = v6.2 + **Google Calendar nei due sensi** (sezione "Google Calendar nei due sensi (v6.3)"): permesso Google dall'app, scelta o creazione del calendario dei richiami, appuntamenti Google visibili nel Calendario dell'app. Tag Git `v6.3`; la scritta in Riepilogo dice 6.3.
 - **v6.2** = v6.1 + tasto **Salva** nella scheda cliente (in basso, accanto a Modifica, che diventa secondario): stato, richiamo e chiusura si salvano già da soli; Salva conferma il campo ancora aperto, aggiunge allo storico la nota scritta ma non ancora aggiunta e chiude la scheda (`#dSalva`). Tag Git `v6.2`; la scritta in Riepilogo dice 6.2.
 - **v6.1** = v6.0 + **Calendario** al posto di Richiami (mese con richiami e ordini del giro) e **collegamento a Google Calendar / iCloud** tramite il Worker
   `strumenti/worker-calendario.js` (sezione "Calendario (v6.1)"). Tag Git `v6.1`; la scritta in Riepilogo dice 6.1.
@@ -443,6 +444,39 @@ La sezione **Richiami** si chiama ora **Calendario** (voce del menu/barra, stess
   Google aggiorna i calendari sottoscritti ogni qualche ora (non si può forzare); Apple più spesso.
 - Prove fatte: Worker con finto Firestore (18 casi: token giusto/sbagliato/mancante, altro utente, più pagine di clienti, giro spento, cliente chiuso, domeniche,
   righe ≤ 75 byte, Firestore irraggiungibile = 503); app con finto Firebase (griglia, giorno, mesi, finestra, nuovo link, link Google).
+
+## Google Calendar nei due sensi (v6.3)
+
+Richiesta di Manuel: usare il suo Google Calendar esistente, con le modifiche che passano in entrambe le direzioni (il link .ics sottoscritto della v6.1
+veniva aggiornato da Google solo ogni 8–24 ore). Il link .ics resta per iPhone/iCloud e altri calendari (sola lettura).
+- **Servizio** `strumenti/worker-calendario.js` (stesso Worker `calendario`): OAuth Google (scope `calendar` + `openid email`, `access_type=offline`,
+  `prompt=consent`), stato firmato HMAC con `GOOGLE_CLIENT_SECRET` (15 minuti), pagina di ritorno `/google/ritorno` che mostra "collegato" con il tasto
+  "Torna all'app". Il permesso (refresh token) sta in `calendario_segreti/{uid}`, una raccolta che le regole di Firestore NON fanno leggere all'app (nessuna
+  regola = negato); lo legge solo il servizio con la chiave di servizio. Segreti del Worker: `SERVICE_ACCOUNT`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`;
+  Cron Trigger `*/5 * * * *`.
+- **Sincronizzazione** (`sincronizza`): (a) legge da Google le modifiche dal `syncToken` precedente (con 410 riparte da capo); un evento dell'app spostato in
+  Google sposta il richiamo del cliente, uno cancellato lo toglie (riga nello storico "Richiamo spostato/tolto da Google Calendar"), ma solo se nell'app il
+  richiamo non è cambiato nel frattempo (altrimenti vince l'app); (b) dall'app a Google: crea, aggiorna (PUT) o toglie gli eventi "Richiamare: <nome>"
+  (30 min con avviso 15 min se c'è l'ora, altrimenti tutto il giorno; richiami più vecchi di 60 giorni non si creano); al massimo 25 scritture per giro, il resto
+  al giro dopo; (c) copia gli appuntamenti dei calendari scelti da vedere (massimo 4, da 14 giorni fa a 120 giorni avanti, esclusi gli eventi dell'app) in
+  `utenti/{uid}/impostazioni/gcal_eventi`; (d) salva mappa cliente→evento (`mappa`, con `k` = "data|ora" scritto in Google) e stato per l'app in
+  `impostazioni/gcal`. **Un evento per cliente con id fisso** (`"cl" + base32hex(idCliente)`): se la mappa si perde, la creazione dà 409 e l'evento si riusa
+  con PUT, quindi niente doppioni. Cambiando calendario gli eventi si tolgono dal vecchio e si creano nel nuovo.
+- **Quando**: l'app chiama `/google/sincronizza` 2,5 secondi dopo che QUESTO dispositivo ha cambiato data/ora/nome di un richiamo o eliminato un cliente
+  (`snap.metadata.hasPendingWrites` nello snapshot dei clienti, `gcPresto`); le modifiche fatte in Google arrivano con il cron (entro 5 minuti) o con
+  "Sincronizza ora". I giri NON vanno su Google (scelta di Manuel).
+- **Nell'app**: finestra `#dlgCal` con due riquadri. "Google Calendar nei due sensi": Collega (apre Google in una nuova finestra), account collegato, menu del
+  calendario dei richiami (calendari scrivibili + "Crea un nuovo calendario…"), spunte dei calendari da vedere, stato/ultima sincronizzazione/errore,
+  "Sincronizza ora", "Scollega Google" (revoca il permesso; gli eventi già creati restano in Google). "iPhone / iCloud e altri calendari": il link .ics di prima.
+  Nel Calendario gli appuntamenti Google sono un numero blu nella griglia (con i titoli da 700 px) e la sezione "Appuntamenti Google" nel giorno scelto
+  (tocco = apre l'evento in Google).
+- **Configurazione Google** (una volta, console Google Cloud, progetto clienti-malfer): Google Calendar API attivata; schermata di consenso esterna e
+  **pubblicata** (in "Test" il permesso scade dopo 7 giorni); client OAuth "Applicazione web" con URI di reindirizzamento
+  `https://calendario.webmalfer.workers.dev/google/ritorno`. L'app non è verificata da Google: al collegamento compare l'avviso, si va avanti con
+  Avanzate › Vai a….
+- Prove: Worker con finto Google + finto Firestore + login Firebase firmato (36 casi: permesso, stato falsificato, creazione/aggiornamento/rimozione, spostamento
+  e cancellazione in Google, conflitto, cliente eliminato, memoria persa senza doppioni, syncToken scaduto, cambio calendario, 32 richiami a rate, cron, permesso
+  revocato, scollega, link .ics); app con finto Firebase (griglia e giorno con eventi Google, finestra, scelta/creazione calendario, sincronizzazione dopo un cambio).
 
 ## Tema chiaro/scuro e preferenze (v5.1)
 
