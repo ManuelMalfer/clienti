@@ -66,7 +66,7 @@ Ogni cambio di stato aggiunge automaticamente una riga allo storico.
 
 ## Funzioni presenti
 
-Barra in basso (5 voci): **Clienti, Richiami, Cataloghi, Riepilogo, Altro**; in **Altro** (griglia di riquadri) stanno **Mappa, Giro,
+Barra in basso (5 voci): **Clienti, Calendario, Cataloghi, Riepilogo, Altro**; in **Altro** (griglia di riquadri) stanno **Mappa, Giro,
 Preventivi, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo preventivo). Vedi "Interfaccia" più sotto.
 
 - **Clienti**: ricerca multi-parola su tutti i campi, filtri per stato, località e tipologia.
@@ -104,10 +104,8 @@ Preventivi, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo p
   si annulla ripremendolo. Lo stato sta nel documento del cliente, campo `ordiniFatti` (array di date `YYYY-MM-DD`: la spunta vale
   solo per quel giorno e su tutti i dispositivi; si tengono solo le ultime 3 settimane). `giroData(i)` calcola la data del giorno scelto
   (la domenica si guarda già la settimana dopo).
-- **Richiami**: scaduti / oggi / prossimi 7 giorni / più avanti, ordinati per data e ora; badge rosso
-  sulla tab con i richiami scaduti o di oggi. Pulsante **Aggiungi al calendario** che genera un file
-  `.ics` con tutti i richiami da oggi in avanti (evento di 30 min con avviso 15 min prima se c'è l'ora,
-  altrimenti tutto il giorno). È un'esportazione, non una sincronizzazione.
+- **Calendario** (fino alla v6.0 "Richiami"; la vista resta `v-richiami`, `renderRichiami` → `renderCalendario`): vedi la sezione
+  "Calendario (v6.1)" più sotto. Badge rosso sulla voce con i richiami scaduti o di oggi.
 - **Riepilogo**: clienti attivi, in trattativa, locali mappati; conteggi per stato; copertura per
   località (clienti attivi sul totale, cliccabile); fornitori attuali più diffusi;
   **Importa da Excel** (foglio DATABASE, salta i duplicati nome+indirizzo+località) ed **Esporta in Excel**
@@ -302,6 +300,8 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.1** = v6.0 + **Calendario** al posto di Richiami (mese con richiami e ordini del giro) e **collegamento a Google Calendar / iCloud** tramite il Worker
+  `strumenti/worker-calendario.js` (sezione "Calendario (v6.1)"). Tag Git `v6.1`; la scritta in Riepilogo dice 6.1.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
@@ -422,6 +422,26 @@ CARNE, ITTICO GELO, SALUMI E LATTICINI, ALIMENTARE FRESCO, BEVANDE): ~4.070 PDF,
   "scheda tecnica"; nel dettaglio il tasto **Scheda tecnica** (`artScheda`) apre il PDF nel lettore dei cataloghi (`catApri` con `file` = indirizzo R2, decifrato in memoria).
   `catEnsureKey` ora legge da sé `cataloghi/cifratura.json` se la pagina Cataloghi non è ancora stata aperta (prima falliva aprendo una scheda dagli Articoli).
 - Provato in locale con un finto R2 (server sul PC) e la chiave vera: la scheda 01205 si apre decifrata nel lettore.
+
+## Calendario (v6.1)
+
+La sezione **Richiami** si chiama ora **Calendario** (voce del menu/barra, stessa vista `#v-richiami`).
+- **Nell'app**: barra con ‹ mese ›, "Oggi" e la pillola rossa "N scaduti"; griglia del mese (lun–dom, `renderCalendario`) dove ogni giorno mostra il numero di
+  **richiami** (arancione, da `ricontattare`) e di **ordini del giro** (verde, `calOrdini`: clienti con quel giorno in `giorniOrdine`, non chiusi); da 700 px si
+  vedono anche i nomi dei primi due richiami. Toccando un giorno, sotto (a destra su PC) il dettaglio: richiami scaduti (solo su oggi), richiami del giorno con l'ora,
+  ordini del giro (con "✓ raccolto" se spuntato nel Giro). Scorrimento a destra/sinistra sul mese = mese dopo/prima. Stato in `ui.calMese` / `ui.calSel`.
+- **Collega a Google Calendar / iCloud** (`#dlgCal`, `calApri`): calendario **sottoscritto** in una direzione (l'app scrive, il calendario mostra). L'app crea un
+  codice segreto casuale e lo salva in `utenti/{uid}/impostazioni/calendario` = `{token, giro, creato}`; il link è `CAL_SERVIZIO/cal/<uid>/<token>.ics`
+  (`CAL_SERVIZIO` = `https://calendario.webmalfer.workers.dev`). Pulsanti: iPhone/iPad/Mac (`webcal://`, si sceglie l'account iCloud), Google Calendar
+  (`calendar.google.com/calendar/r?cid=webcal://…`), Copia link (Outlook ecc.), interruttore "Metti anche i giri", **Crea un nuovo link** (il vecchio smette di
+  funzionare), "Scarica i richiami (.ics)" (il vecchio export una tantum). Se `/ping` non risponde la finestra lo dice e resta solo lo scaricamento.
+- **Servizio** `strumenti/worker-calendario.js` (Cloudflare Worker `calendario`): legge Firestore con la chiave di servizio (Secret `SERVICE_ACCOUNT` = contenuto
+  del JSON della chiave di servizio Firebase del progetto clienti-malfer, la stessa di Rosario) e risponde con il file .ics: richiami dagli ultimi 60 giorni in
+  avanti (30 min con avviso 15 min prima se c'è l'ora, altrimenti tutto il giorno; ora di Roma con VTIMEZONE) e, se `giro` non è false, un evento di tutto il giorno
+  "Giro: N ordini" per ogni giorno con ordini (dalla settimana scorsa a 8 settimane avanti, nomi nella descrizione). Token sbagliato o mancante = 404.
+  Google aggiorna i calendari sottoscritti ogni qualche ora (non si può forzare); Apple più spesso.
+- Prove fatte: Worker con finto Firestore (18 casi: token giusto/sbagliato/mancante, altro utente, più pagine di clienti, giro spento, cliente chiuso, domeniche,
+  righe ≤ 75 byte, Firestore irraggiungibile = 503); app con finto Firebase (griglia, giorno, mesi, finestra, nuovo link, link Google).
 
 ## Tema chiaro/scuro e preferenze (v5.1)
 

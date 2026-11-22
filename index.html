@@ -972,6 +972,55 @@ main.view{padding-top:14px}
 @media (min-width:1100px) and (hover:hover) and (pointer:fine){ main.view{padding-top:20px} #list{margin-top:14px} }
 .row-main .flag.chiuso{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);margin-right:6px}
 /* ===== /Ritocchi v3.3 ===== */
+/* ===== Calendario (v6.1) ===== */
+.cal-bar{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.cal-bar b{font-family:var(--font-cond);font-size:20px;font-weight:700;min-width:150px;text-align:center}
+.cal-nav{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-size:24px;line-height:1;display:grid;place-items:center;padding:0 0 3px}
+.cal-scad{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,var(--line));font-weight:700}
+.cal-wrap{display:grid;gap:16px;margin-top:12px}
+.cal-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg,18px);padding:10px;box-shadow:var(--sh1)}
+.cal-wd,.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-wd span{text-align:center;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;padding:2px 0 6px}
+.cal-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:58px;padding:5px 2px;border:1px solid transparent;border-radius:12px;background:var(--surface-2);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.cal-c.fuori{opacity:.4}
+.cal-c.dom{background:transparent}
+.cal-c.passato .cal-n{color:var(--muted)}
+.cal-c.oggi .cal-n{background:var(--accent);color:var(--accent-ink);border-radius:99px;padding:0 7px}
+.cal-c.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;background:var(--accent-soft)}
+.cal-n{font-weight:700;font-size:15px;line-height:22px}
+.cal-ev{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}
+.cal-ev span{min-width:20px;height:18px;padding:0 5px;border-radius:99px;font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
+.cal-r{background:var(--st-contattato);color:#fff}
+.cal-o{background:color-mix(in srgb,var(--st-cliente) 20%,transparent);color:var(--st-cliente)}
+.cal-nomi{display:none}
+.cal-leg{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:13px;color:var(--muted)}
+.cal-leg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.cal-leg i.cal-o{background:var(--st-cliente)}
+.cal-day-t{font-family:var(--font-cond);font-size:24px;font-weight:700;margin:4px 0 0}
+.cal-day h2.sec{margin-top:16px}
+.cal-vuoto{margin:4px 0 0;padding:10px 0;text-align:left}
+.cal-fatto{color:var(--st-cliente)!important}
+#dlgCal .cal-msg{font-size:15px;line-height:1.5;margin:0 0 8px}
+#dlgCal .cal-chk{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;font-size:15px}
+#dlgCal .cal-big{width:100%;min-height:48px;font-size:16px;margin-top:6px}
+#dlgCal .pv-hint{margin:6px 0 14px}
+.cal-link-r{display:flex;gap:8px}
+.cal-link-r .input{flex:1;min-width:0;font-size:13px}
+@media (min-width:700px){
+  .cal-c{min-height:84px;align-items:stretch;padding:6px}
+  .cal-n{align-self:flex-start}
+  .cal-ev{justify-content:flex-start}
+  .cal-nomi{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .cal-nm{font-size:11.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;color:var(--ink)}
+  .cal-piu{color:var(--muted)}
+}
+@media (min-width:1100px){
+  .cal-wrap{grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);align-items:start}
+  .cal-day{position:sticky;top:12px}
+  #v-richiami .cal-day .list{grid-template-columns:1fr}
+  .cal-c{min-height:100px}
+}
+/* ===== /Calendario ===== */
 </style>
 </head>
 <body>
@@ -1040,8 +1089,15 @@ main.view{padding-top:14px}
   </section>
 
   <section id="v-richiami" class="view-wrap hidden">
-    <header class="top"><div class="wrap"><div class="top-row"><h1>Da ricontattare</h1><span class="count" id="richLbl"></span></div>
-      <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg>Aggiungi al calendario</button>
+    <header class="top"><div class="wrap"><div class="top-row"><h1>Calendario</h1><span class="count" id="richLbl"></span></div>
+      <div class="cal-bar">
+        <button class="cal-nav" type="button" id="calPrev" aria-label="Mese precedente">‹</button>
+        <b id="calMese"></b>
+        <button class="cal-nav" type="button" id="calNext" aria-label="Mese successivo">›</button>
+        <button class="chip-btn" type="button" id="calOggi">Oggi</button>
+        <button class="chip-btn cal-scad hidden" type="button" id="calScad"></button>
+      </div>
+      <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>Collega a Google Calendar / iCloud</button>
     </div></header>
     <main class="wrap view" id="richBody"></main>
   </section>
@@ -1237,7 +1293,7 @@ main.view{padding-top:14px}
   <div id="menuVelo"></div>
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
     <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
-    <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Richiami<span class="num hidden" id="richNum"></span></button>
+    <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario<span class="num hidden" id="richNum"></span></button>
     <button data-view="cataloghi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
     <button data-view="articoli" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Articoli</button>
     <button data-view="riepilogo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
@@ -1531,6 +1587,24 @@ main.view{padding-top:14px}
       <p class="pv-hint" id="pvmCome"></p>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" id="pvmAlt"></button><button class="btn btn-primary" type="button" id="pvmInvia"></button></div>
+  </div>
+</dialog>
+<dialog id="dlgCal" aria-labelledby="calT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="calT">Collega il calendario<span class="sub">Richiami e giri compaiono da soli nel calendario del telefono e del PC, e si aggiornano.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <p class="cal-msg" id="calStato">Controllo il servizio…</p>
+      <div id="calOn" class="hidden">
+        <label class="chk cal-chk"><input type="checkbox" id="calGiro" checked><span>Metti anche i giri (ordini da raccogliere, un promemoria al giorno)</span></label>
+        <button class="btn btn-primary cal-big" type="button" id="calApple">iPhone / iPad / Mac (iCloud)</button>
+        <p class="pv-hint">Si apre il Calendario: tocca <b>Iscriviti</b> e come account scegli <b>iCloud</b>, così lo vedi su tutti i tuoi dispositivi Apple.</p>
+        <button class="btn btn-primary cal-big" type="button" id="calGoogle">Google Calendar</button>
+        <p class="pv-hint">Si apre Google Calendar: conferma con <b>Aggiungi</b>. Google aggiorna i calendari collegati ogni qualche ora (non si può rendere più veloce).</p>
+        <div class="field cal-link"><span>Link personale (per Outlook o altri calendari)</span><div class="cal-link-r"><input class="input" id="calUrl" readonly aria-label="Link del calendario"><button class="btn" type="button" id="calCopia">Copia</button></div></div>
+        <p class="pv-hint">Funziona in una direzione: richiami e giri si cambiano dall’app e il calendario si adegua. Il link è personale: non condividerlo.</p>
+      </div>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" id="calScarica">Scarica i richiami (.ics)</button><button class="btn hidden" type="button" id="calNuovo">Crea un nuovo link</button></div>
   </div>
 </dialog>
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
@@ -4173,22 +4247,95 @@ $("#daysStrip").addEventListener("click", e => { const b = e.target.closest("[da
 
 /* ---------- Richiami ---------- */
 function renderRichiami(){
-  const t = localISO(), w = addDays(7);
+  const t = localISO();
   const all = clienti.filter(c => c.ricontattare).sort((a,b) => (a.ricontattare + (a.ricontattareOra || "99")).localeCompare(b.ricontattare + (b.ricontattareOra || "99")));
   const due = all.filter(c => c.ricontattare <= t).length;
   const num = $("#richNum"); num.textContent = due; num.classList.toggle("hidden", !due);
   if(ui.view !== "richiami") return;
-  const groups = [
-    ["Scaduti", all.filter(c => c.ricontattare < t)],
-    ["Oggi", all.filter(c => c.ricontattare === t)],
-    ["Prossimi 7 giorni", all.filter(c => c.ricontattare > t && c.ricontattare <= w)],
-    ["Più avanti", all.filter(c => c.ricontattare > w)]
-  ].filter(g => g[1].length);
-  $("#richLbl").textContent = all.length ? `${all.length} in programma` : "";
-  $("#calAllBtn").classList.toggle("hidden", !all.some(c => c.ricontattare >= t));
-  $("#richBody").innerHTML = groups.length ? groups.map(([title, list]) =>
-    `<h2 class="sec">${title} <small>${list.length}</small></h2><ul class="list">${list.map(c => "<li>" + rowHTML(c, `<span class="flag ${c.ricontattare < t ? "late" : ""}">${fmtDate(c.ricontattare)}${c.ricontattareOra ? "<br>ore " + c.ricontattareOra : ""}</span>`) + "</li>").join("")}</ul>`).join("")
-    : `<p class="empty">Nessun ricontatto in programma. Nella scheda di un cliente imposta "Da ricontattare il" e lo ritrovi qui.</p>`;
+  renderCalendario(all, t);
+}
+
+/* ---------- Calendario (v6.1): mese con richiami e ordini del giro; dettaglio del giorno scelto ---------- */
+const CAL_GIORNI = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
+const CAL_MESI = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+const calD = iso => new Date(iso + "T12:00:00");
+const calOrdini = iso => {                       // ordini del giro da raccogliere quel giorno (giorniOrdine, clienti non chiusi)
+  const g = CAL_GIORNI[calD(iso).getDay()];
+  return clienti.filter(c => (c.giorniOrdine || []).includes(g) && !chiusoIl(c, iso));
+};
+function renderCalendario(all, t){
+  if(!ui.calSel) ui.calSel = t;
+  if(!ui.calMese) ui.calMese = t.slice(0, 7);
+  const [Y, M] = ui.calMese.split("-").map(Number);
+  $("#calMese").textContent = CAL_MESI[M - 1] + " " + Y;
+  const scad = all.filter(c => c.ricontattare < t);
+  $("#calScad").textContent = scad.length + (scad.length === 1 ? " scaduto" : " scaduti");
+  $("#calScad").classList.toggle("hidden", !scad.length);
+  const prossimi = all.filter(c => c.ricontattare >= t).length;
+  $("#richLbl").textContent = prossimi ? prossimi + " in programma" : "";
+  const perData = {}; all.forEach(c => (perData[c.ricontattare] = perData[c.ricontattare] || []).push(c));
+
+  // griglia: da lunedì della prima settimana a domenica dell'ultima
+  const primo = new Date(Y, M - 1, 1, 12), spost = (primo.getDay() + 6) % 7;
+  const inizio = new Date(primo); inizio.setDate(1 - spost);
+  const giorniMese = new Date(Y, M, 0).getDate(), celle = Math.ceil((spost + giorniMese) / 7) * 7;
+  let html = "";
+  for(let i = 0; i < celle; i++){
+    const d = new Date(inizio); d.setDate(inizio.getDate() + i);
+    const iso = localISO(d), r = perData[iso] || [], o = calOrdini(iso).length;
+    const nomi = r.slice(0, 2).map(c => `<span class="cal-nm">${c.ricontattareOra ? esc(c.ricontattareOra) + " " : ""}${esc(c.nome || "")}</span>`).join("") + (r.length > 2 ? `<span class="cal-nm cal-piu">+${r.length - 2}</span>` : "");
+    const cls = ["cal-c", d.getMonth() !== M - 1 && "fuori", iso === t && "oggi", iso === ui.calSel && "sel", iso < t && "passato", d.getDay() === 0 && "dom"].filter(Boolean).join(" ");
+    const etich = `${CAL_GIORNI[d.getDay()]} ${d.getDate()} ${CAL_MESI[d.getMonth()].toLowerCase()}: ${r.length} richiami, ${o} ordini`;
+    html += `<button type="button" class="${cls}" data-cal="${iso}" aria-label="${etich}" aria-pressed="${iso === ui.calSel}">
+      <span class="cal-n">${d.getDate()}</span>
+      <span class="cal-ev">${r.length ? `<span class="cal-r" title="Richiami">${r.length}</span>` : ""}${o ? `<span class="cal-o" title="Ordini del giro">${o}</span>` : ""}</span>
+      <span class="cal-nomi">${nomi}</span>
+    </button>`;
+  }
+
+  // giorno scelto
+  const sel = ui.calSel, ds = calD(sel), rs = perData[sel] || [];
+  const ord = calOrdini(sel).sort((a, b) => (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
+  const oraFlag = c => `<span class="flag">${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) : "in giornata"}</span>`;
+  const scadFlag = c => `<span class="flag late">${fmtDate(c.ricontattare).slice(0, 5)}${c.ricontattareOra ? "<br>ore " + esc(c.ricontattareOra) : ""}</span>`;
+  const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(c.orarioOrdine || "")}</span>`;
+  const lista = (arr, f) => `<ul class="list">${arr.map(c => "<li>" + rowHTML(c, f(c)) + "</li>").join("")}</ul>`;
+  const titolo = `${CAL_GIORNI[ds.getDay()]} ${ds.getDate()} ${CAL_MESI[ds.getMonth()].toLowerCase()}${sel === t ? " · oggi" : ""}`;
+  const giorno = `<section class="cal-day" aria-live="polite">
+    <h2 class="cal-day-t">${titolo}</h2>
+    ${sel === t && scad.length ? `<h2 class="sec">Richiami scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag)}` : ""}
+    <h2 class="sec">Richiami <small>${rs.length}</small></h2>
+    ${rs.length ? lista(rs, oraFlag) : `<p class="empty cal-vuoto">Nessun richiamo. Lo fissi dalla scheda del cliente con “Richiama il”.</p>`}
+    ${ds.getDay() === 0 ? "" : `<h2 class="sec">Ordini del giro <small>${ord.length}</small></h2>
+    ${ord.length ? lista(ord, ordFlag) : `<p class="empty cal-vuoto">Nessun ordine da raccogliere.</p>`}`}
+  </section>`;
+
+  $("#richBody").innerHTML = `<div class="cal-wrap">
+    <div class="cal-card">
+      <div class="cal-wd">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(x => `<span>${x}</span>`).join("")}</div>
+      <div class="cal-grid">${html}</div>
+      <div class="cal-leg"><span><i class="cal-r"></i>Richiami</span><span><i class="cal-o"></i>Ordini del giro</span></div>
+    </div>
+    ${giorno}
+  </div>`;
+}
+const calVai = (mese, sel) => { ui.calMese = mese; if(sel) ui.calSel = sel; renderRichiami(); };
+const calSposta = n => { const [y, m] = ui.calMese.split("-").map(Number); const d = new Date(y, m - 1 + n, 1, 12); calVai(localISO(d).slice(0, 7)); };
+$("#calPrev").addEventListener("click", () => calSposta(-1));
+$("#calNext").addEventListener("click", () => calSposta(1));
+$("#calOggi").addEventListener("click", () => { const t = localISO(); calVai(t.slice(0, 7), t); });
+$("#calScad").addEventListener("click", () => { const t = localISO(); calVai(t.slice(0, 7), t); setTimeout(() => { const s = $("#richBody .cal-day"); if(s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50); });
+$("#richBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-cal]"); if(!b) return;
+  const iso = b.dataset.cal; ui.calSel = iso;
+  if(iso.slice(0, 7) !== ui.calMese) ui.calMese = iso.slice(0, 7);
+  renderRichiami();
+  if(innerWidth < 1100) setTimeout(() => { const s = $("#richBody .cal-day"); if(s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50);
+});
+// scorrere a destra/sinistra sul mese cambia mese (telefono e iPad)
+{ let x0 = null, y0 = 0;
+  $("#richBody").addEventListener("touchstart", e => { if(!e.target.closest(".cal-grid")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  $("#richBody").addEventListener("touchend", e => { if(x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null; if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) calSposta(dx < 0 ? 1 : -1); }, { passive: true });
 }
 
 /* ---------- Rosario (assistente vocale) ----------
@@ -4564,7 +4711,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.0 (v6.0)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.1 (v6.1)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5401,9 +5548,45 @@ function downloadICS(list, name){
   setTimeout(() => URL.revokeObjectURL(url), 60000);
   toast(list.length === 1 ? "Richiamo pronto per il calendario" : `${list.length} richiami pronti per il calendario`);
 }
-$("#calAllBtn").addEventListener("click", () => {
+$("#calScarica").addEventListener("click", () => {
   const t = localISO();
   downloadICS(clienti.filter(c => c.ricontattare && c.ricontattare >= t), "richiami-clienti");
+});
+
+/* ----- Collegamento a Google Calendar / iCloud (v6.1): link .ics personale creato dal servizio Cloudflare strumenti/worker-calendario.js ----- */
+const CAL_SERVIZIO = "https://calendario.webmalfer.workers.dev";
+const calImpRef = () => doc(db, "utenti", uid, "impostazioni", "calendario");
+let calImp = null;
+const calToken = () => [...crypto.getRandomValues(new Uint8Array(24))].map(b => b.toString(16).padStart(2, "0")).join("");
+const calLink = () => calImp && calImp.token ? CAL_SERVIZIO + "/cal/" + uid + "/" + calImp.token + ".ics" : "";
+async function calApri(){
+  $("#calStato").textContent = "Controllo il servizio…"; $("#calStato").classList.remove("hidden");
+  $("#calOn").classList.add("hidden"); $("#calNuovo").classList.add("hidden");
+  $("#dlgCal").showModal();
+  let attivo = false;
+  try { const r = await fetch(CAL_SERVIZIO + "/ping", { cache: "no-store" }); attivo = r.ok; } catch(e){}
+  if(!attivo){ $("#calStato").textContent = "Il servizio del calendario non risponde (non è ancora attivo o manca la rete). Intanto puoi scaricare i richiami una volta sola con il tasto qui sotto."; return; }
+  try {
+    const s = await getDoc(calImpRef()); calImp = s.exists() ? s.data() : null;
+    if(!calImp || !calImp.token){ calImp = { token: calToken(), giro: true, creato: nowISO() }; await setDoc(calImpRef(), calImp); }
+  } catch(err){ fail(err); $("#calStato").textContent = "Non riesco a preparare il collegamento: riprova."; return; }
+  $("#calGiro").checked = calImp.giro !== false;
+  $("#calUrl").value = calLink();
+  $("#calStato").classList.add("hidden"); $("#calOn").classList.remove("hidden"); $("#calNuovo").classList.remove("hidden");
+}
+$("#calAllBtn").addEventListener("click", calApri);
+$("#calGiro").addEventListener("change", e => { if(!calImp) return; calImp.giro = e.target.checked; setDoc(calImpRef(), { giro: calImp.giro }, { merge: true }).catch(fail); toast(calImp.giro ? "I giri compariranno nel calendario" : "I giri non compariranno più nel calendario"); });
+$("#calApple").addEventListener("click", () => { const l = calLink(); if(l) location.href = l.replace(/^https:/, "webcal:"); });
+$("#calGoogle").addEventListener("click", () => { const l = calLink(); if(l) window.open("https://calendar.google.com/calendar/r?cid=" + encodeURIComponent(l.replace(/^https:/, "webcal:")), "_blank", "noopener"); });
+$("#calCopia").addEventListener("click", async () => {
+  const l = calLink(); if(!l) return;
+  try { await navigator.clipboard.writeText(l); toast("Link copiato"); } catch(e){ $("#calUrl").select(); toast("Seleziona il link e copialo"); }
+});
+$("#calNuovo").addEventListener("click", async () => {
+  if(!calImp || !confirm("Creo un nuovo link? Il calendario collegato con il link vecchio smetterà di aggiornarsi e andrà ricollegato.")) return;
+  calImp.token = calToken();
+  try { await setDoc(calImpRef(), { token: calImp.token, creato: nowISO() }, { merge: true }); $("#calUrl").value = calLink(); toast("Nuovo link pronto: ricollega il calendario"); }
+  catch(err){ fail(err); }
 });
 
 
