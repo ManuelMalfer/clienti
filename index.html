@@ -1321,7 +1321,8 @@ main.view{padding-top:14px}
     </div>
     <div class="dlg-foot">
       <button class="btn btn-danger" type="button" id="delBtn">Elimina</button>
-      <button class="btn btn-primary" type="button" id="editBtn">Modifica</button>
+      <button class="btn" type="button" id="editBtn">Modifica</button>
+      <button class="btn btn-primary" type="button" id="dSalva">Salva</button>
     </div>
   </div>
 </dialog>
@@ -4711,7 +4712,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.1 (v6.1)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.2 (v6.2)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4831,6 +4832,15 @@ $("#dStorico").addEventListener("click", async e => {
   if(!(await confermaElimina("questa nota", "La nota sparisce dallo storico del cliente."))) return;
   const s = [...(c.storico||[])]; s.splice(+b.dataset.delnote, 1);
   update(c.id, { storico: s });
+});
+// Salva (v6.2): stato, richiamo e chiusura si salvano già da soli; qui si conferma il campo ancora aperto,
+// si aggiunge la nota scritta ma non ancora aggiunta, e si chiude la scheda
+$("#dSalva").addEventListener("click", () => {
+  const a = document.activeElement;
+  if(a && a.closest && a.closest("#dlgDetail") && a.blur) a.blur();
+  const c = byId(ui.openId), t = $("#noteText").value.trim();
+  if(c && t){ update(c.id, { storico: [...(c.storico||[]), { d: localISO(), t }] }); $("#noteText").value = ""; }
+  setTimeout(() => { $("#dlgDetail").close(); toast(t ? "Scheda salvata, nota aggiunta" : "Scheda salvata"); }, 60);
 });
 $("#noteForm").addEventListener("submit", e => {
   e.preventDefault();
