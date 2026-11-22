@@ -464,6 +464,11 @@ body.pv-open{overflow:hidden}
 .pv-move select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px;-webkit-appearance:none;appearance:none}
 .pv-ready{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center;max-width:320px}
 .pv-ready span{font-size:14px;color:var(--muted);word-break:break-all}
+.pvm-testo{min-height:190px;resize:vertical;line-height:1.45;font-family:inherit}
+.pvm-warn{color:var(--warn,#c2410c);margin:-6px 0 10px}
+.pvm-file{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:4px 0 10px;font-size:14px;min-width:0}
+.pvm-file #pvmFile{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvm-ico{flex:none;font-size:11px;font-weight:700;color:#fff;background:#dc2626;border-radius:6px;padding:4px 6px}
 .pv-capture .pv-pin,.pv-capture .pv-pill,.pv-capture .pv-add,.pv-capture .pv-move{display:none!important}
 .pv-capture .pv-pout{display:inline}
 .pv-capture .pv-row.sel{background:none;box-shadow:none}
@@ -1453,6 +1458,7 @@ main.view{padding-top:14px}
     <button class="pv-back" type="button" id="pvBack">‹ Preventivi</button>
     <h2 id="pvTitle">Preventivo<small id="pvSaved" class="pv-saved"></small></h2>
     <button class="btn" type="button" id="pvPrint">Stampa</button>
+    <button class="btn" type="button" id="pvMail">Invia per email</button>
     <button class="btn btn-primary" type="button" id="pvPdf">Crea PDF</button>
   </div>
   <div class="pv-layout">
@@ -1511,6 +1517,20 @@ main.view{padding-top:14px}
       <div class="ar-list pva-list" id="pvaList"></div>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" id="pvaVuoto">Articolo a mano</button><button class="btn btn-primary" type="button" id="pvaOk" disabled>Aggiungi</button></div>
+  </div>
+</dialog>
+<dialog id="dlgPvMail" aria-labelledby="pvmT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="pvmT">Invia il preventivo<span class="sub">Controlla e modifica l’email prima di mandarla.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <label class="field"><span>A</span><input class="input" id="pvmA" type="text" inputmode="email" autocomplete="off" placeholder="email del cliente (più indirizzi separati da virgola)"></label>
+      <p class="pv-hint pvm-warn hidden" id="pvmNoEm">Nella scheda del cliente non c’è nessuna email: scrivila qui.</p>
+      <label class="field"><span>Oggetto</span><input class="input" id="pvmOgg" type="text" autocomplete="off"></label>
+      <label class="field"><span>Testo</span><textarea class="input pvm-testo" id="pvmTesto" rows="9"></textarea></label>
+      <div class="pvm-file"><span class="pvm-ico" aria-hidden="true">PDF</span><span id="pvmFile"></span><button class="link" type="button" id="pvmVedi">Vedi</button></div>
+      <p class="pv-hint" id="pvmCome"></p>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" id="pvmAlt"></button><button class="btn btn-primary" type="button" id="pvmInvia"></button></div>
   </div>
 </dialog>
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
@@ -4534,7 +4554,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.7 (v5.7)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.8 (v5.8)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5963,7 +5983,19 @@ $("#pvPrint").addEventListener("click", () => {
 let pvPdfFile = null;
 const pvIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 async function pvMakePdf(){
-  if(!pvCur) return;
+  await pvCreaPdf();
+  if(!pvPdfFile) return;
+  // Su iPhone/iPad (e dove si può) si apre il menu Condividi: Stampa, Mail, WhatsApp, Salva in File…
+  if(navigator.canShare && navigator.canShare({ files: [pvPdfFile] })){
+    $("#pvReadyName").textContent = pvPdfFile.name;
+    $("#pvReady").classList.remove("hidden");
+  } else {
+    pvDownload(pvPdfFile); toast("PDF scaricato: lo trovi nella cartella Download");
+  }
+}
+async function pvCreaPdf(){
+  pvPdfFile = null;
+  if(!pvCur) return null;
   pvSelect(null); if(document.activeElement) document.activeElement.blur(); pvSave(true);
   pvBusy(true, "Creo il PDF…");
   const host = $("#pvPages");
@@ -5991,14 +6023,7 @@ async function pvMakePdf(){
   } finally {
     document.body.classList.remove("pv-capture"); pvFit(); pvBusy(false);
   }
-  if(!pvPdfFile) return;
-  // Su iPhone/iPad (e dove si può) si apre il menu Condividi: Stampa, Mail, WhatsApp, Salva in File…
-  if(navigator.canShare && navigator.canShare({ files: [pvPdfFile] })){
-    $("#pvReadyName").textContent = pvPdfFile.name;
-    $("#pvReady").classList.remove("hidden");
-  } else {
-    pvDownload(pvPdfFile); toast("PDF scaricato: lo trovi nella cartella Download");
-  }
+  return pvPdfFile;
 }
 function pvDownload(file){
   const url = URL.createObjectURL(file);
@@ -6012,6 +6037,77 @@ $("#pvShare").addEventListener("click", async () => {
   catch(err){ if(err && err.name === "AbortError") return; pvDownload(pvPdfFile); $("#pvReady").classList.add("hidden"); }
 });
 $("#pvReadyClose").addEventListener("click", () => $("#pvReady").classList.add("hidden"));
+
+/* ----- Invia per email (v5.8): l'email si controlla e si modifica qui, poi parte dall'app di posta (Outlook) ----- */
+const pvMobile = pvIOS || /Android|iPhone|iPad/i.test(navigator.userAgent);
+let pvMailFile = null, pvMailUrl = "";
+function pvMailTesto(){
+  let v = String(pvCur.validita || "").trim().replace(/^valid[ao]\s+/i, "");
+  if(/^\d/.test(v)) v = "fino al " + v;
+  const firma = [agente.nome, agente.tel, agente.email].filter(Boolean).join("\n");
+  return "Buongiorno,\n\nin allegato trova la nostra offerta" + (v ? ", valida " + v : "") + ".\n" +
+    "Resto a disposizione per qualsiasi chiarimento.\n\nCordiali saluti" + (firma ? "\n" + firma : "");
+}
+async function pvEmailApri(){
+  if(!pvCur) return;
+  const f = await pvCreaPdf(); if(!f) return;
+  pvMailFile = f;
+  const c = pvCur.clienteId && byId(pvCur.clienteId), em = emSplit(c && c.email);
+  $("#pvmA").value = em.join(", ");
+  $("#pvmNoEm").classList.toggle("hidden", !!em.length);
+  $("#pvmOgg").value = ("Offerta " + (pvCur.cliente || (c && c.nome) || "") + (pvCur.data ? " del " + fmtDate(pvCur.data) : "")).replace(/\s+/g, " ").trim();
+  $("#pvmTesto").value = pvMailTesto();
+  $("#pvmFile").textContent = f.name + " · " + Math.max(1, Math.round(f.size / 1024)) + " KB";
+  const share = pvMobile && navigator.canShare && navigator.canShare({ files: [f] });
+  $("#pvmInvia").textContent = share ? "Invia con il PDF" : "Apri in Outlook";
+  $("#pvmAlt").textContent = share ? "Senza allegato" : "Outlook sul web";
+  $("#pvmCome").textContent = share
+    ? "Si apre il menu Condividi: scegli Outlook (o Mail). Il PDF e il testo sono già nell’email; i destinatari vengono copiati: tieni premuto nel campo A e scegli Incolla."
+    : "Si apre il tuo programma di posta con destinatari, oggetto e testo già scritti, e il PDF viene scaricato: trascinalo nell’email (o usa Allega). Se usi Outlook nel browser scegli “Outlook sul web”.";
+  $("#pvmInvia").dataset.share = share ? "1" : "";
+  $("#dlgPvMail").showModal();
+}
+function pvMailDati(){
+  const to = emSplit($("#pvmA").value), bad = to.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if(bad.length){ toast("Indirizzo non valido: " + bad[0]); $("#pvmA").focus(); return null; }
+  return { to: to.join(", "), ogg: $("#pvmOgg").value.trim(), testo: $("#pvmTesto").value };
+}
+function pvMailto(d){
+  const to = d.to.split(",").map(s => encodeURIComponent(s.trim())).filter(Boolean).join(",");
+  location.href = "mailto:" + to + "?subject=" + encodeURIComponent(d.ogg) + "&body=" + encodeURIComponent(d.testo.replace(/\r?\n/g, "\r\n"));
+}
+$("#pvMail").addEventListener("click", pvEmailApri);
+$("#pvmInvia").addEventListener("click", async () => {
+  const d = pvMailDati(); if(!d || !pvMailFile) return;
+  if($("#pvmInvia").dataset.share){
+    // niente attese prima di share(): il telefono vuole che parta subito dal tocco
+    if(d.to && navigator.clipboard) navigator.clipboard.writeText(d.to).catch(() => {});
+    try { await navigator.share({ files: [pvMailFile], title: d.ogg, text: d.testo }); $("#dlgPvMail").close(); }
+    catch(err){ if(err && err.name === "AbortError") return; $("#dlgPvMail").close(); pvDownload(pvMailFile); pvMailto(d); }
+  } else {
+    pvDownload(pvMailFile);
+    $("#dlgPvMail").close();
+    setTimeout(() => pvMailto(d), 400);
+    toast("PDF scaricato: trascinalo nell’email o usa Allega");
+  }
+});
+$("#pvmAlt").addEventListener("click", () => {
+  const d = pvMailDati(); if(!d) return;
+  if($("#pvmInvia").dataset.share){ $("#dlgPvMail").close(); pvMailto(d); return; }
+  pvDownload(pvMailFile);
+  const q = "to=" + encodeURIComponent(d.to) + "&subject=" + encodeURIComponent(d.ogg) + "&body=" + encodeURIComponent(d.testo);
+  window.open("https://outlook.office.com/mail/deeplink/compose?" + q, "_blank", "noopener");
+  $("#dlgPvMail").close();
+  toast("PDF scaricato: in Outlook usa Allega per aggiungerlo");
+});
+$("#pvmVedi").addEventListener("click", () => {
+  if(!pvMailFile) return;
+  if(pvMailUrl) URL.revokeObjectURL(pvMailUrl);
+  pvMailUrl = URL.createObjectURL(pvMailFile);
+  const w = window.open(pvMailUrl, "_blank");
+  if(!w) pvDownload(pvMailFile);
+});
+$("#dlgPvMail").addEventListener("close", () => { if(pvMailUrl){ const u = pvMailUrl; pvMailUrl = ""; setTimeout(() => URL.revokeObjectURL(u), 60000); } });
 $("#pvDup").addEventListener("click", () => {
   if(!pvCur) return;
   const copia = JSON.parse(JSON.stringify(pvCur));
