@@ -900,6 +900,11 @@ body.pv-open .tema-btn{display:none}
 .ar-row.scelto{border-color:var(--st-cliente);background:color-mix(in srgb,var(--st-cliente) 8%,var(--surface))}
 #dlgPvArt .ar-row .ar-add{width:32px;height:32px;font-size:20px}
 .ar-sch{display:inline-block;padding:0 6px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:11.5px}
+.em-row{display:flex;gap:8px;align-items:center}
+.em-row + .em-row{margin-top:8px}
+.em-row .input{flex:1;min-width:0}
+.em-btn{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:22px;line-height:1;display:grid;place-items:center}
+.em-btn.em-add{background:var(--accent-soft);color:var(--accent);border-color:transparent;font-weight:600}
 /* ===== /Budget ===== */
 /* ===== Giro ===== */
 :root{--giro-v:#3FA55B;--giro-g:#F2C230}
@@ -1300,7 +1305,7 @@ main.view{padding-top:14px}
         <label class="field"><span>Referente</span><input class="input" name="referente" autocomplete="off"></label>
         <label class="field"><span>Telefono</span><input class="input" name="tel" type="tel" inputmode="tel" autocomplete="off"></label>
         <label class="field"><span>Cellulare</span><input class="input" name="cellulare" type="tel" inputmode="tel" autocomplete="off"></label>
-        <label class="field"><span>Email</span><input class="input" name="email" type="email" inputmode="email" autocomplete="off"></label>
+        <div class="field"><span>Email</span><input type="hidden" name="email"><div id="emList"></div></div>
       </div>
       <label class="field"><span>PEC</span><input class="input" name="pec" type="email" inputmode="email" autocomplete="off"></label>
 
@@ -4524,7 +4529,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.5 (v5.5)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 5.6 (v5.6)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4556,7 +4561,7 @@ function renderDetail(){
     ["Rag. sociale", esc(c.ragioneSociale)],
     ["Telefono", esc(c.tel)],
     ["Cellulare", esc(c.cellulare)],
-    ["Email", esc(c.email)],
+    ["Email", emSplit(c.email).map(m => `<a href="mailto:${encodeURIComponent(m)}">${esc(m)}</a>`).join("<br>")],
     ["PEC", esc(c.pec)],
     ["Indirizzo", esc([c.indirizzo, [c.cap, c.luogo].filter(Boolean).join(" ") + (c.prov ? ` (${c.prov})` : "")].filter(Boolean).join(", "))],
     ["P.IVA", esc(c.piva)],
@@ -4573,7 +4578,7 @@ function renderDetail(){
     <div class="actions">
       ${act(tel ? "tel:" + tel : "", "Chiama", ic('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'))}
       ${act(wa, "WhatsApp", ic('<path d="M3 21l1.6-4.8A8.5 8.5 0 1 1 8 19.6Z"/>'), true)}
-      ${act(c.email ? "mailto:" + encodeURIComponent(c.email) : "", "Email", ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'))}
+      ${act(emSplit(c.email).length ? "mailto:" + emSplit(c.email).map(encodeURIComponent).join(",") : "", "Email", ic('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'))}
       ${act(mapsLink(c), "Naviga", ic('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>'), true)}
     </div>
     <div class="stato-pick">
@@ -4690,6 +4695,7 @@ function openForm(id = null, preset = {}, opts = {}){
     if(el.name === "fornitori") v = (v || []).join(", ");
     el.value = v ?? (el.name === "stato" ? "DA CONTATTARE" : "");
   }
+  emRender(emSplit(c.email));
   $$("[data-days]").forEach(box => {
     const sel = c[box.dataset.days] || [];
     box.querySelectorAll("input").forEach(i => i.checked = sel.includes(i.value));
@@ -4698,7 +4704,23 @@ function openForm(id = null, preset = {}, opts = {}){
   if(!opts.fromShot) F.querySelector("[name=nome]").focus();
   F.querySelector(".dlg-body").scrollTop = 0;
 }
+// più email: ogni riga è un campo; la prima ha il "+" per aggiungerne un'altra, le altre la "×" per toglierla
+const emSplit = s => String(s || "").split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+function emRender(vals, focusLast){
+  const hid = F.querySelector("[name=email]"), L = vals.length ? vals : [""];
+  $("#emList").innerHTML = L.map((v, i) => `<div class="em-row"><input class="input em-in${i === 0 && hid.classList.contains("check") ? " check" : ""}" type="email" inputmode="email" autocomplete="off" value="${esc(v)}" aria-label="Email ${i + 1}">${i === 0
+    ? `<button type="button" class="em-btn em-add" data-emadd aria-label="Aggiungi un'altra email" title="Aggiungi un'altra email">+</button>`
+    : `<button type="button" class="em-btn" data-emdel="${i}" aria-label="Togli questa email" title="Togli questa email">×</button>`}</div>`).join("");
+  if(focusLast){ const ins = $$("#emList .em-in"); ins[ins.length - 1].focus(); }
+}
+const emValori = () => $$("#emList .em-in").map(i => i.value.trim());
+$("#emList").addEventListener("click", e => {
+  if(e.target.closest("[data-emadd]")){ emRender([...emValori(), ""], true); return; }
+  const d = e.target.closest("[data-emdel]"); if(!d) return;
+  const v = emValori(); v.splice(+d.dataset.emdel, 1); emRender(v);
+});
 function readForm(){
+  F.querySelector("[name=email]").value = emValori().filter(Boolean).join(", ");
   const d = {};
   for(const el of F.elements){ if(el.name) d[el.name] = el.value.trim(); }
   d.fornitori = splitList(d.fornitori);
@@ -4715,7 +4737,8 @@ async function save(andNew){
     const el = F.querySelector(`[name=${miss[0]}]`); el.focus();
     toast("Compila nome, località e tipologia"); return;
   }
-  if(d.email && !F.querySelector("[name=email]").checkValidity()){ F.querySelector("[name=email]").focus(); toast("Controlla l'indirizzo email"); return; }
+  const emBad = $$("#emList .em-in").find(i => i.value.trim() && !i.checkValidity());
+  if(emBad){ emBad.focus(); toast("Controlla l'indirizzo email"); return; }
   const piva = d.piva.replace(/^IT/, "");
   if(d.piva && !/^\d{11}$/.test(piva) && !confirm("La P.IVA non ha 11 cifre. Salvo comunque?")) return;
   if(d.codiceUnivoco && !/^[A-Z0-9]{7}$/.test(d.codiceUnivoco) && !confirm("Il codice univoco di solito ha 7 caratteri. Salvo comunque?")) return;

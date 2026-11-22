@@ -297,6 +297,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.3** = v5.2 + il **+ Articolo** del preventivo apre la finestra Articoli con **selezione multipla**; **foto piccola su ogni riga** del preventivo (anche nel PDF, con interruttore). Tag Git `v5.3`; la scritta in Riepilogo dice 5.3.
 - **v5.4** = v5.3 + gli articoli aggiunti al preventivo vanno **da soli nella loro categoria** (non più in quella del "+" da cui si parte). Tag Git `v5.4`; la scritta in Riepilogo dice 5.4.
 - **v5.5** = v5.4 + **schede tecniche** degli articoli (PDF cifrati su Cloudflare R2). Tag Git `v5.5`; la scritta in Riepilogo dice 5.5.
+- **v5.6** = v5.5 + **più email per cliente**: nel modulo il tasto **+** accanto a Email aggiunge un altro campo (× per toglierlo). Si salvano sempre nel campo `email` come testo unico separato da ", " (compatibile con ricerca, import/export Excel, Rosario); nel modulo c'è un input nascosto `name=email` e le righe visibili `#emList .em-in` (`emRender`, `emValori`, `emSplit`). Nella scheda cliente ogni email è un collegamento e il tasto Email scrive a tutte. Tag Git `v5.6`; la scritta in Riepilogo dice 5.6.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
   Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
