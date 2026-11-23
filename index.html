@@ -1109,6 +1109,13 @@ dialog.rc-dlg{max-width:720px}
 .set-mod{display:flex;gap:8px;flex-wrap:wrap}
 .set-mod button{flex:1;min-height:42px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-weight:600;cursor:pointer}
 .set-mod button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.app-quando{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.app-scelto{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);background:var(--surface-2)}
+.app-scelto b{display:block}
+.app-scelto small{color:var(--muted)}
+.uni-ign{margin-top:14px;padding-top:8px;border-top:1px solid var(--line)}
+.set-dati{display:flex;flex-wrap:wrap;gap:8px}
+.set-dati .btn{flex:1 1 auto}
 .set-col{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
 .set-col span{flex:1;font-weight:600}
 .set-col i{width:14px;height:14px;border-radius:50%;background:var(--c)}
@@ -1841,6 +1848,20 @@ dialog.rc-dlg{max-width:720px}
     <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="submit">Salva</button></div>
   </form>
 </dialog>
+<dialog id="dlgApp" aria-labelledby="appT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="appT">Nuovo appuntamento<span class="sub">Scegli il giorno, l’ora e il cliente.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <div class="app-quando"><label class="field"><span>Giorno</span><input class="input" type="date" id="appData"></label><label class="field"><span>Ora (facoltativa)</span><input class="input" type="time" id="appOra"></label></div>
+      <div class="field"><span>Cliente</span><div id="appScelto" class="app-scelto hidden"></div>
+        <input class="input" id="appQ" type="search" placeholder="Cerca per nome, località o codice" autocomplete="off" aria-label="Cerca il cliente">
+        <ul class="list rc-cli-list" id="appList"></ul></div>
+      <label class="field"><span>Nota (facoltativa, va nello storico del cliente)</span><input class="input" id="appNota" autocomplete="off" placeholder="Es. presentare il listino surgelati"></label>
+      <p class="pv-hint pvm-warn hidden" id="appAvv"></p>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="button" id="appOk" disabled>Salva appuntamento</button></div>
+  </div>
+</dialog>
 <dialog id="dlgSet" aria-labelledby="setT">
   <div class="dlg">
     <div class="dlg-head"><h2 id="setT">Impostazioni</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
@@ -2208,7 +2229,7 @@ function filtered(){
 function richiamoTag(c){
   if(!c.ricontattare) return "";
   const late = c.ricontattare < localISO();
-  return `<span class="flag riga-richiamo ${late ? "late" : ""}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Richiama ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
+  return `<span class="flag riga-richiamo ${late ? "late" : ""}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Appuntamento ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
 }
 const inizialiDi = n => {
   const p = String(n || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(w => w && !/^(il|lo|la|le|l|da|di|del|dei|al|alla|e|&)$/i.test(w));
@@ -3827,12 +3848,16 @@ function unisciDestinazione(f, d, oggi){
 /*UNI2-PARSE-END*/
 
 // coppie probabili: una destinazione (120…) con una fatturazione (100…) che ha la stessa P.IVA, lo stesso indirizzo, la stessa coda del codice o un nome simile
+// coppie ignorate dall'utente (tasto Ignora): non si propongono più
+const uniIgnorate = () => new Set(pref.uniIgnora || []);
+function uniIgnoraSalva(lista){ pref.uniIgnora = lista; if(uid) setDoc(prefRef(), { uniIgnora: lista }, { mergeFields: ["uniIgnora"] }).catch(fail); }
 function uniCoppie(){
-  const fatt = clienti.filter(c => uniTipo(c) === "fatt" && !c.codiceDest), usati = {};
+  const fatt = clienti.filter(c => uniTipo(c) === "fatt" && !c.codiceDest), usati = {}, ign = uniIgnorate();
   const coppie = [];
   clienti.filter(c => uniTipo(c) === "dest" && !c.codiceFatt && !c.fattId).forEach(d => {
     let migliore = null;
     fatt.forEach(f => {
+      if(ign.has(d.id + "|" + f.id)) return;
       let p = 0;
       if(d.piva && f.piva && norm(d.piva) === norm(f.piva)) p += 3;
       if(d.indirizzo && f.indirizzo && norm(d.indirizzo) === norm(f.indirizzo) && norm(d.luogo) === norm(f.luogo)) p += 3;
@@ -3866,8 +3891,11 @@ function uniRender(){
     const L = uniCoppie(), gruppi = [...new Set(L.filter(o => o.multi).map(o => o.f.id))];
     body.innerHTML = L.length
       ? `<p class="hint" style="margin:0 0 8px"><b>${L.length}</b> ${L.length === 1 ? "destinazione (codice 120…, col nome del locale) sembra appartenere" : "destinazioni (codice 120…, col nome del locale) sembrano appartenere"} a una fatturazione (codice 100…). Controlla e <b>collega</b>: restano schede separate, la destinazione compare sotto la fatturazione. Se una fatturazione ha più destinazioni usa <b>Collega tutte</b>.</p>` +
-        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Collega</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button></div></div>`).join("")
+        L.map(o => `<div class="tg-cli" style="align-items:flex-start">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}${o.multi ? " · questa fatturazione ha più destinazioni" : ""}</small>`)}<div style="display:flex;flex-direction:column;gap:6px;flex:0 0 auto"><button type="button" class="chip-btn" data-uni="${o.f.id}|${o.d.id}">Collega</button>${o.multi ? `<button type="button" class="chip-btn" data-unigruppo="${o.f.id}">Collega tutte (${L.filter(x => x.f.id === o.f.id).length})</button>` : ""}<button type="button" class="chip-btn" data-unialtra="${o.d.id}" title="L'abbinamento è sbagliato: scegli un'altra fatturazione">Cambia</button><button type="button" class="chip-btn" data-uniign="${o.d.id}|${o.f.id}" title="Non proporre più questa coppia">Ignora</button></div></div>`).join("")
       : `<p class="hint">Non trovo destinazioni (120…) da collegare a una fatturazione (100…).</p>`;
+    // coppie ignorate ancora valide (le due schede esistono e la destinazione non è collegata)
+    const ignorate = [...uniIgnorate()].map(k => { const [d, f] = k.split("|"); return { k, d: byId(d), f: byId(f) }; }).filter(o => o.d && o.f && !o.d.codiceFatt && !o.d.fattId);
+    if(ignorate.length) body.innerHTML += `<div class="uni-ign"><button type="button" class="link" data-uniignvedi>${uni.vediIgn ? "Nascondi" : "Mostra"} le voci ignorate (${ignorate.length})</button>${uni.vediIgn ? ignorate.map(o => `<div class="tg-cli" style="align-items:flex-start;opacity:.75">${uniRiga(o.d, `<small>↔ ${esc(o.f.nome)}${o.f.codice ? " · cod. " + esc(o.f.codice) : ""}</small>`)}<button type="button" class="chip-btn" data-uniripr="${o.k}">Ripristina</button></div>`).join("") : ""}</div>`;
     body.innerHTML += `<p class="hint" style="margin:12px 0 6px">L'abbinamento proposto non è quello giusto, o la coppia non è in elenco? Scegli tu le schede, con la ricerca (anche più destinazioni per una stessa fatturazione).</p><button type="button" class="btn" data-uniman>Collega a mano…</button>`;
   } else if(uni.modo === "scegli"){
     const a = uni.a ? byId(uni.a) : null; if(uni.a && !a){ $("#dlgUni").close(); return; }
@@ -3926,6 +3954,11 @@ $("#uniX").addEventListener("click", () => $("#dlgUni").close());
 $("#uniNo").addEventListener("click", () => $("#dlgUni").close());
 $("#uniBody").addEventListener("click", e => {
   const c = e.target.closest("[data-uni]"); if(c){ const [f, d] = c.dataset.uni.split("|"); uniConferma(f, d); return; }
+  const ig = e.target.closest("[data-uniign]");
+  if(ig){ const k = ig.dataset.uniign; uniIgnoraSalva([...new Set([...(pref.uniIgnora || []), k])]); uniRender(); toast("Coppia ignorata: non la propongo più"); return; }
+  if(e.target.closest("[data-uniignvedi]")){ uni.vediIgn = !uni.vediIgn; uniRender(); return; }
+  const rp = e.target.closest("[data-uniripr]");
+  if(rp){ uniIgnoraSalva((pref.uniIgnora || []).filter(k => k !== rp.dataset.uniripr)); uniRender(); toast("Coppia di nuovo proposta"); return; }
   const gr = e.target.closest("[data-unigruppo]"); if(gr){ uni.f = gr.dataset.unigruppo; uni.ds = uniCoppie().filter(o => o.f.id === uni.f).map(o => o.d.id); uni.modo = "conferma"; uni.az = ""; uniRender(); return; }
   const p = e.target.closest("[data-unipick]");
   if(p){
@@ -4428,7 +4461,10 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.6 (v6.6)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.7 (v6.7)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+    <section class="set-sez"><h3>Dati</h3>
+      <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
+      <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
     <section class="set-sez"><h3>Tema</h3>
       <div class="set-scelte">${SET_STILI.map(([k, n, d, a]) => `<button type="button" class="set-stile" data-stile="${k}" aria-pressed="${(pref.stile || "") === k}" style="--a-bg:${a.bg};--a-top:${a.top};--a-row:${a.row}"><span class="ant"><i></i><em></em><em></em></span>${n}<small>${d}</small></button>`).join("")}</div>
       <p class="pv-hint" style="margin:14px 0 6px">Modalità</p>
@@ -4445,7 +4481,10 @@ $("#setBody").addEventListener("click", e => {
   const m = e.target.closest("[data-mod]");
   if(m){ temaApplica(m.dataset.mod); prefSalva({ tema: m.dataset.mod }); setRender(); return; }
   if(e.target.closest("#setColReset")){ pref.colori = {}; coloriApplica({}); if(uid) setDoc(prefRef(), { colori: {} }, { mergeFields: ["colori"] }).catch(() => {}); setRender(); toast("Colori originali ripristinati"); return; }
-  if(e.target.closest("#setEsci")){ $("#dlgSet").close(); signOut(auth); }
+  if(e.target.closest("#setEsci")){ $("#dlgSet").close(); signOut(auth); return; }
+  if(e.target.closest("#setImp")){ $("#fileImport").click(); return; }
+  if(e.target.closest("#setExp")){ exportExcel(); return; }
+  if(e.target.closest("#setUni")){ $("#dlgSet").close(); uniApri("coppie"); }
 });
 $("#setBody").addEventListener("input", e => {
   const k = e.target.dataset.col; if(!k) return;
@@ -4587,10 +4626,10 @@ function renderCalendario(all, t){
     const gg = gPer[iso] || [], righe = [...r.map(c => (c.ricontattareOra ? esc(c.ricontattareOra) + " " : "") + esc(c.nome || "")), ...gg.map(e => `<i class="cal-gdot" style="background:${esc((gCal[e.c] || {}).colore || "#4285F4")}"></i>` + (e.g ? "" : esc(e.s.slice(11)) + " ") + esc(e.t))];
     const nomi = righe.slice(0, 3).map(x => `<span class="cal-nm">${x}</span>`).join("") + (righe.length > 3 ? `<span class="cal-nm cal-piu">+${righe.length - 3}</span>` : "");
     const cls = ["cal-c", d.getMonth() !== M - 1 && "fuori", iso === t && "oggi", iso === ui.calSel && "sel", iso < t && "passato", d.getDay() === 0 && "dom"].filter(Boolean).join(" ");
-    const etich = `${CAL_GIORNI[d.getDay()]} ${d.getDate()} ${CAL_MESI[d.getMonth()].toLowerCase()}: ${r.length} richiami, ${o} ordini`;
+    const etich = `${CAL_GIORNI[d.getDay()]} ${d.getDate()} ${CAL_MESI[d.getMonth()].toLowerCase()}: ${r.length} appuntamenti, ${o} ordini`;
     html += `<button type="button" class="${cls}" data-cal="${iso}" aria-label="${etich}" aria-pressed="${iso === ui.calSel}">
       <span class="cal-n">${d.getDate()}</span>
-      <span class="cal-ev">${r.length ? `<span class="cal-r" title="Richiami">${r.length}</span>` : ""}${o ? `<span class="cal-o" title="Ordini del giro">${o}</span>` : ""}${gg.length ? `<span class="cal-g" title="Appuntamenti Google">${gg.length}</span>` : ""}</span>
+      <span class="cal-ev">${r.length ? `<span class="cal-r" title="Appuntamenti">${r.length}</span>` : ""}${o ? `<span class="cal-o" title="Ordini del giro">${o}</span>` : ""}${gg.length ? `<span class="cal-g" title="Appuntamenti Google">${gg.length}</span>` : ""}</span>
       <span class="cal-nomi">${nomi}</span>
     </button>`;
   }
@@ -4605,14 +4644,14 @@ function renderCalendario(all, t){
   const titolo = `${CAL_GIORNI[ds.getDay()]} ${ds.getDate()} ${CAL_MESI[ds.getMonth()].toLowerCase()}${sel === t ? " · oggi" : ""}`;
   const giorno = `<section class="cal-day" aria-live="polite">
     <h2 class="cal-day-t">${titolo}</h2>
-    ${sel === t && scad.length ? `<h2 class="sec">Richiami scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag)}` : ""}
+    ${sel === t && scad.length ? `<h2 class="sec">Appuntamenti scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag)}` : ""}
     ${(() => { const gs = gPer[sel] || []; if(!gs.length) return "";
-      return `<h2 class="sec">Appuntamenti Google <small>${gs.length}</small></h2><ul class="list gc-list">${gs.map(e => { const c = gCal[e.c] || {};
+      return `<h2 class="sec">Dal tuo Google Calendar <small>${gs.length}</small></h2><ul class="list gc-list">${gs.map(e => { const c = gCal[e.c] || {};
         const ora = e.g ? "tutto il giorno" : (e.s.slice(0, 10) === sel ? e.s.slice(11) : "…") + (e.e.slice(0, 10) === sel ? "–" + e.e.slice(11) : "");
         return `<li><${e.u ? `a href="${esc(e.u)}" target="_blank" rel="noopener"` : "div"} class="row gc-row"><i class="cal-gdot" style="background:${esc(c.colore || "#4285F4")}"></i>
           <span class="row-main"><span class="row-name">${esc(e.t)}</span><span class="row-sub">${esc([c.nome, e.l].filter(Boolean).join(" · "))}</span></span><span class="row-side"><span class="flag gc-ora">${esc(ora)}</span></span></${e.u ? "a" : "div"}></li>`; }).join("")}</ul>`; })()}
-    <h2 class="sec">Richiami <small>${rs.length}</small></h2>
-    ${rs.length ? lista(rs, oraFlag) : `<p class="empty cal-vuoto">Nessun richiamo. Lo fissi dalla scheda del cliente con “Richiama il”.</p>`}
+    <h2 class="sec">Appuntamenti <small>${rs.length}</small></h2>
+    ${rs.length ? lista(rs, oraFlag) : `<p class="empty cal-vuoto">Nessun appuntamento. Tocca <b>Nuovo</b> per fissarne uno, oppure dalla scheda del cliente con “Appuntamento il”.</p>`}
     ${ds.getDay() === 0 ? "" : `<h2 class="sec">Ordini del giro <small>${ord.length}</small></h2>
     ${ord.length ? lista(ord, ordFlag) : `<p class="empty cal-vuoto">Nessun ordine da raccogliere.</p>`}`}
   </section>`;
@@ -4621,7 +4660,7 @@ function renderCalendario(all, t){
     <div class="cal-card">
       <div class="cal-wd">${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(x => `<span>${x}</span>`).join("")}</div>
       <div class="cal-grid">${html}</div>
-      <div class="cal-leg"><span><i class="cal-r"></i>Richiami</span><span><i class="cal-o"></i>Ordini del giro</span>${gcal.collegato ? `<span><i class="cal-g"></i>Google</span>` : ""}</div>
+      <div class="cal-leg"><span><i class="cal-r"></i>Appuntamenti</span><span><i class="cal-o"></i>Ordini del giro</span>${gcal.collegato ? `<span><i class="cal-g"></i>Google</span>` : ""}</div>
     </div>
     ${giorno}
   </div>`;
@@ -4644,6 +4683,52 @@ $("#richBody").addEventListener("click", e => {
   $("#richBody").addEventListener("touchstart", e => { if(!e.target.closest(".cal-grid")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
   $("#richBody").addEventListener("touchend", e => { if(x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null; if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) calSposta(dx < 0 ? 1 : -1); }, { passive: true });
 }
+
+/* ---------- Nuovo appuntamento dal Calendario (v6.7) ----------
+   Il tasto Nuovo del Calendario fissa un appuntamento (campi ricontattare / ricontattareOra del cliente, come "Appuntamento il" della scheda):
+   giorno (quello scelto nel calendario, se non è passato), ora facoltativa, cliente con ricerca, nota facoltativa nello storico.
+   Ogni cliente ha un solo appuntamento: se ne ha già uno, viene spostato (l'app lo dice prima). */
+const app = { id: null, q: "" };
+function appNuovo(){
+  const t = localISO();
+  app.id = null; app.q = "";
+  $("#appData").value = ui.calSel && ui.calSel >= t ? ui.calSel : t;
+  $("#appOra").value = ""; $("#appNota").value = ""; $("#appQ").value = "";
+  appRender();
+  $("#dlgApp").showModal();
+  if(matchMedia("(pointer:fine)").matches) $("#appQ").focus();
+}
+function appRender(){
+  const c = app.id && byId(app.id);
+  $("#appScelto").classList.toggle("hidden", !c);
+  $("#appQ").classList.toggle("hidden", !!c); $("#appList").classList.toggle("hidden", !!c);
+  $("#appOk").disabled = !c || !$("#appData").value;
+  const avv = c && c.ricontattare ? `${c.nome} ha già un appuntamento il ${fmtDate(c.ricontattare)}${c.ricontattareOra ? " alle " + c.ricontattareOra : ""}: salvando viene spostato a questo.` : "";
+  $("#appAvv").textContent = avv; $("#appAvv").classList.toggle("hidden", !avv);
+  if(c){ $("#appScelto").innerHTML = `<div><b>${esc(c.nome)}</b><small>${esc([c.luogo, c.codice ? "cod. " + c.codice : "", statoLabel(c.stato)].filter(Boolean).join(" · "))}</small></div><button class="link" type="button" id="appCambia">Cambia</button>`; return; }
+  const parole = app.q.split(/\s+/).map(norm).filter(Boolean);
+  const ord = x => (x.stato === "CLIENTE" ? 0 : x.stato === "CONTATTATO" ? 1 : 2);
+  const rows = clienti.filter(x => !parole.length || (() => { const h = norm([x.nome, x.ragioneSociale, x.luogo, x.codice, x.referente].join(" ")); return parole.every(w => h.includes(w)); })())
+    .sort((a, b) => ord(a) - ord(b) || (a.nome || "").localeCompare(b.nome || "", "it")).slice(0, 60);
+  $("#appList").innerHTML = rows.length ? rows.map(x => `<li><button class="row" type="button" data-appcli="${x.id}"><span class="row-main"><span class="row-name">${esc(x.nome)}</span><span class="row-sub">${esc([x.luogo, statoLabel(x.stato), x.ricontattare ? "appuntamento il " + fmtDate(x.ricontattare) : ""].filter(Boolean).join(" · "))}</span></span><span class="row-side">›</span></button></li>`).join("")
+    : `<li class="empty">Nessun cliente trovato.</li>`;
+}
+$("#appQ").addEventListener("input", e => { app.q = e.target.value; appRender(); });
+$("#appData").addEventListener("input", () => { $("#appOk").disabled = !app.id || !$("#appData").value; });
+$("#dlgApp").addEventListener("click", e => {
+  const b = e.target.closest("[data-appcli]"); if(b){ app.id = b.dataset.appcli; appRender(); return; }
+  if(e.target.closest("#appCambia")){ app.id = null; appRender(); $("#appQ").focus(); }
+});
+$("#appOk").addEventListener("click", () => {
+  const c = app.id && byId(app.id), d = $("#appData").value, ora = $("#appOra").value || "", nota = $("#appNota").value.trim();
+  if(!c || !d) return;
+  const dati = { ricontattare: d, ricontattareOra: ora };
+  if(nota) dati.storico = [...(c.storico || []), { d: localISO(), t: `Appuntamento fissato per il ${fmtDate(d)}${ora ? " ore " + ora : ""}: ${nota}` }];
+  update(c.id, dati);
+  $("#dlgApp").close();
+  ui.calSel = d; ui.calMese = d.slice(0, 7); renderRichiami();
+  toast(`Appuntamento con ${c.nome} il ${fmtDate(d)}${ora ? " alle " + ora : ""}`);
+});
 
 /* ---------- Rosario (assistente vocale) ----------
    Rosario ti telefona dopo gli appuntamenti e scrive le modifiche PROPOSTE in utenti/{uid}/rosario.
@@ -5006,26 +5091,7 @@ function renderRiepilogo(){
       <div class="rp-h"><h2>Fornitori attuali</h2><small>${forn.length ? `primi ${Math.min(10, forn.length)} su ${forn.length}` : ""}</small></div>
       ${fornRows || `<p class="rp-note">Compila "Fornitori attuali" nelle schede per vedere qui con chi lavorano i tuoi locali.</p>`}
     </section>
-
-    <section class="rp-card">
-      <div class="rp-h"><h2>Dati</h2></div>
-      <div class="rp-tools">
-        <button class="btn" type="button" id="impBtn">Importa da Excel</button>
-        <button class="btn" type="button" id="expBtn">Esporta in Excel</button>
-        <button class="btn" type="button" id="uniBtn">Collega fatturazioni e destinazioni</button>
-      </div>
-      <p class="rp-note" style="margin-top:10px;font-size:13px">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p>
-      <div class="rp-sep"></div>
-      <div class="rp-acct">
-        <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.6 (v6.6)</span></div>
-        <button class="btn" type="button" id="logoutBtn">Esci</button>
-      </div>
-    </section>`;
-  $("#impBtn").onclick = () => $("#fileImport").click();
-  $("#expBtn").onclick = exportExcel;
-  $("#uniBtn").onclick = () => uniApri("coppie");
-  $("#logoutBtn").onclick = () => signOut(auth);
+`;
   const more = $("#rpMore"); if(more) more.onclick = () => { ui.rpTutti = !ui.rpTutti; renderRiepilogo(); };
 }
 
@@ -5082,9 +5148,9 @@ function renderDetail(){
       <button class="chip-btn" type="button" data-map="fix">Correggi posizione</button>
     </div>
     <div class="richiamo">
-      <label for="dRich">Richiama il</label>
+      <label for="dRich">Appuntamento il</label>
       <input class="input" type="date" id="dRich" value="${c.ricontattare || ""}">
-      <input class="input" type="time" id="dRichOra" value="${c.ricontattareOra || ""}" aria-label="Ora del richiamo">
+      <input class="input" type="time" id="dRichOra" value="${c.ricontattareOra || ""}" aria-label="Ora dell'appuntamento">
       <button class="chip-btn" type="button" data-rich="7">+1 settimana</button>
       <button class="chip-btn" type="button" data-rich="30">+1 mese</button>
       ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="cal">Aggiungi al calendario</button><button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
@@ -5124,12 +5190,12 @@ $("#dBody").addEventListener("click", e => {
   const c = byId(ui.openId);
   if(b.dataset.rich === "done"){
     update(c.id, { ricontattare: "", ricontattareOra: "", storico: [...(c.storico||[]), { d: localISO(), t: "Ricontattato" }] });
-    toast("Richiamo completato");
+    toast("Appuntamento fatto");
   } else if(b.dataset.rich === "cal"){
     downloadICS([c], "richiamo-" + (c.nome || "cliente").replace(/[^\w]+/g, "-").toLowerCase());
   } else {
     const d = addDays(+b.dataset.rich);
-    update(c.id, { ricontattare: d }); toast("Richiamo il " + fmtDate(d));
+    update(c.id, { ricontattare: d }); toast("Appuntamento il " + fmtDate(d));
   }
 });
 $("#dStorico").addEventListener("click", async e => {
@@ -5268,7 +5334,7 @@ async function save(andNew){
 F.addEventListener("submit", e => { e.preventDefault(); save(false); });
 F.addEventListener("input", e => e.target.classList.remove("check"));
 $("#saveNewBtn").addEventListener("click", () => save(true));
-$("#fab").addEventListener("click", () => ui.view === "preventivi" ? pvPick() : ui.view === "reclami" ? rcNuovo() : openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
+$("#fab").addEventListener("click", () => ui.view === "preventivi" ? pvPick() : ui.view === "reclami" ? rcNuovo() : ui.view === "richiami" ? appNuovo() : openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
 
 /* ---------- Compila da screenshot del gestionale ----------
    La schermata del gestionale ha sempre gli stessi campi nella stessa posizione.

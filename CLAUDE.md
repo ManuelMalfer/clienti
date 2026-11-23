@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.7** = v6.6 + la scheda **Dati** del Riepilogo (Importa/Esporta Excel, Collega fatturazioni e destinazioni, account) è passata nelle **Impostazioni**; in "Collega fatturazioni e destinazioni" ogni voce ha **Ignora** (con "Mostra le voci ignorate" e Ripristina); nel **Calendario** il tasto **Nuovo** crea un **appuntamento** (non un cliente) e "Richiami" si chiama **Appuntamenti** (anche "Appuntamento il" nella scheda cliente e "Appuntamento gg/mm" sulle righe). Tag Git `v6.7`; la versione si legge ora nelle Impostazioni (6.7), non più nel Riepilogo.
 - **v6.6** = v6.5 + **Impostazioni** (ingranaggio in basso a sinistra al posto del tasto sole/luna): account collegato con Esci, **tema** con scelta dello stile (**Classico** o **Livrea Marchi**) e della modalità (come il telefono / chiara / scura), **colori degli stati** dei clienti personalizzabili. Sezione "Impostazioni e stile Livrea Marchi (v6.6)". Tag Git `v6.6`; la scritta in Riepilogo dice 6.6.
 - **v6.5** = v6.4 + nuova sezione **Reclami** (segnalazioni all'ufficio qualità con email scritta da Google Gemini, statistiche e report annuale; sezione "Reclami (v6.5)"). Tag Git `v6.5`; la scritta in Riepilogo dice 6.5.
 - **v6.4** = v6.3 + sincronizzazione con Google **ogni minuto** (Cron Trigger `* * * * *`) con giro leggero nel Worker per non superare le letture gratuite di Firestore; nell'app la scritta dice "ogni minuto". Tag Git `v6.4`; la scritta in Riepilogo dice 6.4.
@@ -308,7 +309,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v6.1** = v6.0 + **Calendario** al posto di Richiami (mese con richiami e ordini del giro) e **collegamento a Google Calendar / iCloud** tramite il Worker
   `strumenti/worker-calendario.js` (sezione "Calendario (v6.1)"). Tag Git `v6.1`; la scritta in Riepilogo dice 6.1.
 - **v3.2** = v3.1 con la mappa del Giro sulle consegne del **giorno dopo** e conteggi "ord." nella barra dei giorni. Tag Git `v3.2`. In
-  Riepilogo, sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
+  Riepilogo (dalla v6.7 nelle Impostazioni), sotto l'email dell'account, compare "App versione 3.2 (v3.2)" (utile per capire se il dispositivo mostra ancora la versione vecchia; aggiornare
   la scritta a ogni nuova versione).
 - **Tornare alla v2** (solo senza la parte PC): `git revert --no-edit <commit-di-v3>`. **Tornare alla v1** (se Manuel lo chiede): senza riscrivere la cronologia, con `git revert --no-edit <commit-di-v2>` (il commit
   a cui punta il tag `v2`) e push su `main`; il sito torna com'era e i dati non cambiano. Attenzione: i cataloghi aggiunti dall'app
@@ -540,6 +541,17 @@ Il tasto rotondo **in basso a sinistra** è ora un **ingranaggio** (`#setBtn`, c
   corallo `#F78761`). Blocco CSS `/* ===== Stile Livrea Marchi (v6.6) ===== */` in fondo a `<style>`: **ogni selettore inizia con
   `:root[data-stile="marchi"]`** (anche nelle regole del tema scuro, scritte in entrambi i modi), così lo stile Classico non cambia. Le regole nuove della
   Livrea vanno scritte allo stesso modo. Nel click delle impostazioni si usa `.set-stile` e non `[data-stile]`: anche `<html>` ha quell'attributo.
+- **Dati (v6.7)**: nelle Impostazioni, sezione Dati con Importa da Excel (`#fileImport`), Esporta in Excel (`exportExcel`) e Collega fatturazioni e
+  destinazioni (`uniApri("coppie")`, chiude prima le Impostazioni). Il Riepilogo non ha più la scheda Dati né l'account (che è in Impostazioni).
+- **Ignora (v6.7)**: in "Fatturazioni e destinazioni" ogni coppia proposta ha **Ignora**; le coppie ignorate stanno in `preferenze.uniIgnora` =
+  ["idDestinazione|idFatturazione", …] (salvate con `mergeFields`) e `uniCoppie` le salta (la destinazione può ricevere un'altra proposta). In fondo
+  "Mostra le voci ignorate (N)" con **Ripristina**.
+- **Appuntamenti (v6.7)**: nel Calendario il tasto Nuovo (`#fab`) apre `#dlgApp` (`appNuovo`): giorno (quello scelto nel calendario se non è passato,
+  altrimenti oggi), ora facoltativa, cliente con ricerca, nota facoltativa che va nello storico ("Appuntamento fissato per il …: nota"). Scrive
+  `ricontattare`/`ricontattareOra` del cliente come "Appuntamento il" della scheda (un solo appuntamento per cliente: se ce n'è già uno l'app avvisa che
+  viene spostato). Testi: "Richiami" → **Appuntamenti** nel Calendario (sezione del giorno, scaduti, legenda), "Richiama il" → **Appuntamento il** nella
+  scheda, chip delle righe "Appuntamento gg/mm"; gli eventi di Google si chiamano "Dal tuo Google Calendar". I nomi dei campi e il titolo degli eventi in
+  Google ("Richiamare: …", Worker calendario) non cambiano.
 - Reclami: "Inviato" ora è una cornice, "Da inviare" pieno (classe `rc-st inviato`).
 
 ## Tema chiaro/scuro e preferenze (v5.1)
