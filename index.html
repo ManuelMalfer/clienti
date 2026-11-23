@@ -4766,7 +4766,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.3 (v6.3)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.4 (v6.4)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5681,7 +5681,7 @@ function gcRender(){
   $("#gcMostra").innerHTML = cal.map(c => `<label class="chk gc-chk"><input type="checkbox" data-gcm="${esc(c.id)}" ${mostra.includes(c.id) ? "checked" : ""}><i style="background:${esc(c.colore || "#4285F4")}"></i><span>${esc(c.nome)}</span></label>`).join("") || `<p class="pv-hint">Nessun calendario trovato.</p>`;
   $("#gcSt").className = "gc-st" + (gcal.errore ? " err" : "");
   $("#gcSt").textContent = !gcal.calId ? "Scegli qui sopra dove mettere i richiami: finché non lo scegli, i richiami non vanno su Google."
-    : gcal.errore ? gcal.errore : "Ultima sincronizzazione: " + gcQuando(gcal.ultimo) + ". Si aggiorna da sola ogni 5 minuti e subito dopo ogni tuo cambio.";
+    : gcal.errore ? gcal.errore : "Ultima sincronizzazione: " + gcQuando(gcal.ultimo) + ". Si aggiorna da sola ogni minuto e subito dopo ogni tuo cambio.";
 }
 $("#gcCollega").addEventListener("click", async () => {
   const w = window.open("", "_blank");                   // aperta subito, altrimenti il browser la blocca

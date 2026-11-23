@@ -8,13 +8,14 @@
 //     - se in Google l'evento viene spostato o cancellato, il richiamo del cliente si sposta o si toglie (riga nello storico);
 //     - gli appuntamenti dei calendari Google scelti si copiano (sola lettura) in utenti/{uid}/impostazioni/gcal_eventi
 //       e l'app li mostra nel Calendario.
-//     Si sincronizza quando l'app lo chiede (subito dopo una modifica) e ogni 5 minuti con il "Cron Trigger".
+//     Si sincronizza quando l'app lo chiede (subito dopo una modifica) e con il "Cron Trigger" ogni minuto: giro leggero (legge da
+//     Firestore solo i clienti degli eventi cambiati in Google) e, allo scoccare di ogni ora, un controllo completo.
 //
 // Impostazioni nel pannello Cloudflare (Worker > Settings):
 //   SERVICE_ACCOUNT      (Secret)  JSON della chiave di servizio Firebase (progetto clienti-malfer)
 //   GOOGLE_CLIENT_ID     (Secret)  ID client OAuth "Applicazione web" della console Google (stesso progetto)
 //   GOOGLE_CLIENT_SECRET (Secret)  il suo segreto
-//   Trigger events > Cron Triggers: */5 * * * *
+//   Trigger events > Cron Triggers: * * * * *   (ogni minuto)
 //   (facoltative) ALLOWED_ORIGINS = https://clienti.malfer.it   APP_URL = https://clienti.malfer.it
 //
 // Dove stanno i dati:
@@ -134,6 +135,13 @@ async function scrivi(env, scritture){
   });
   await fsChiama(env, "POST", base(env) + ":commit", { writes });
 }
+// solo alcuni clienti, in una richiesta (giro leggero)
+async function clientiPerId(env, uid, ids){
+  if(!ids.length) return [];
+  const r = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: ids.map(id => radice(env) + "/utenti/" + uid + "/clienti/" + id), mask: { fieldPaths: [...CAMPI, "storico"] } });
+  return (r || []).filter(x => x.found).map(x => ({ id: decodeURIComponent(x.found.name.split("/").pop()), ...campi(x.found.fields || {}) }));
+}
+function impronta(s){ let a = 5381, b = 52711; for(let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); a = (a * 33) ^ c; b = (b * 33) ^ c; } return (a >>> 0).toString(36) + (b >>> 0).toString(36) + s.length.toString(36); }
 async function clientiDi(env, uid, extra = []){
   const out = []; let pag = "";
   do {
@@ -332,8 +340,8 @@ export async function sincronizza(env, uid, opz = {}){
   let calendari = Array.isArray(S.calendari) ? S.calendari : [];
   try {
     if(opz.calendari || !calendari.length) calendari = await g.calendari();
-    const clienti = await clientiDi(env, uid, ["storico"]);
-    const perId = new Map(clienti.map(c => [c.id, c]));
+    // giro leggero (cron ogni minuto): si leggono solo i clienti degli eventi cambiati in Google, non tutto l'elenco
+    let clienti = [], perId = new Map();
     let syncToken = S.syncToken || null;
 
     if(S.calId){
@@ -355,8 +363,12 @@ export async function sincronizza(env, uid, opz = {}){
       catch(e){ if(e.google === 410){ cambiati.length = 0; syncToken = await elenco(null); } else throw e; }
 
       const evCliente = new Map(Object.entries(mappa).map(([cid, m]) => [m.ev, cid]));
+      const cidDi = ev => evCliente.get(ev.id) || (ev.extendedProperties && ev.extendedProperties.private && ev.extendedProperties.private.app === "clienti" ? ev.extendedProperties.private.cliente : null);
+      const toccati = [...new Set(cambiati.map(cidDi).filter(cid => cid && mappa[cid]))];
+      clienti = opz.leggero ? await clientiPerId(env, uid, toccati) : await clientiDi(env, uid, ["storico"]);
+      perId = new Map(clienti.map(c => [c.id, c]));
       for(const ev of cambiati){
-        const cid = evCliente.get(ev.id) || (ev.extendedProperties && ev.extendedProperties.private && ev.extendedProperties.private.app === "clienti" ? ev.extendedProperties.private.cliente : null);
+        const cid = cidDi(ev);
         if(!cid) continue;
         const m = mappa[cid], c = perId.get(cid);
         if(!m || m.ev !== ev.id) continue;
@@ -403,7 +415,7 @@ export async function sincronizza(env, uid, opz = {}){
           delete mappa[c.id]; stat.tolti++;
         }
       }
-      for(const cid of Object.keys(mappa)) if(!perId.has(cid)){        // cliente eliminato dall'app
+      if(!opz.leggero) for(const cid of Object.keys(mappa)) if(!perId.has(cid)){        // cliente eliminato dall'app
         if(!tocca()) continue;
         try { await g.chiama("DELETE", cal(S.calId) + "/events/" + encodeURIComponent(mappa[cid].ev)); } catch(e){ if(e.google !== 404 && e.google !== 410) throw e; }
         delete mappa[cid]; stat.tolti++;
@@ -434,10 +446,11 @@ export async function sincronizza(env, uid, opz = {}){
     for(const c of clienti) if(c._cambiato)
       scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi: ["ricontattare", "ricontattareOra", "storico", "aggiornato"],
         dati: { ricontattare: c.ricontattare, ricontattareOra: c.ricontattareOra, storico: c.storico, aggiornato: new Date().toISOString() } });
-    scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["mappa", "syncToken", "calendari"], dati: { mappa, syncToken, calendari } });
+    const evHash = impronta(JSON.stringify(ev.slice(0, 600)) + JSON.stringify(mostra));
+    scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["mappa", "syncToken", "calendari", "evHash"], dati: { mappa, syncToken, calendari, evHash } });
     scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["collegato", "ultimo", "errore", "calendari", "mostra"],
       dati: { collegato: true, ultimo: new Date().toISOString(), errore: stat.rimandati ? "Molti richiami da copiare: finisco tra pochi minuti" : null, calendari, mostra } });
-    scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal_eventi", dati: { agg: new Date().toISOString(), ev: ev.slice(0, 600) } });
+    if(evHash !== S.evHash) scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal_eventi", dati: { agg: new Date().toISOString(), ev: ev.slice(0, 600) } });
     await scrivi(env, scritture);
     return { collegato: true, ...stat, chiamateGoogle: g.chiamate };
   } catch(err){
@@ -594,11 +607,13 @@ export default {
   },
 
   // ogni 5 minuti: sincronizza gli utenti collegati (porta nell'app le modifiche fatte in Google)
+  // ogni minuto un giro leggero; allo scoccare di ogni ora un controllo completo (rilegge tutti i clienti)
   async scheduled(evento, env, ctx){
+    const completo = new Date(evento && evento.scheduledTime || Date.now()).getUTCMinutes() === 0;
     const d = await leggi(env, base(env) + "/calendario_segreti?pageSize=50&mask.fieldPaths=calId");
     for(const x of (d && d.documents) || []){
       const uid = decodeURIComponent(x.name.split("/").pop());
-      try { await sincronizza(env, uid); } catch(e){ /* l'errore è già salvato per l'app */ }
+      try { await sincronizza(env, uid, { leggero: !completo }); } catch(e){ /* l'errore è già salvato per l'app */ }
     }
   }
 };
