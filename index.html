@@ -4485,7 +4485,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.8 (v6.8)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.9 (v6.9)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -6085,8 +6085,8 @@ function icRender(){
   const mostra = Array.isArray(ical.mostra) ? ical.mostra : [];
   $("#icMostra").innerHTML = cal.map(c => `<label class="chk gc-chk"><input type="checkbox" data-icm="${esc(c.id)}" ${mostra.includes(c.id) ? "checked" : ""}><i style="background:${esc(c.colore || "#FF9500")}"></i><span>${esc(c.nome)}</span></label>`).join("") || `<p class="pv-hint">Nessun calendario trovato.</p>`;
   $("#icSt").className = "gc-st" + (ical.errore ? " err" : "");
-  $("#icSt").textContent = !ical.calId ? (gcal.calId ? "Gli appuntamenti ora vanno su Google: da iCloud vedi solo i tuoi impegni. Per metterli qui, scegli un calendario." : "Scegli qui sopra dove mettere gli appuntamenti: finché non lo scegli, non vanno su iCloud.")
-    : ical.errore ? ical.errore : "Ultima sincronizzazione: " + gcQuando(ical.ultimo) + ". Si aggiorna da sola ogni minuto e subito dopo ogni tuo cambio.";
+  $("#icSt").textContent = ical.errore ? ical.errore : !ical.calId ? (gcal.calId ? "Gli appuntamenti ora vanno su Google: da iCloud vedi solo i tuoi impegni. Per metterli qui, scegli un calendario." : "Scegli qui sopra dove mettere gli appuntamenti: finché non lo scegli, non vanno su iCloud.")
+    : "Ultima sincronizzazione: " + gcQuando(ical.ultimo) + ". Si aggiorna da sola ogni minuto e subito dopo ogni tuo cambio.";
 }
 async function icCollega(corpo, tasto){
   tasto.disabled = true;

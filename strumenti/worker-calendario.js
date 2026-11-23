@@ -534,8 +534,13 @@ class ICloud {
     const r = await this.dav("PROPFIND", this.home, `<?xml version="1.0" encoding="utf-8"?><d:propfind ${DAV}><d:prop><d:displayname/><d:resourcetype/><a:calendar-color/>` +
       `<c:supported-calendar-component-set/><d:current-user-privilege-set/><cs:getctag/></d:prop></d:propfind>`, { depth: "1" });
     if(r.s >= 400) throw new Errore(502, "iCloud non dà l'elenco dei calendari (" + r.s + ")");
-    const out = [];
-    for(const resp of xmlTutti(r.t, "response")){
+    const out = [], risp = xmlTutti(r.t, "response");
+    // rapporto tecnico (solo nomi dei tag, niente dati) per capire cosa manda iCloud se non si trova nessun calendario
+    const soloTag = s => (String(s || "").match(/<[w:-]+/g) || []).map(t => t.slice(1).replace(/^[w-]+:/, "")).join(",");
+    this.diag = "stato " + r.s + ", home " + new URL(this.home).host + new URL(this.home).pathname.replace(/d+/g, "N") + ", risposte " + risp.length + ": " +
+      risp.slice(0, 6).map(resp => "[" + soloTag(xmlUno(resp, "resourcetype")) + " | " + soloTag(xmlUno(resp, "supported-calendar-component-set")) + " | " + (xmlUno(resp, "supported-calendar-component-set") || "").replace(/<[^>]*name=.([A-Z]+).[^>]*>/g, "$1 ").replace(/<[^>]*>/g, "").trim() + "]").join(" ") +
+      (risp.length ? "" : " inizio: " + r.t.slice(0, 160).replace(/d{4,}/g, "N"));
+    for(const resp of risp){
       const tipo = xmlUno(resp, "resourcetype") || "";
       if(!xmlHa(tipo, "calendar")) continue;
       const comp = xmlUno(resp, "supported-calendar-component-set");
@@ -672,6 +677,7 @@ export async function sincronizzaICloud(env, uid, opz = {}){
     if(!ic.home) await ic.scopri();
     while(pulizia.length && tocca()){ await ic.togli(pulizia[0]); pulizia.shift(); }
     const lista = await ic.calendari();
+    if(!lista.length) throw new Errore(502, "iCloud non mostra calendari. Dettagli per Claude: " + ic.diag);
     calendari = lista.map(({ ctag, ...c }) => c);
     nuoviCtag = Object.fromEntries(lista.map(c => [c.id, c.ctag || ""]));
     let clienti = [];
