@@ -15,7 +15,7 @@
 <title>Clienti</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,400..800;1,62..125,400..800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
@@ -1088,6 +1088,120 @@ dialog.rc-dlg{max-width:720px}
 .rc-bar{display:block;height:6px;border-radius:3px;background:var(--surface-2);margin-top:4px;overflow:hidden}
 .rc-bar i{display:block;height:100%;background:var(--danger);border-radius:3px}
 .rc-stat-az{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+/* ===== Impostazioni (v6.6) ===== */
+.rc-st.inviato{background:transparent;border:1px solid currentColor}
+.set-sez{margin:0 0 20px}
+.set-sez:last-child{margin-bottom:0}
+.set-sez h3{margin:0 0 8px;font-size:15px;color:var(--muted);font-weight:600}
+.set-acc{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r-md);background:var(--surface-2)}
+.set-acc div{flex:1;min-width:180px}
+.set-acc b{display:block;font-size:16px;word-break:break-all}
+.set-acc small{color:var(--muted);font-size:13px}
+.set-scelte{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.set-stile{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px;border:2px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);text-align:left;font-weight:600;cursor:pointer}
+.set-stile[aria-pressed="true"]{border-color:var(--accent)}
+.set-stile .ant{display:block;height:64px;border-radius:6px;overflow:hidden;background:var(--a-bg);border:1px solid rgba(0,0,0,.08)}
+.set-stile .ant i{display:block;height:20px;background:var(--a-top)}
+.set-stile .ant em{display:block;height:11px;margin:8px 8px 0;border-radius:3px;background:var(--a-row)}
+.set-stile .ant em + em{width:60%}
+.set-stile small{color:var(--muted);font-weight:500;font-size:13px}
+.set-mod{display:flex;gap:8px;flex-wrap:wrap}
+.set-mod button{flex:1;min-height:42px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-weight:600;cursor:pointer}
+.set-mod button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.set-col{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.set-col span{flex:1;font-weight:600}
+.set-col i{width:14px;height:14px;border-radius:50%;background:var(--c)}
+.set-col input[type=color]{width:52px;height:36px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
+/* ===== Stile Livrea Marchi (v6.6): vale solo con <html data-stile="marchi"> =====
+   La fascia verde dei camion Marchi: banda verde in alto con il titolo corsivo stretto come il logo, schede con un filo di bordo
+   senza ombre, corallo di Marchi solo per ciò che chiede attenzione. Ogni selettore è preceduto da :root[data-stile="marchi"]. */
+:root[data-stile="marchi"]{--bg:#EEF1EC; --surface:#FFFFFF; --surface-2:#E4E9E2; --ink:#14231D; --muted:#56675F; --line:#D2DAD1;
+  --accent:#0F5A3D; --accent-ink:#FFFFFF; --accent-soft:#DCEBE2; --danger:#B3402F;
+  --band:#0F5A3D; --band-ink:#FFFFFF; --band-2:#0B4A32; --coral:#E86A40;
+  --st-dacontattare:#86918B; --st-contattato:#C2840C; --st-cliente:#5F8A22; --st-clientemax:#1F6B3A;
+  --st-clientelutteri:#2C8C8C; --st-nonservibile:#B3402F; --st-clienteperso:#7A4E9E;
+  --font-title:"Archivo","Barlow Semi Condensed",system-ui,sans-serif;
+  --r-sm:8px; --r-md:10px; --r-lg:14px; --sh1:none; --sh2:0 12px 32px rgba(10,40,28,.18);}
+@media (prefers-color-scheme:dark){:root[data-stile="marchi"]:not([data-theme="light"]){--bg:#0C1813; --surface:#12221B; --surface-2:#1A2F25; --ink:#E3ECE6; --muted:#93A79C; --line:#244032;
+    --accent:#4DB385; --accent-ink:#06140E; --accent-soft:#183A2A; --danger:#E5806E;
+    --band:#0D3D2A; --band-ink:#F2F7F4; --band-2:#0A3223; --coral:#F08A63;
+    --st-dacontattare:#8E9A94; --st-contattato:#E3A63C; --st-cliente:#93BE55; --st-nonservibile:#E5806E; --st-clienteperso:#B08AD6;
+    --sh1:none; --sh2:0 12px 32px rgba(0,0,0,.5);}
+}
+:root[data-stile="marchi"][data-theme="dark"]{--bg:#0C1813; --surface:#12221B; --surface-2:#1A2F25; --ink:#E3ECE6; --muted:#93A79C; --line:#244032;
+    --accent:#4DB385; --accent-ink:#06140E; --accent-soft:#183A2A; --danger:#E5806E;
+    --band:#0D3D2A; --band-ink:#F2F7F4; --band-2:#0A3223; --coral:#F08A63;
+    --st-dacontattare:#8E9A94; --st-contattato:#E3A63C; --st-cliente:#93BE55; --st-nonservibile:#E5806E; --st-clienteperso:#B08AD6;
+    --sh1:none; --sh2:0 12px 32px rgba(0,0,0,.5);}
+:root[data-stile="marchi"] body::before{background:var(--band)}
+:root[data-stile="marchi"] header.top{background:var(--band);color:var(--band-ink);-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:0;padding:14px 0 14px}
+:root[data-stile="marchi"] .top h1{font-family:var(--font-title);font-style:italic;font-weight:800;font-stretch:72%;font-size:38px;letter-spacing:-.01em;line-height:1;color:var(--band-ink)}
+:root[data-stile="marchi"] .top .count{color:color-mix(in srgb,var(--band-ink) 72%,transparent)}
+:root[data-stile="marchi"] header.top .link,:root[data-stile="marchi"] header.top .ct-head .link{color:var(--band-ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+:root[data-stile="marchi"] header.top .menu-btn{color:var(--band-ink)}
+:root[data-stile="marchi"] header.top .menu-btn:active{background:var(--band-2)}
+:root[data-stile="marchi"] header.top .search input{background:var(--band-2);color:var(--band-ink);border:1px solid color-mix(in srgb,var(--band-ink) 18%,transparent)}
+:root[data-stile="marchi"] header.top .search input::placeholder{color:color-mix(in srgb,var(--band-ink) 62%,transparent)}
+:root[data-stile="marchi"] header.top .search input:focus{background:var(--surface);color:var(--ink);border-color:var(--surface);box-shadow:none}
+:root[data-stile="marchi"] header.top .search svg{color:color-mix(in srgb,var(--band-ink) 70%,transparent)}
+:root[data-stile="marchi"] header.top .ct-chips button,:root[data-stile="marchi"] header.top .chip-btn,:root[data-stile="marchi"] header.top .cal-nav{background:transparent;color:var(--band-ink);border:1px solid color-mix(in srgb,var(--band-ink) 35%,transparent);box-shadow:none}
+:root[data-stile="marchi"] header.top .ct-chips button[aria-pressed="true"]{background:var(--band-ink);color:var(--band);border-color:var(--band-ink)}
+:root[data-stile="marchi"] header.top .btn{background:var(--band-2);color:var(--band-ink);border-color:color-mix(in srgb,var(--band-ink) 25%,transparent);box-shadow:none}
+:root[data-stile="marchi"] header.top b,:root[data-stile="marchi"] header.top #calMese{color:var(--band-ink)}
+:root[data-stile="marchi"] header.top .days-strip button{color:var(--band-ink)}
+:root[data-stile="marchi"] .btn{box-shadow:none;border-radius:var(--r-sm);font-weight:600}
+:root[data-stile="marchi"] .btn-primary{box-shadow:none}
+:root[data-stile="marchi"] .input,:root[data-stile="marchi"] select.input,:root[data-stile="marchi"] textarea.input{border-radius:var(--r-sm)}
+:root[data-stile="marchi"] .row{border-radius:var(--r-md);border:1px solid var(--line);box-shadow:none;padding:12px 14px 12px 12px}
+:root[data-stile="marchi"] .row:active{transform:none;background:var(--surface-2)}
+:root[data-stile="marchi"] .av{flex:0 0 42px;height:42px;border-radius:8px;background:var(--c,var(--muted));color:#fff;font-family:var(--font-title);font-style:italic;font-stretch:80%;font-weight:800;font-size:17px}
+:root[data-stile="marchi"] .row-name{font-weight:700;font-size:16.5px}
+:root[data-stile="marchi"] .st-pill{border-radius:4px;padding:2px 7px;font-size:12px;background:transparent;border:1px solid color-mix(in srgb,var(--c,var(--muted)) 55%,transparent)}
+:root[data-stile="marchi"] .row-main .flag{border-radius:4px;background:transparent;border:1px solid currentColor;padding:1px 7px}
+:root[data-stile="marchi"] .row-main .flag.late{background:var(--coral);border-color:var(--coral);color:#fff}
+:root[data-stile="marchi"] .pill{box-shadow:none;border-radius:8px;min-height:36px}
+:root[data-stile="marchi"] .pill[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+:root[data-stile="marchi"] .ct-chips button{border-radius:8px}
+:root[data-stile="marchi"] .ct-chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+:root[data-stile="marchi"] .filters .zone-btn{box-shadow:none}
+:root[data-stile="marchi"] .zone-panel{box-shadow:none;border:1px solid var(--line);border-radius:var(--r-lg)}
+:root[data-stile="marchi"] .num,:root[data-stile="marchi"] .tabs .num,:root[data-stile="marchi"] .alt-tile .num{background:var(--coral)!important;color:#fff}
+:root[data-stile="marchi"] .fab{background:var(--coral);border-color:var(--coral);color:#fff;border-radius:14px;box-shadow:0 6px 18px color-mix(in srgb,var(--coral) 35%,transparent)}
+:root[data-stile="marchi"] nav.tabs{background:var(--band)!important;border-right:0!important}
+:root[data-stile="marchi"] nav.tabs::before{font-family:var(--font-title);font-style:italic;font-stretch:72%;font-weight:800;color:var(--band-ink)!important;font-size:34px}
+:root[data-stile="marchi"] .tabs button{color:color-mix(in srgb,var(--band-ink) 82%,transparent)!important;border-radius:8px!important}
+:root[data-stile="marchi"] .tabs button:hover:not([aria-current="page"]){background:var(--band-2)!important}
+:root[data-stile="marchi"] .tabs button[aria-current="page"]{background:var(--band-ink)!important;color:var(--band)!important}
+:root[data-stile="marchi"] dialog{border-radius:var(--r-lg)}
+:root[data-stile="marchi"] .dlg-head h2{font-family:var(--font-title);font-style:italic;font-weight:800;font-stretch:75%;letter-spacing:-.005em}
+:root[data-stile="marchi"] .bdg-card,:root[data-stile="marchi"] .bdg-kpi,:root[data-stile="marchi"] .alt-tile,:root[data-stile="marchi"] .ar-row,:root[data-stile="marchi"] .ar-card,:root[data-stile="marchi"] .rc-prod,:root[data-stile="marchi"] .giro-li{box-shadow:none!important}
+:root[data-stile="marchi"] .alt-tile{border-radius:var(--r-lg);border:1px solid var(--line)}
+:root[data-stile="marchi"] .alt-ico{border-radius:8px;background:var(--c);color:#fff}
+:root[data-stile="marchi"] .alt-tile b{font-family:var(--font-title);font-style:italic;font-stretch:78%;font-weight:800}
+:root[data-stile="marchi"] .rc-n{border-radius:6px;background:var(--band);color:var(--band-ink);font-family:var(--font-title);font-style:italic;font-weight:800}
+:root[data-stile="marchi"] .rc-tipi button{border-radius:8px}
+:root[data-stile="marchi"] .rc-st{border-radius:4px;background:var(--coral);color:#fff}
+:root[data-stile="marchi"] .rc-st.chiuso{background:transparent;color:var(--st-cliente);border:1px solid currentColor}
+:root[data-stile="marchi"] .rc-li .rc-ico{border-radius:8px;background:var(--coral);color:#fff}
+:root[data-stile="marchi"] .rc-li.chiuso .rc-ico{background:var(--surface-2);color:var(--st-cliente)}
+:root[data-stile="marchi"] .bdg-kpi b{font-family:var(--font-title);font-style:italic;font-stretch:78%;font-weight:800}
+:root[data-stile="marchi"] .tema-btn{box-shadow:none;border:1px solid var(--line)}
+@media (min-width:1100px){:root[data-stile="marchi"] .top h1{font-size:46px}
+}
+:root[data-stile="marchi"] .zone-chips button,:root[data-stile="marchi"] .zone-panel button{border-radius:8px}
+:root[data-stile="marchi"] dialog:not(.sure) .dlg-head{background:var(--band);color:var(--band-ink);padding-top:16px;padding-bottom:14px}
+:root[data-stile="marchi"] dialog:not(.sure) .dlg-head h2,:root[data-stile="marchi"] dialog:not(.sure) .dlg-head h2 *{color:var(--band-ink)}
+:root[data-stile="marchi"] dialog:not(.sure) .dlg-head .sub{color:color-mix(in srgb,var(--band-ink) 75%,transparent)!important}
+:root[data-stile="marchi"] dialog:not(.sure) .dlg-head .close{background:var(--band-2);color:var(--band-ink);border:0}
+:root[data-stile="marchi"] .chip-btn{border-radius:8px}
+:root[data-stile="marchi"] #dBody a,:root[data-stile="marchi"] .dlg-body a{color:var(--accent)}
+:root[data-stile="marchi"] .top-row .ct-head{flex:1 1 0;min-width:0;flex-wrap:wrap;justify-content:flex-end;text-align:right;row-gap:2px}
+:root[data-stile="marchi"] .top-row h1{flex:0 0 auto}
+:root[data-stile="marchi"] .rc-st.inviato{background:transparent;color:var(--coral);border:1px solid var(--coral)}
+@media (prefers-color-scheme:dark){:root[data-stile="marchi"]:not([data-theme="light"]) .av{color:#0C1813}
+}
+:root[data-stile="marchi"][data-theme="dark"] .av{color:#0C1813}
 </style>
 </head>
 <body>
@@ -1369,7 +1483,7 @@ dialog.rc-dlg{max-width:720px}
   </div>
   <!-- /LETTORE PDF -->
 
-  <button type="button" class="tema-btn" id="temaBtn" aria-label="Cambia modalità chiara/scura"><svg class="sole" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="luna" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg></button>
+  <button type="button" class="tema-btn" id="setBtn" aria-label="Impostazioni" title="Impostazioni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   <div id="menuVelo"></div>
   <nav class="tabs" aria-label="Sezioni"><div class="tabs-inner">
     <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
@@ -1726,6 +1840,12 @@ dialog.rc-dlg{max-width:720px}
     </div>
     <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="submit">Salva</button></div>
   </form>
+</dialog>
+<dialog id="dlgSet" aria-labelledby="setT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="setT">Impostazioni</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body" id="setBody"></div>
+  </div>
 </dialog>
 <input type="file" id="rcFotoIn" accept="image/*" multiple class="hidden">
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
@@ -4275,20 +4395,65 @@ let pref = {};
 const prefRef = () => doc(db, "utenti", uid, "impostazioni", "preferenze");
 function temaApplica(t){
   if(t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
-  const scuro = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-  const b = $("#temaBtn"); if(b){ b.setAttribute("aria-label", scuro ? "Passa alla modalità chiara" : "Passa alla modalità scura"); b.title = b.getAttribute("aria-label"); b.classList.toggle("scuro", scuro); }
+}
+// stile: "" (Classico) | "marchi" (Livrea Marchi) → <html data-stile="marchi">
+function stileApplica(st){ if(st === "marchi") document.documentElement.setAttribute("data-stile", "marchi"); else document.documentElement.removeAttribute("data-stile"); }
+// colori degli stati scelti dall'utente: { "CLIENTE": "#rrggbb", ... } → variabili --st-… (valgono per chiaro e scuro, e per entrambi gli stili)
+const stVar = k => "--st-" + norm(k);
+function coloriApplica(col){
+  STATI.forEach(([k]) => { const v = col && col[k]; if(v && /^#[0-9a-f]{6}$/i.test(v)) document.documentElement.style.setProperty(stVar(k), v); else document.documentElement.style.removeProperty(stVar(k)); });
+  if(ui.view === "mappa") renderMap();
 }
 async function prefCarica(){
   try{ const s = await getDoc(prefRef()); pref = s.exists() ? s.data() : {}; }catch(err){ pref = {}; }
-  temaApplica(pref.tema || "");
+  temaApplica(pref.tema || ""); stileApplica(pref.stile || ""); coloriApplica(pref.colori || {});
   if(pref.articoliVista === "elenco" || pref.articoliVista === "box"){ art.vista = pref.articoliVista; renderArticoli(); }}
 function prefSalva(p){ Object.assign(pref, p); if(uid) setDoc(prefRef(), p, { merge: true }).catch(() => {}); }
-$("#temaBtn").addEventListener("click", () => {
-  const scuroOra = document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.hasAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-  const t = scuroOra ? "light" : "dark";
-  temaApplica(t); prefSalva({ tema: t }); toast(t === "dark" ? "Modalità scura" : "Modalità chiara");
-});
 temaApplica("");
+
+/* ---------- Impostazioni (v6.6): tasto con l'ingranaggio in basso a sinistra ---------- */
+// account collegato, tema (stile Classico / Livrea Marchi + modalità come il telefono / chiara / scura), colori degli stati.
+// Tutto in utenti/{uid}/impostazioni/preferenze (tema, stile, colori): vale su ogni dispositivo dell'account.
+const SET_STILI = [["", "Classico", "Lo stile di sempre", { bg: "#F3F5F4", top: "#DDE5E3", row: "#FFFFFF" }], ["marchi", "Livrea Marchi", "Banda verde e corallo di Marchi", { bg: "#EEF1EC", top: "#0F5A3D", row: "#FFFFFF" }]];
+function setColoreOra(k){
+  // colore dello stato senza la scelta dell'utente (dipende da stile e modalità)
+  const r = document.documentElement, salvato = r.style.getPropertyValue(stVar(k));
+  r.style.removeProperty(stVar(k));
+  const base = getComputedStyle(r).getPropertyValue(stVar(k)).trim();
+  if(salvato) r.style.setProperty(stVar(k), salvato);
+  return /^#[0-9a-f]{6}$/i.test(base) ? base : "#888888";
+}
+function setRender(){
+  const email = (auth && auth.currentUser && auth.currentUser.email) || "";
+  const t = pref.tema || "", col = pref.colori || {};
+  $("#setBody").innerHTML = `
+    <section class="set-sez"><h3>Account</h3>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.6 (v6.6)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+    <section class="set-sez"><h3>Tema</h3>
+      <div class="set-scelte">${SET_STILI.map(([k, n, d, a]) => `<button type="button" class="set-stile" data-stile="${k}" aria-pressed="${(pref.stile || "") === k}" style="--a-bg:${a.bg};--a-top:${a.top};--a-row:${a.row}"><span class="ant"><i></i><em></em><em></em></span>${n}<small>${d}</small></button>`).join("")}</div>
+      <p class="pv-hint" style="margin:14px 0 6px">Modalità</p>
+      <div class="set-mod">${[["", "Come il telefono"], ["light", "Chiara"], ["dark", "Scura"]].map(([k, n]) => `<button type="button" data-mod="${k}" aria-pressed="${t === k}">${n}</button>`).join("")}</div></section>
+    <section class="set-sez"><h3>Colori degli stati dei clienti</h3>
+      ${STATI.map(([k, n]) => `<label class="set-col"><i style="--c:var(${stVar(k)})"></i><span>${esc(n)}</span><input type="color" data-col="${k}" value="${col[k] || setColoreOra(k)}" aria-label="Colore di ${esc(n)}"></label>`).join("")}
+      <button class="btn" type="button" id="setColReset" style="margin-top:12px"${Object.keys(col).length ? "" : " disabled"}>Ripristina i colori originali</button>
+      <p class="pv-hint" style="margin:8px 0 0">I colori valgono nell’elenco, nelle schede, nel Giro e sulla mappa, sia in modalità chiara sia scura.</p></section>`;
+}
+$("#setBtn").addEventListener("click", () => { setRender(); $("#dlgSet").showModal(); });
+$("#setBody").addEventListener("click", e => {
+  const st = e.target.closest(".set-stile");   // non [data-stile]: ce l'ha anche <html>
+  if(st){ stileApplica(st.dataset.stile); prefSalva({ stile: st.dataset.stile }); setRender(); return; }
+  const m = e.target.closest("[data-mod]");
+  if(m){ temaApplica(m.dataset.mod); prefSalva({ tema: m.dataset.mod }); setRender(); return; }
+  if(e.target.closest("#setColReset")){ pref.colori = {}; coloriApplica({}); if(uid) setDoc(prefRef(), { colori: {} }, { mergeFields: ["colori"] }).catch(() => {}); setRender(); toast("Colori originali ripristinati"); return; }
+  if(e.target.closest("#setEsci")){ $("#dlgSet").close(); signOut(auth); }
+});
+$("#setBody").addEventListener("input", e => {
+  const k = e.target.dataset.col; if(!k) return;
+  pref.colori = { ...(pref.colori || {}), [k]: e.target.value }; coloriApplica(pref.colori);
+  $("#setColReset").disabled = false;
+});
+// si salva quando il selettore del colore si chiude (non a ogni movimento)
+$("#setBody").addEventListener("change", e => { if(e.target.dataset.col && uid) setDoc(prefRef(), { colori: pref.colori || {} }, { mergeFields: ["colori"] }).catch(() => {}); });
 
 /* ---------- Giro ---------- */
 // data (YYYY-MM-DD) del giorno scelto nella settimana in corso (la domenica si guarda già la settimana dopo, come la barra dei giorni)
@@ -4853,7 +5018,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.5 (v6.5)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.6 (v6.6)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -5419,16 +5584,17 @@ function exportExcel(){
 
 /* ---------- Mappa ---------- */
 const MAP_GROUPS = [
-  { k: "attivi", label: "Clienti", color: "#2E9E48", match: c => ATTIVI.includes(c.stato) },
-  { k: "contattato", label: "Contattati", color: "#E39B12", match: c => c.stato === "CONTATTATO" },
-  { k: "dacontattare", label: "Da contattare", color: "#D93A2F", match: c => (c.stato || "DA CONTATTARE") === "DA CONTATTARE" },
-  { k: "persi", label: "Clienti persi", color: "#8E5CB8", match: c => c.stato === "CLIENTE PERSO" },
-  { k: "nonservibile", label: "Non servibili", color: "#8A969A", match: c => c.stato === "NON SERVIBILE" }
+  { k: "attivi", st: "CLIENTE", label: "Clienti", color: "#2E9E48", match: c => ATTIVI.includes(c.stato) },
+  { k: "contattato", st: "CONTATTATO", label: "Contattati", color: "#E39B12", match: c => c.stato === "CONTATTATO" },
+  { k: "dacontattare", st: "DA CONTATTARE", label: "Da contattare", color: "#D93A2F", match: c => (c.stato || "DA CONTATTARE") === "DA CONTATTARE" },
+  { k: "persi", st: "CLIENTE PERSO", label: "Clienti persi", color: "#8E5CB8", match: c => c.stato === "CLIENTE PERSO" },
+  { k: "nonservibile", st: "NON SERVIBILE", label: "Non servibili", color: "#8A969A", match: c => c.stato === "NON SERVIBILE" }
 ];
 ui.mapOn = { attivi: true, contattato: true, dacontattare: true, persi: true, nonservibile: false };
 ui.zona = true;            // colori solo nella zona di lavoro
 const ZONA_KM = 1;        // raggio attorno a ogni locale
 let map = null, markers = new Map(), fitted = false, meMarker = null;
+const mapColore = g => (pref.colori && pref.colori[g.st]) || g.color;   // colore scelto nelle Impostazioni, altrimenti quello della mappa
 const groupOf = c => MAP_GROUPS.find(g => g.match(c)) || MAP_GROUPS[2];
 
 function initMap(){
@@ -5523,7 +5689,7 @@ function popHTML(c){
 }
 function renderMap(){
   $("#mapChips").innerHTML = `<button type="button" data-zona aria-pressed="${ui.zona}" title="Colori solo entro ${ZONA_KM} km dai tuoi locali"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>Solo la mia zona</button>`
-    + MAP_GROUPS.map(g => `<button type="button" data-g="${g.k}" aria-pressed="${!!ui.mapOn[g.k]}"><i style="background:${g.color}"></i>${g.label} ${clienti.filter(g.match).length}</button>`).join("");
+    + MAP_GROUPS.map(g => `<button type="button" data-g="${g.k}" aria-pressed="${!!ui.mapOn[g.k]}"><i style="background:${mapColore(g)}"></i>${g.label} ${clienti.filter(g.match).length}</button>`).join("");
   const placed = clienti.filter(c => c.lat != null);
   const approx = placed.filter(c => c.approx).length, fails = clienti.filter(c => c.geoFail).length;
   const missing = clienti.filter(c => c.lat == null && !c.geoFail).length;
@@ -5546,7 +5712,7 @@ function renderMap(){
     .forEach(c => {
       visible.add(c.id);
       const g = groupOf(c);
-      const style = { radius: g.k === "attivi" ? 9 : 7, color: c.approx ? "#1C2B2E" : "#FFFFFF", weight: 2, dashArray: c.approx ? "3 3" : null, fillColor: g.color, fillOpacity: .95 };
+      const style = { radius: g.k === "attivi" ? 9 : 7, color: c.approx ? "#1C2B2E" : "#FFFFFF", weight: 2, dashArray: c.approx ? "3 3" : null, fillColor: mapColore(g), fillOpacity: .95 };
       let m = markers.get(c.id);
       if(!m){ m = L.circleMarker([c.lat, c.lng], style).bindPopup(popHTML(c)).addTo(map); markers.set(c.id, m); }
       else {
@@ -6832,7 +6998,7 @@ function renderReclami(){
     <ul class="list" id="rcList">${rows.length ? rows.map(r => {
       const ch = r.stato === "chiuso" ? " chiuso" : "";
       const art = (r.prodotti || []).map(p => p.n || ("cod. " + p.c)).filter(Boolean);
-      return `<li class="pv-li rc-li${ch}"><button class="row" type="button" data-rcopen="${r.id}"><span class="rc-ico">${RC_ICO}</span><span class="row-main"><span class="row-name">${esc(r.cliente || "Senza cliente")}</span><span class="row-sub">${esc([fmtDate(r.data), r.codice ? "cod. " + r.codice : "", (r.tipi || []).map(k => rcTipo(k)[3]).join(", ")].filter(Boolean).join(" · "))}</span>${art.length ? `<span class="row-sub">${esc(art.slice(0, 2).join(", ") + (art.length > 2 ? " e altri " + (art.length - 2) : ""))}</span>` : ""}</span><span class="rc-st${ch}">${ch ? "Chiuso" : r.inviato ? "Inviato" : "Da inviare"}</span></button></li>`;
+      return `<li class="pv-li rc-li${ch}"><button class="row" type="button" data-rcopen="${r.id}"><span class="rc-ico">${RC_ICO}</span><span class="row-main"><span class="row-name">${esc(r.cliente || "Senza cliente")}</span><span class="row-sub">${esc([fmtDate(r.data), r.codice ? "cod. " + r.codice : "", (r.tipi || []).map(k => rcTipo(k)[3]).join(", ")].filter(Boolean).join(" · "))}</span>${art.length ? `<span class="row-sub">${esc(art.slice(0, 2).join(", ") + (art.length > 2 ? " e altri " + (art.length - 2) : ""))}</span>` : ""}</span><span class="rc-st${ch}${!ch && r.inviato ? " inviato" : ""}">${ch ? "Chiuso" : r.inviato ? "Inviato" : "Da inviare"}</span></button></li>`;
     }).join("") : `<li class="empty">${reclami.length ? "Nessun reclamo trovato." : "Nessun reclamo ancora. Tocca <b>Nuovo</b> per segnalarne uno all’ufficio qualità."}</li>`}</ul>`;
 }
 // conteggi per tipologia, articolo e cliente (un reclamo conta una volta per ogni articolo, tipologia e cliente)

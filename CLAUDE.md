@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.6** = v6.5 + **Impostazioni** (ingranaggio in basso a sinistra al posto del tasto sole/luna): account collegato con Esci, **tema** con scelta dello stile (**Classico** o **Livrea Marchi**) e della modalità (come il telefono / chiara / scura), **colori degli stati** dei clienti personalizzabili. Sezione "Impostazioni e stile Livrea Marchi (v6.6)". Tag Git `v6.6`; la scritta in Riepilogo dice 6.6.
 - **v6.5** = v6.4 + nuova sezione **Reclami** (segnalazioni all'ufficio qualità con email scritta da Google Gemini, statistiche e report annuale; sezione "Reclami (v6.5)"). Tag Git `v6.5`; la scritta in Riepilogo dice 6.5.
 - **v6.4** = v6.3 + sincronizzazione con Google **ogni minuto** (Cron Trigger `* * * * *`) con giro leggero nel Worker per non superare le letture gratuite di Firestore; nell'app la scritta dice "ogni minuto". Tag Git `v6.4`; la scritta in Riepilogo dice 6.4.
 - **v6.3** = v6.2 + **Google Calendar nei due sensi** (sezione "Google Calendar nei due sensi (v6.3)"): permesso Google dall'app, scelta o creazione del calendario dei richiami, appuntamenti Google visibili nel Calendario dell'app. Tag Git `v6.3`; la scritta in Riepilogo dice 6.3.
@@ -521,7 +522,30 @@ veniva aggiornato da Google solo ogni 8–24 ore). Il link .ics resta per iPhone
   e cancellazione in Google, conflitto, cliente eliminato, memoria persa senza doppioni, syncToken scaduto, cambio calendario, 32 richiami a rate, cron, permesso
   revocato, scollega, link .ics); app con finto Firebase (griglia e giorno con eventi Google, finestra, scelta/creazione calendario, sincronizzazione dopo un cambio).
 
+## Impostazioni e stile Livrea Marchi (v6.6)
+
+Il tasto rotondo **in basso a sinistra** è ora un **ingranaggio** (`#setBtn`, classe `tema-btn`) che apre `#dlgSet` (`setRender`, blocco "Impostazioni (v6.6)"):
+- **Account**: "Accesso effettuato come <email>", versione dell'app, tasto Esci.
+- **Tema**: due riquadri con anteprima, **Classico** (l'aspetto di sempre) e **Livrea Marchi**; sotto la **modalità** Come il telefono / Chiara / Scura.
+  Lo stile si applica con `<html data-stile="marchi">` (`stileApplica`); la modalità con `data-theme` come prima (`temaApplica`).
+- **Colori degli stati** (Da contattare, Contattato, Cliente, Cliente perso, Non servibile): un selettore di colore per stato; il colore scelto
+  sovrascrive la variabile `--st-…` con lo stile in linea su `<html>` (`coloriApplica`, `stVar`), quindi vale in chiaro e scuro e in entrambi gli stili;
+  anche i pallini della **Mappa** lo usano (`mapColore`, campo `st` in `MAP_GROUPS`). "Ripristina i colori originali" li toglie.
+- Tutto in `utenti/{uid}/impostazioni/preferenze`: `tema` ("" | "light" | "dark"), `stile` ("" | "marchi"), `colori` ({STATO: "#rrggbb"},
+  salvato con `mergeFields: ["colori"]` perché il merge normale non toglierebbe i colori ripristinati), `articoliVista`. Letto da `prefCarica()` dopo il login.
+- **Livrea Marchi**: idea della fascia verde dei camion Marchi. Banda verde (verde del logo `#0F5A3D`) in testa a ogni sezione e finestra,
+  titoli in **Archivo** corsivo stretto (richiama la scritta del logo; font aggiunto al link di Google Fonts), schede con un filo di bordo e senza ombre,
+  angoli più asciutti, iniziali dei clienti in un quadratino pieno del colore dello stato, menu laterale verde, **corallo** di Marchi (`--coral`, `#E86A40`)
+  solo per ciò che chiede attenzione (richiami scaduti, numeri nel menu, tasto +, reclami da inviare). Colori presi da marchispa.it (verde `#154531`,
+  corallo `#F78761`). Blocco CSS `/* ===== Stile Livrea Marchi (v6.6) ===== */` in fondo a `<style>`: **ogni selettore inizia con
+  `:root[data-stile="marchi"]`** (anche nelle regole del tema scuro, scritte in entrambi i modi), così lo stile Classico non cambia. Le regole nuove della
+  Livrea vanno scritte allo stesso modo. Nel click delle impostazioni si usa `.set-stile` e non `[data-stile]`: anche `<html>` ha quell'attributo.
+- Reclami: "Inviato" ora è una cornice, "Da inviare" pieno (classe `rc-st inviato`).
+
 ## Tema chiaro/scuro e preferenze (v5.1)
+
+(Dalla v6.6 il tasto sole/luna non c'è più: la modalità si sceglie in Impostazioni.)
+
 
 Tasto rotondo **in basso a sinistra** (`#temaBtn`, sole/luna) per passare da modalità chiara a scura e viceversa. Di base l'app segue il telefono/PC
 (`prefers-color-scheme`); scegliendo a mano si mette `data-theme="light"|"dark"` su `<html>` e le variabili scure valgono per `:root[data-theme="dark"]` e,
