@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.8** = v6.7 + **iCloud nei due sensi** come Google (sezione "iCloud nei due sensi (v6.8)"): email Apple + password per app, scelta o creazione del calendario, impegni iCloud nel Calendario; gli appuntamenti vanno in **un solo** servizio (Google o iCloud). Tag Git `v6.8`; la versione nelle Impostazioni dice 6.8.
 - **v6.7** = v6.6 + la scheda **Dati** del Riepilogo (Importa/Esporta Excel, Collega fatturazioni e destinazioni, account) è passata nelle **Impostazioni**; in "Collega fatturazioni e destinazioni" ogni voce ha **Ignora** (con "Mostra le voci ignorate" e Ripristina); nel **Calendario** il tasto **Nuovo** crea un **appuntamento** (non un cliente) e "Richiami" si chiama **Appuntamenti** (anche "Appuntamento il" nella scheda cliente e "Appuntamento gg/mm" sulle righe). Tag Git `v6.7`; la versione si legge ora nelle Impostazioni (6.7), non più nel Riepilogo.
 - **v6.6** = v6.5 + **Impostazioni** (ingranaggio in basso a sinistra al posto del tasto sole/luna): account collegato con Esci, **tema** con scelta dello stile (**Classico** o **Livrea Marchi**) e della modalità (come il telefono / chiara / scura), **colori degli stati** dei clienti personalizzabili. Sezione "Impostazioni e stile Livrea Marchi (v6.6)". Tag Git `v6.6`; la scritta in Riepilogo dice 6.6.
 - **v6.5** = v6.4 + nuova sezione **Reclami** (segnalazioni all'ufficio qualità con email scritta da Google Gemini, statistiche e report annuale; sezione "Reclami (v6.5)"). Tag Git `v6.5`; la scritta in Riepilogo dice 6.5.
@@ -522,6 +523,38 @@ veniva aggiornato da Google solo ogni 8–24 ore). Il link .ics resta per iPhone
 - Prove: Worker con finto Google + finto Firestore + login Firebase firmato (36 casi: permesso, stato falsificato, creazione/aggiornamento/rimozione, spostamento
   e cancellazione in Google, conflitto, cliente eliminato, memoria persa senza doppioni, syncToken scaduto, cambio calendario, 32 richiami a rate, cron, permesso
   revocato, scollega, link .ics); app con finto Firebase (griglia e giorno con eventi Google, finestra, scelta/creazione calendario, sincronizzazione dopo un cambio).
+
+## iCloud nei due sensi (v6.8)
+
+Richiesta di Manuel: lo stesso collegamento di Google anche con il Calendario di iCloud. Apple non ha OAuth: si usa **CalDAV** (`caldav.icloud.com`) con
+l'email del suo account Apple e una **password per app** (creata da lui su account.apple.com › Accesso e sicurezza › Password per le app).
+- **Servizio** (stesso Worker `strumenti/worker-calendario.js`, sezione "3) iCLOUD", classe `ICloud`): scoperta `current-user-principal` →
+  `calendar-home-set` (es. `https://pNN-caldav.icloud.com/<id>/calendars/`), elenco calendari con PROPFIND Depth 1 (solo quelli con VEVENT; sola lettura
+  se manca il privilegio write; colore Apple; `getctag`), `MKCALENDAR` per crearne uno nuovo, `PUT`/`DELETE` di `clienti-<idCliente>.ics` (un file
+  per cliente, UID `clienti-<id>@clienti.malfer.it`, `X-CLIENTI-ID`, 30 min con avviso o tutto il giorno, ora di Roma), modifiche con `sync-collection`
+  (RFC 6578; token non valido → si riparte da capo) + `calendar-multiget`, impegni da mostrare con `calendar-query` con `expand` (ricorrenze già espanse).
+  XML letto con espressioni regolari (nei Worker non c'è DOMParser). Le stesse regole di Google: spostato/cancellato sull'iPhone → cambia la scheda (riga
+  "Appuntamento spostato/tolto da iCloud"), ma vince l'app se è cambiato anche lì.
+- **Dati**: `calendario_segreti/{uid}.icloud` = `{user, pass, home, calId, calNome, mostra[], calendari[], mappa:{idCliente:{ev: percorso del file, k}}, syncToken,
+  ctag:{url: ctag}, ev:{url: [impegni]}, evHash, pulizia[]}` (solo il servizio lo legge); per l'app `utenti/{uid}/impostazioni/icloud` (stato) e `icloud_eventi`.
+  Percorsi: `POST /icloud/collega` `{user, pass}` o `{rosario: true}` (riusa `rosario_segreti/{uid}` se è `tipo: "icloud"`), `/icloud/scegli`, `/icloud/scollega`,
+  `/icloud/sincronizza`. `/google/sincronizza` e il cron fanno **tutti e due** i servizi (`sincronizzaTutto`, un solo errore non ferma l'altro: le risposte hanno
+  `errori: [{servizio, stato, msg}]`).
+- **Un solo servizio per gli appuntamenti**: scegliendo il calendario in iCloud si tolgono da Google (e viceversa); dall'altro si vedono solo gli impegni.
+  **Pulizia a rate**: quando si cambia calendario o servizio, gli eventi vecchi si tolgono 25 per volta (`pulizia` nel documento segreto, sia per Google sia per
+  iCloud), il resto ai giri successivi.
+- **Giro leggero**: un solo PROPFIND dei calendari per minuto; `sync-collection` e `calendar-query` solo per i calendari con `getctag` cambiato; da Firestore solo i
+  clienti toccati. Il documento segreto si legge una volta per giro (`opz.S`).
+- **Nell'app**: in `#dlgCal` il riquadro "iCloud (iPhone, iPad, Mac) nei due sensi" (`icRender`, `#icOff`/`#icOn`, `#icUser`, `#icPass`, "Usa quella già data a
+  Rosario", `#icCal`, `#icMostra`, `#icSync`, `#icStacca`); il terzo riquadro ora si chiama "Link per altri calendari (sola lettura)". Nel Calendario gli
+  impegni di Google e iCloud stanno insieme ("Dai tuoi calendari", con "· Google"/"· iCloud"; pallino quadrato per iCloud). `gcPresto` parte se c'è un
+  calendario scelto in Google **o** in iCloud.
+- Prove: Worker con finto iCloud CalDAV (server sul PC con namespace come iCloud), finto Google, finto Firestore e login Firebase firmato: 71 casi (31 nuovi:
+  password sbagliata, email non valida, Rosario senza/con iCloud, calendari VTODO/inbox/sola lettura esclusi, password non nello stato, impegni con TZID/UTC/tutto
+  il giorno, nuovo calendario, passaggio da Google a iCloud e ritorno con pulizia a rate, spostamenti nei due sensi, conflitto, Fatto, cliente eliminato,
+  sync-token non valido, password revocata con Google che continua, scollega iCloud con Google che resta); prove solo-Google (40) e link .ics (18) ancora tutte ok;
+  app con finto Firebase (collega con password e con Rosario, scelta calendario, impegni dei due servizi nel giorno, legenda, sincronizzazione dopo un cambio).
+- **Dopo la pubblicazione**: il codice del Worker `calendario` va incollato di nuovo su Cloudflare (nessun segreto nuovo: la password Apple la scrive Manuel nell'app).
 
 ## Impostazioni e stile Livrea Marchi (v6.6)
 
