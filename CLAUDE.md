@@ -67,7 +67,7 @@ Ogni cambio di stato aggiunge automaticamente una riga allo storico.
 ## Funzioni presenti
 
 Barra in basso (5 voci): **Clienti, Calendario, Cataloghi, Riepilogo, Altro**; in **Altro** (griglia di riquadri) stanno **Mappa, Giro,
-Preventivi, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo preventivo). Vedi "Interfaccia" più sotto.
+Preventivi, Reclami, Rosario**. Pulsante flottante rotondo **+** (nuovo cliente / nuovo preventivo). Vedi "Interfaccia" più sotto.
 
 - **Clienti**: ricerca multi-parola su tutti i campi, filtri per stato, località e tipologia.
   Pulsante **Zone**: apre la mappa delle zone di lavoro (SVG inline, nessuna richiesta di rete), divisa
@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.5** = v6.4 + nuova sezione **Reclami** (segnalazioni all'ufficio qualità con email scritta da Google Gemini, statistiche e report annuale; sezione "Reclami (v6.5)"). Tag Git `v6.5`; la scritta in Riepilogo dice 6.5.
 - **v6.4** = v6.3 + sincronizzazione con Google **ogni minuto** (Cron Trigger `* * * * *`) con giro leggero nel Worker per non superare le letture gratuite di Firestore; nell'app la scritta dice "ogni minuto". Tag Git `v6.4`; la scritta in Riepilogo dice 6.4.
 - **v6.3** = v6.2 + **Google Calendar nei due sensi** (sezione "Google Calendar nei due sensi (v6.3)"): permesso Google dall'app, scelta o creazione del calendario dei richiami, appuntamenti Google visibili nel Calendario dell'app. Tag Git `v6.3`; la scritta in Riepilogo dice 6.3.
 - **v6.2** = v6.1 + tasto **Salva** nella scheda cliente (in basso, accanto a Modifica, che diventa secondario): stato, richiamo e chiusura si salvano già da soli; Salva conferma il campo ancora aperto, aggiunge allo storico la nota scritta ma non ancora aggiunta e chiude la scheda (`#dSalva`). Tag Git `v6.2`; la scritta in Riepilogo dice 6.2.
@@ -445,6 +446,45 @@ La sezione **Richiami** si chiama ora **Calendario** (voce del menu/barra, stess
   Google aggiorna i calendari sottoscritti ogni qualche ora (non si può forzare); Apple più spesso.
 - Prove fatte: Worker con finto Firestore (18 casi: token giusto/sbagliato/mancante, altro utente, più pagine di clienti, giro spento, cliente chiuso, domeniche,
   righe ≤ 75 byte, Firestore irraggiungibile = 503); app con finto Firebase (griglia, giorno, mesi, finestra, nuovo link, link Google).
+
+## Reclami (v6.5)
+
+Sezione **Reclami** (menu, e riquadro in "Altro"; vista `#v-reclami`, codice `rc*` in `index.html`, blocco "Reclami (v6.5)"). Serve a mandare all'**ufficio qualità
+di Marchi (qualita@marchispa.com)** le segnalazioni dei clienti, nello stile delle email vere di Manuel (brevi, cliente con "cod.", articoli con "cod.", "Attendo gentile
+riscontro"), e a tenerne il conto.
+- **Nuovo reclamo** (`#dlgRc`, pulsante Nuovo in basso nella sezione, oppure "Nuovo reclamo" nella scheda cliente): 1) **cliente** cercato come negli altri selettori;
+  l'app prende il codice (`codice`, se manca `codiceFatt` o `codiceReport`), lo mostra modificabile e lo **copia negli appunti** (tasto Copia); 2) **prodotti** dal catalogo
+  Articoli (riusa la finestra `#dlgPvArt` dei preventivi: `pvaApri(null, "rc")`, `pva.dest`) o "Articolo a mano", con quantità, lotto e scadenza facoltativi;
+  3) **tipologia** (più di una: `RC_TIPI` = prodotto alterato/avariato, non conforme alla descrizione o scheda tecnica, lavorazione errata o non effettuata, merce mancante
+  o consegna parziale, danneggiata nel trasporto, scadenza breve o superata, catena del freddo interrotta, corpo estraneo, peso/calibro, etichettatura, articolo sbagliato,
+  confezione difettosa, altro) e **cosa chiedere** (`RC_RICH`: verifica e riscontro, nota di credito, sostituzione, ritiro e nota di credito, solo segnalazione);
+  4) "Descrivi brevemente cosa è successo" e **foto** (restano solo in memoria per allegarle, NON si salvano); 5) **email** (A, CC, oggetto, testo, tutti modificabili);
+  6) **stato** Aperto/Chiuso con l'esito.
+- **Testo con l'IA**: "Scrivi l'email con l'IA" chiama il Worker `strumenti/worker-reclami.js` (Cloudflare, `RC_SERVIZIO` = `https://reclami.webmalfer.workers.dev`),
+  che controlla il login Firebase e l'email abilitata (come il Worker dei cataloghi) e chiede il testo a **Google Gemini** (scelta di Manuel; modelli in ordine
+  `gemini-3.5-flash, -lite, 3.6, 3.8` come Rosario; JSON {oggetto, testo}). Segreti del Worker: `GEMINI_API_KEY`, `ALLOWED_EMAILS`; variabili `FIREBASE_PROJECT` =
+  clienti-malfer, `ALLOWED_ORIGINS` (facoltativa), `GEMINI_MODELLI` (facoltativa). **Ripiego senza IA**: se il servizio non risponde (o non è ancora creato) l'app
+  scrive l'email con il modello `rcModello` (marcatori `RCMOD-START/END`) e lo dice. Nel piano gratuito Google può usare i testi inviati (nomi e codici dei clienti) per
+  migliorare i suoi prodotti: Manuel lo sa e l'ha scelta lo stesso.
+- **Invio** come i preventivi (v5.8), sempre dall'app di posta di Manuel: PC "Apri in Outlook" (`mailto:` con cc) o "Outlook sul web" (deeplink con cc); su
+  iPhone/iPad con foto "Invia con le foto" (menu Condividi con foto e testo, l'indirizzo A copiato negli appunti) o "Senza foto" (`mailto:`). Inviando, il reclamo si salva
+  come "inviato" e (la prima volta) il cliente riceve una riga nello storico "Reclamo all'ufficio qualità: …".
+- **Impostazioni** (tasto in testa, `#dlgRcSet`): A (di base qualita@marchispa.com), CC sempre (es. il responsabile), CC in più per merce mancante/danneggiata/sbagliata
+  (es. logistica, `RC_LOG`), firma (di base nome e telefono di "I tuoi dati" dei preventivi + "Agente di Zona"). Salvate in `utenti/{uid}/impostazioni/reclami`
+  = `{a, cc, ccLog, firma}`: **gli indirizzi dei colleghi non vanno nel repository**.
+- **Dati**: `utenti/{uid}/reclami/{id}` = `{data, clienteId, cliente, codice, luogo, prodotti:[{i, c, n, qta, lotto, scad, man}], tipi:[…], richiesta, descrizione, foto (numero),
+  email:{a, cc, ogg, testo}, ia, inviato, stato: "aperto"|"chiuso", chiuso, esito, creato, aggiornato}`. **Regole Firestore**: se le regole non coprono già tutto `utenti/{uid}/…`, serve la regola per
+  `utenti/{uid}/reclami` (read, write, stessa condizione di `clienti`), altrimenti il salvataggio dà "Account non autorizzato".
+- **Elenco**: pillole Aperti / Chiusi / Tutti, ricerca (cliente, codice, articoli, tipologia, descrizione), etichetta "Da inviare" / "Inviato" / "Chiuso"; numero dei reclami
+  aperti sul riquadro e nel menu (`#rcNum`, `#rcNumNav`). Eliminazione con `confermaElimina`.
+- **Statistiche**: scelta dell'anno, riquadri (reclami, aperti, clienti coinvolti), grafico mese per mese (`bdgBarre`), poi per periodo (anno o mese) **tipologie**, **articoli
+  più segnalati** (per codice, con quanti clienti) e **clienti** (toccandoli si apre la scheda); `rcAggrega`. **Report annuale**: PDF fatto con jsPDF (testo e tabelle, non
+  html2canvas: riepilogo, mesi, tipologie, articoli, clienti, elenco completo) e Excel (SheetJS: fogli Reclami, Per mese, Per tipologia, Per articolo, Per cliente). Su
+  iPhone il PDF esce dal riquadro "PDF pronto" dei preventivi (Condividi).
+- Prove: Worker vero con finto Gemini e finto login Google (16 casi: senza login, origine, email non abilitata, token falso, prompt con codici/lotto/firma, primo modello
+  sparito, Gemini giù = 503, troppo lungo, 30 articoli al massimo); app con finto Firebase (scelta cliente e copia codice, articoli dal catalogo, tipologie e CC della
+  logistica, email dall'IA e dal modello di ripiego, invio Outlook sul web e menu Condividi con foto, storico del cliente, statistiche, PDF e Excel, scheda cliente,
+  eliminazione, chiusura senza salvare, iPhone 375 px chiaro e scuro, preventivi dagli articoli ancora funzionanti).
 
 ## Google Calendar nei due sensi (v6.3)
 

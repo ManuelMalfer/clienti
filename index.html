@@ -685,6 +685,7 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="cataloghi"]{order:5}
   .tabs button[data-view="articoli"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
+  .tabs button[data-view="reclami"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
   .tabs button[data-view="budget"]{order:8}
   .tabs button[data-view="rosario"]{order:9}
@@ -760,6 +761,7 @@ dialog::backdrop{background:rgba(10,20,22,.5);-webkit-backdrop-filter:blur(3px);
   .tabs button[data-view="cataloghi"]{order:5}
   .tabs button[data-view="articoli"]{order:5}
   .tabs button[data-view="preventivi"]{order:6}
+  .tabs button[data-view="reclami"]{order:6}
   .tabs button[data-view="riepilogo"]{order:7}
   .tabs button[data-view="budget"]{order:8}
   .tabs button[data-view="rosario"]{order:9}
@@ -1040,6 +1042,52 @@ main.view{padding-top:14px}
 .gc-st.err{color:var(--danger);font-weight:600}
 .gc-az{display:flex;gap:8px;flex-wrap:wrap}
 /* ===== /Calendario ===== */
+
+/* ===== Reclami (v6.5) ===== */
+.rc-tabs{margin-top:4px}
+#v-reclami .search{margin-top:10px}
+.rc-li .rc-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.rc-li.chiuso .rc-ico{background:color-mix(in srgb,var(--st-cliente) 14%,transparent);color:var(--st-cliente)}
+.rc-st{flex:0 0 auto;display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+.rc-st.chiuso{background:color-mix(in srgb,var(--st-cliente) 14%,transparent);color:var(--st-cliente)}
+.rc-filtri{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px}
+dialog.rc-dlg{max-width:720px}
+.rc-step{margin:0 0 18px;padding:0 0 16px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+.rc-step:last-child{border-bottom:0;margin-bottom:0}
+.rc-step h3{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:17px}
+.rc-n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:700;flex:0 0 auto}
+.rc-cli{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface-2)}
+.rc-cli b{font-size:17px}
+.rc-cli small{display:block;color:var(--muted);font-size:13px}
+.rc-cod{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rc-cod input{width:150px;font-weight:700;letter-spacing:.02em}
+.rc-cli-list{list-style:none;margin:8px 0 0;padding:0;max-height:42vh;overflow:auto}
+.rc-prod{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 12px;margin:0 0 8px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);background:var(--surface)}
+.rc-prod b{font-size:15px}
+.rc-prod small{color:var(--muted)}
+.rc-prod .rc-x{align-self:start;border:0;background:none;color:var(--muted);font-size:22px;line-height:1;padding:0 4px;cursor:pointer}
+.rc-prod-f{grid-column:1 / -1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rc-prod-f label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.rc-prod-f .input{min-height:38px;padding:6px 10px;font-size:14px}
+.rc-prod-man{display:grid;grid-template-columns:110px 1fr;gap:8px}
+@media (max-width:520px){.rc-prod-f{grid-template-columns:1fr 1fr}.rc-prod-f label:last-child{grid-column:1 / -1}}
+.rc-az{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.rc-tipi{display:flex;flex-wrap:wrap;gap:8px}
+.rc-tipi button{min-height:38px;padding:6px 14px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:500;text-align:left;cursor:pointer}
+.rc-tipi button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rc-foto{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.rc-foto span{position:relative;width:72px;height:72px;border-radius:10px;overflow:hidden;background:var(--surface-2)}
+.rc-foto img{width:100%;height:100%;object-fit:cover}
+.rc-foto button{position:absolute;top:2px;right:2px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:16px;line-height:1;cursor:pointer}
+.rc-ia{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+.rc-ia-st{font-size:13px;color:var(--muted)}
+.rc-ia-st.err{color:var(--danger)}
+.rc-testo{min-height:240px;font-size:15px;line-height:1.45}
+.rc-invia{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rc-stato{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.rc-bar{display:block;height:6px;border-radius:3px;background:var(--surface-2);margin-top:4px;overflow:hidden}
+.rc-bar i{display:block;height:100%;background:var(--danger);border-radius:3px}
+.rc-stat-az{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 </style>
 </head>
 <body>
@@ -1152,6 +1200,18 @@ main.view{padding-top:14px}
     <main class="wrap view"><ul class="list" id="pvList"></ul></main>
   </section>
 
+  <section id="v-reclami" class="view-wrap hidden">
+    <header class="top"><div class="wrap">
+      <div class="top-row"><h1>Reclami</h1><span class="ct-head"><span class="count" id="rcLbl"></span><button class="link" type="button" id="rcSetBtn">Impostazioni</button></span></div>
+      <div class="ct-chips rc-tabs" role="tablist"><button type="button" aria-pressed="true" data-rctab="elenco">Elenco</button><button type="button" aria-pressed="false" data-rctab="stat">Statistiche</button></div>
+      <div class="search" id="rcSearch">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input class="input" id="rcQ" type="search" placeholder="Cerca cliente, codice o articolo…" autocomplete="off" aria-label="Cerca nei reclami">
+      </div>
+    </div></header>
+    <main class="wrap view" id="rcBody"></main>
+  </section>
+
   <section id="v-articoli" class="view-wrap hidden">
     <header class="top"><div class="wrap">
       <div class="top-row"><h1>Articoli</h1><span class="ct-head"><span class="count" id="arLbl"></span><span class="ar-vista" role="group" aria-label="Visualizzazione"><button type="button" id="arVistaBox" aria-pressed="true" aria-label="Vista a riquadri" title="Riquadri"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button><button type="button" id="arVistaElenco" aria-pressed="false" aria-label="Vista a elenco" title="Elenco"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor"/></svg></button></span></span></div>
@@ -1188,6 +1248,7 @@ main.view{padding-top:14px}
       <button class="alt-tile" type="button" data-go="mappa" style="--c:#2B8FA8"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg></span><b>Mappa</b><small>I tuoi locali sulla mappa e la zona che copri</small></button>
       <button class="alt-tile" type="button" data-go="giro" style="--c:#D39A1F"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg></span><b>Giro</b><small>Consegne e ordini da raccogliere, giorno per giorno</small></button>
       <button class="alt-tile" type="button" data-go="preventivi" style="--c:#CC5E9E"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><b>Preventivi</b><small>Le offerte per i clienti, anche in PDF</small></button>
+      <button class="alt-tile" type="button" data-go="reclami" style="--c:#C8553D"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg></span><b>Reclami</b><small>Segnalazioni all'ufficio qualità e statistiche</small><span class="num hidden" id="rcNum"></span></button>
       <button class="alt-tile" type="button" data-go="rosario" style="--c:#3F9A55"><span class="alt-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Rosario</b><small>L'assistente vocale: proposte e promemoria</small><span class="num hidden" id="rosNum"></span></button>
     </div></main>
   </section>
@@ -1320,6 +1381,7 @@ main.view{padding-top:14px}
     <button data-view="mappa" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
     <button data-view="giro" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h2l2-6h9l2 6h3"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/><path d="M14 11V7h4l2 4"/></svg>Giro</button>
     <button data-view="preventivi" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Preventivi</button>
+    <button data-view="reclami" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>Reclami<span class="num hidden" id="rcNumNav"></span></button>
     <button data-view="budget" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9"/></svg>Budget</button>
     <button data-view="rosario" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Rosario<span class="num hidden" id="rosNumNav"></span></button>
   </div></nav>
@@ -1645,6 +1707,27 @@ main.view{padding-top:14px}
     <div class="dlg-foot"><button class="btn" type="button" id="calScarica">Scarica i richiami (.ics)</button><button class="btn hidden" type="button" id="calNuovo">Crea un nuovo link</button></div>
   </div>
 </dialog>
+<dialog id="dlgRc" class="rc-dlg" aria-labelledby="rcT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="rcT">Nuovo reclamo<span class="sub" id="rcSub">Scegli il cliente: poi si aprono gli altri passi.</span></h2><button class="close" type="button" id="rcX" aria-label="Chiudi">×</button></div>
+    <div class="dlg-body" id="rcEd"></div>
+    <div class="dlg-foot"><button class="btn btn-danger hidden" type="button" id="rcDel" style="margin-right:auto">Elimina</button><button class="btn" type="button" id="rcNo">Annulla</button><button class="btn btn-primary" type="button" id="rcOk">Salva</button></div>
+  </div>
+</dialog>
+<dialog id="dlgRcSet" aria-labelledby="rcsT">
+  <form class="dlg" id="rcSetForm" novalidate>
+    <div class="dlg-head"><h2 id="rcsT">Impostazioni dei reclami<span class="sub">Valgono per tutte le email dei reclami.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <label class="field"><span>A (ufficio qualità)</span><input class="input" id="rcsA" type="text" inputmode="email" autocomplete="off"></label>
+      <label class="field"><span>Copia a (CC), sempre</span><input class="input" id="rcsCc" type="text" inputmode="email" autocomplete="off" placeholder="es. il tuo responsabile (più indirizzi separati da virgola)"></label>
+      <label class="field"><span>Copia anche a, per merce mancante, danneggiata o sbagliata</span><input class="input" id="rcsLog" type="text" inputmode="email" autocomplete="off" placeholder="es. l'indirizzo della logistica"></label>
+      <label class="field"><span>Firma</span><textarea class="input" id="rcsFirma" rows="4"></textarea></label>
+      <p class="pv-hint">Gli indirizzi restano solo nel tuo account, non sul sito.</p>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="submit">Salva</button></div>
+  </form>
+</dialog>
+<input type="file" id="rcFotoIn" accept="image/*" multiple class="hidden">
 <input type="file" id="pvFile" accept="application/pdf,.pdf" class="hidden">
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1850,8 +1933,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); gLoad(); subscribeGcal(); }
-    else { pvStop(); unsubscribeGcal(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); rcStart(); gLoad(); subscribeGcal(); }
+    else { pvStop(); rcStop(); unsubscribeGcal(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -1915,13 +1998,13 @@ document.addEventListener("click", e => { const g = e.target.closest("[data-go]"
 addEventListener("keydown", e => {
   if(e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || document.querySelector("dialog[open]")) return;
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "") || document.activeElement?.isContentEditable) return;
-  const campo = { clienti: "#q", cataloghi: "#ctQ", preventivi: "#pvQ", articoli: "#arQ" }[ui.view];
+  const campo = { clienti: "#q", cataloghi: "#ctQ", preventivi: "#pvQ", articoli: "#arQ", reclami: "#rcQ" }[ui.view];
   if(campo && $(campo)){ e.preventDefault(); $(campo).focus(); }
 });
 function go(view){
   ui.view = view;
   $$(".view-wrap").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + view));
-  const voce =["mappa", "giro", "preventivi", "rosario"].includes(view) ? "altro" : view;
+  const voce =["mappa", "giro", "preventivi", "reclami", "rosario"].includes(view) ? "altro" : view;
   $$(".tabs button").forEach(b => b.dataset.view === voce || b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   window.scrollTo(0, 0);
   $("#fab").classList.toggle("hidden", view === "mappa" || view === "rosario" || view === "cataloghi" || view === "altro" || view === "giro" || view === "budget" || view === "articoli");
@@ -1963,6 +2046,7 @@ function renderAll(){
   if(ui.view === "articoli") renderArticoli();
   if(ui.view === "mappa") renderMap();
   if(ui.view === "preventivi") pvRenderList();
+  if(ui.view === "reclami") renderReclami();
   if(ui.view === "cataloghi") renderCataloghi();
   renderRichiami();
   renderRosario();
@@ -4104,11 +4188,13 @@ $("#arCartSvuota").addEventListener("click", async () => {
 // Si sfogliano le categorie Marchi o si cerca; si toccano gli articoli per sceglierne quanti si vuole (✓), poi "Aggiungi".
 // Se si è partiti dal "+" di una categoria del preventivo, gli articoli finiscono in quella categoria; "Articolo a mano" aggiunge una riga vuota come prima.
 const pva = { cat: null, top: -1, scelti: [], mostra: 80 };
-async function pvaApri(cat){
-  if(!pvCur) return;
+async function pvaApri(cat, dest){
+  pva.dest = dest === "rc" ? "rc" : "pv";   // "rc" = dalla finestra di un reclamo (Reclami, v6.5)
+  if(pva.dest === "pv" && !pvCur) return;
   pva.cat = cat || null; pva.top = -1; pva.scelti = []; pva.mostra = 80;
   $("#pvaQ").value = "";
-  $("#pvaSub").textContent = "Cerca o sfoglia le categorie e tocca gli articoli per selezionarli: ognuno va da solo nella sua categoria del preventivo.";
+  $("#pvaSub").textContent = pva.dest === "rc" ? "Cerca o sfoglia le categorie e tocca gli articoli coinvolti nel reclamo." : "Cerca o sfoglia le categorie e tocca gli articoli per selezionarli: ognuno va da solo nella sua categoria del preventivo.";
+  $("#pvaVuoto").classList.toggle("hidden", pva.dest === "rc");
   pvaLista();
   $("#dlgPvArt").showModal();
   if(matchMedia("(pointer:fine)").matches) $("#pvaQ").focus();
@@ -4124,10 +4210,10 @@ function pvaLista(){
   pvaPulsanti();
   if(!art.dati){ box.innerHTML = `<p class="hint">${art.stato === "errore" ? "Non riesco a caricare gli articoli. Controlla la connessione." : "Carico gli articoli…"}</p>`; return; }
   const D = art.dati, q = $("#pvaQ").value.trim();
-  const gia = new Set((pvCur ? pvCur.items : []).map(i => i.codice).filter(Boolean));
+  const gia = new Set((pva.dest === "rc" ? (rc.cur ? rc.cur.prodotti : []).map(p => p.c) : (pvCur ? pvCur.items : []).map(i => i.codice)).filter(Boolean));
   const riga = x => {
     const sel = pva.scelti.includes(x.i), ok = x.c && gia.has(x.c);
-    return `<button type="button" class="ar-row${sel ? " scelto" : ""}" data-pva="${x.i}" aria-pressed="${sel}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${[x.c ? "Cod. " + esc(x.c) : "", esc(artCat(D.top[x.t])), ok ? "già nel preventivo" : ""].filter(Boolean).join(" · ")}</small></span><span class="ar-add${sel ? " on" : ""}" aria-hidden="true">${sel ? "✓" : "+"}</span></button>`;
+    return `<button type="button" class="ar-row${sel ? " scelto" : ""}" data-pva="${x.i}" aria-pressed="${sel}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${[x.c ? "Cod. " + esc(x.c) : "", esc(artCat(D.top[x.t])), ok ? (pva.dest === "rc" ? "già nel reclamo" : "già nel preventivo") : ""].filter(Boolean).join(" · ")}</small></span><span class="ar-add${sel ? " on" : ""}" aria-hidden="true">${sel ? "✓" : "+"}</span></button>`;
   };
   // ricerca su tutto il catalogo
   if(q.length >= 2){
@@ -4162,6 +4248,7 @@ $("#pvaList").addEventListener("click", e => {
   pvaPulsanti();
 });
 $("#pvaOk").addEventListener("click", () => {
+  if(pva.dest === "rc"){ const ids = [...pva.scelti]; $("#dlgPvArt").close(); rcAggiungiArticoli(ids); return; }
   if(!pvCur || !art.dati || !pva.scelti.length) return;
   // ogni articolo va da solo nella sua categoria (dalla categoria Marchi e dal nome, o da quella corretta a mano in passato per quel codice)
   const nuovi = pva.scelti.map(id => art.dati.a.find(y => y.i === id)).filter(Boolean).map(x => pvDaArticolo(x, pvCur.clienteId));
@@ -4766,7 +4853,7 @@ function renderRiepilogo(){
       <div class="rp-sep"></div>
       <div class="rp-acct">
         <span class="rp-avatar" aria-hidden="true">${esc((email[0] || "?").toUpperCase())}</span>
-        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.4 (v6.4)</span></div>
+        <div><b>Account</b><span>${esc(email)}</span><span style="font-size:12px;color:var(--muted)">App versione 6.5 (v6.5)</span></div>
         <button class="btn" type="button" id="logoutBtn">Esci</button>
       </div>
     </section>`;
@@ -4849,7 +4936,7 @@ function renderDetail(){
       <span style="flex:1;min-width:150px;font-size:14px;color:var(--muted)">${c.codiceDest ? "Scheda unita: fatturazione " + esc(c.codice || "") + " + destinazione " + esc(c.codiceDest) : (c.codiceFatt || c.fattId) ? "Destinazione collegata alla fatturazione" + (c.codiceFatt ? " " + esc(c.codiceFatt) : "") : "Collega questa scheda alla sua fatturazione o alle sue destinazioni"}</span>
       <button class="chip-btn" type="button" data-uni-start>Collega a…</button>${c.codiceDest ? `<button class="chip-btn" type="button" data-uni-undo>Annulla unione</button>` : ""}
     </div>
-    ${pvDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${uniLegamiHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
+    ${pvDetailHTML(c)}${rcDetailHTML(c)}${tgtDetailHTML(c)}${prsDetailHTML(c)}${uniLegamiHTML(c)}${c.codiceFatt ? `<p class="hint" style="margin:8px 0 0">Fatturato, pressione e provvigioni dei report sono quelli dell'intera fatturazione (cod. ${esc(c.codiceFatt)}), condivisa con le altre destinazioni.</p>` : ""}`;
   const st = [...(c.storico || [])].map((s,i) => ({...s, i})).sort((a,b) => (b.d||"").localeCompare(a.d||"") || b.i - a.i);
   $("#dStorico").innerHTML = st.length ? st.map(s => `<li><time>${fmtDate(s.d)}</time><p>${esc(s.t)}</p><button type="button" data-delnote="${s.i}" aria-label="Elimina nota">×</button></li>`).join("")
     : `<li><p style="color:var(--muted)">Ancora nessuna nota. Annota visite, telefonate e offerte.</p></li>`;
@@ -5016,7 +5103,7 @@ async function save(andNew){
 F.addEventListener("submit", e => { e.preventDefault(); save(false); });
 F.addEventListener("input", e => e.target.classList.remove("check"));
 $("#saveNewBtn").addEventListener("click", () => save(true));
-$("#fab").addEventListener("click", () => ui.view === "preventivi" ? pvPick() : openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
+$("#fab").addEventListener("click", () => ui.view === "preventivi" ? pvPick() : ui.view === "reclami" ? rcNuovo() : openForm(null, ui.luogo ? { luogo: ui.luogo } : {}));
 
 /* ---------- Compila da screenshot del gestionale ----------
    La schermata del gestionale ha sempre gli stessi campi nella stessa posizione.
@@ -6667,6 +6754,548 @@ $("#gPrev").addEventListener("click", e => {
   $("#gPrev").classList.add("hidden"); $("#gQBox").classList.add("hidden");
   gMsg(n ? `Compilati ${n} campi da Google (evidenziati): controllali e salva.` : "Nessun campo selezionato.");
 });
+
+/* ---------- Reclami (v6.5) ---------- */
+// Reclami all'ufficio qualità di Marchi. Dati in utenti/{uid}/reclami/{id} = { data, clienteId, cliente, codice, luogo,
+//   prodotti:[{i (id articolo del catalogo o null), c, n, qta, lotto, scad, man}], tipi:[chiavi RC_TIPI], richiesta (chiave RC_RICH), descrizione,
+//   foto (quante ne sono state allegate: le foto NON si salvano), email:{a, cc, ogg, testo}, ia, inviato, stato:"aperto"|"chiuso", chiuso, esito, creato, aggiornato }
+// Impostazioni in utenti/{uid}/impostazioni/reclami = { a, cc, ccLog, firma } (indirizzi solo nell'account, non nel repository pubblico).
+// Il testo dell'email lo scrive Google Gemini tramite il Worker strumenti/worker-reclami.js (chiave solo lì); se non risponde: rcModello.
+const RC_SERVIZIO = "https://reclami.webmalfer.workers.dev";
+const RC_QUALITA = "qualita@marchispa.com";
+// [chiave, etichetta, spiegazione, oggetto breve dell'email]
+const RC_TIPI = [
+  ["alterato", "Prodotto alterato o avariato", "Muffa, cattivo odore, confezioni gonfie, sapore acido", "Problema qualitativo"],
+  ["descrizione", "Non conforme alla descrizione o alla scheda tecnica", "", "Articolo non conforme alla descrizione"],
+  ["lavorazione", "Lavorazione errata o non effettuata", "", "Lavorazione non effettuata"],
+  ["mancante", "Merce mancante o consegna parziale", "", "Merce mancante"],
+  ["danneggiata", "Merce danneggiata nel trasporto", "", "Merce danneggiata"],
+  ["scadenza", "Scadenza breve o superata", "", "Scadenza non conforme"],
+  ["freddo", "Catena del freddo interrotta", "Prodotto scongelato o non freddo alla consegna", "Catena del freddo interrotta"],
+  ["estraneo", "Corpo estraneo nel prodotto", "", "Corpo estraneo"],
+  ["peso", "Peso, calibro o pezzatura non conformi", "", "Peso non conforme"],
+  ["etichetta", "Etichettatura errata o mancante", "", "Etichettatura errata"],
+  ["sbagliato", "Articolo sbagliato (diverso dall'ordinato)", "", "Articolo errato"],
+  ["confezione", "Confezione o imballo difettosi", "", "Confezione difettosa"],
+  ["altro", "Altro", "", "Segnalazione"]
+];
+const RC_LOG = ["mancante", "danneggiata", "sbagliato"];   // tipologie che vanno anche in copia alla logistica (se impostata)
+const RC_RICH = [["riscontro", "Verifica e riscontro"], ["nota", "Nota di credito"], ["sostituzione", "Sostituzione o reintegro della merce"], ["ritiro", "Ritiro del prodotto e nota di credito"], ["nessuna", "Solo segnalazione (merce già smaltita, nessuna nota di credito)"]];
+const RC_ICO = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.3"/></svg>`;
+const rcTipo = k => RC_TIPI.find(t => t[0] === k) || [k, k, "", k];
+const rcRichLbl = k => (RC_RICH.find(t => t[0] === k) || [k, k])[1];
+const rcTipiTesto = r => (r.tipi || []).map(k => rcTipo(k)[1]).join(", ") || "Tipologia non indicata";
+const rcCol = () => collection(db, "utenti", uid, "reclami");
+const rcSetRef = () => doc(db, "utenti", uid, "impostazioni", "reclami");
+const rcCodiceDi = c => c.codice || c.codiceFatt || c.codiceReport || "";
+let reclami = [], rcUnsub = null, rcSet = {};
+const rc = { tab: "elenco", filtro: "aperti", q: "", anno: new Date().getFullYear(), mese: -1, tutti: {}, cur: null, nuovo: false, foto: [], cliQ: "", iaMsg: "", iaErr: false, ccMan: false, sporco: false };
+
+function rcStart(){
+  if(rcUnsub) return;
+  rcUnsub = onSnapshot(rcCol(), snap => {
+    reclami = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    rcBadge();
+    if(ui.view === "reclami") renderReclami();
+  }, err => console.error(err));
+  getDoc(rcSetRef()).then(s => { rcSet = s.exists() ? s.data() || {} : {}; }).catch(() => {});
+}
+function rcStop(){
+  if(rcUnsub){ rcUnsub(); rcUnsub = null; }
+  reclami = []; rcSet = {}; rcLiberaFoto(); rc.cur = null;
+  if($("#dlgRc").open) $("#dlgRc").close();
+}
+function rcBadge(){
+  const n = reclami.filter(r => r.stato !== "chiuso").length;
+  ["#rcNum", "#rcNumNav"].forEach(s => { const e = $(s); if(e){ e.textContent = n; e.classList.toggle("hidden", !n); } });
+}
+const rcA = () => rcSet.a || RC_QUALITA;
+const rcCc = tipi => [...emSplit(rcSet.cc), ...((tipi || []).some(t => RC_LOG.includes(t)) ? emSplit(rcSet.ccLog) : [])].filter((x, i, a) => a.indexOf(x) === i).join(", ");
+const rcFirma = () => rcSet.firma ? rcSet.firma : [agente.nome, "Agente di Zona", agente.tel ? "cell: " + agente.tel : ""].filter(Boolean).join("\n");
+
+/* ----- elenco e statistiche ----- */
+function renderReclami(){
+  if(ui.view !== "reclami") return;
+  $$("[data-rctab]").forEach(b => b.setAttribute("aria-pressed", b.dataset.rctab === rc.tab));
+  $("#rcSearch").classList.toggle("hidden", rc.tab !== "elenco");
+  const aperti = reclami.filter(r => r.stato !== "chiuso").length;
+  $("#rcLbl").textContent = reclami.length ? `${reclami.length} ${reclami.length === 1 ? "reclamo" : "reclami"} · ${aperti} ${aperti === 1 ? "aperto" : "aperti"}` : "";
+  if(rc.tab === "stat"){ $("#rcBody").innerHTML = rcStatHTML(); return; }
+  const parole = rc.q.split(/\s+/).map(norm).filter(Boolean);
+  const conta = { aperti, chiusi: reclami.length - aperti, tutti: reclami.length };
+  const rows = reclami
+    .filter(r => rc.filtro === "tutti" || (rc.filtro === "chiusi") === (r.stato === "chiuso"))
+    .filter(r => { if(!parole.length) return true; const hay = norm([r.cliente, r.codice, r.luogo, rcTipiTesto(r), r.descrizione, ...(r.prodotti || []).flatMap(p => [p.c, p.n])].join(" ")); return parole.every(w => hay.includes(w)); })
+    .sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.creato || "").localeCompare(a.creato || ""));
+  const fil = [["aperti", "Aperti"], ["chiusi", "Chiusi"], ["tutti", "Tutti"]];
+  $("#rcBody").innerHTML = `<div class="rc-filtri ct-chips">${fil.map(([k, l]) => `<button type="button" aria-pressed="${rc.filtro === k}" data-rcfil="${k}">${l} (${conta[k]})</button>`).join("")}</div>
+    <ul class="list" id="rcList">${rows.length ? rows.map(r => {
+      const ch = r.stato === "chiuso" ? " chiuso" : "";
+      const art = (r.prodotti || []).map(p => p.n || ("cod. " + p.c)).filter(Boolean);
+      return `<li class="pv-li rc-li${ch}"><button class="row" type="button" data-rcopen="${r.id}"><span class="rc-ico">${RC_ICO}</span><span class="row-main"><span class="row-name">${esc(r.cliente || "Senza cliente")}</span><span class="row-sub">${esc([fmtDate(r.data), r.codice ? "cod. " + r.codice : "", (r.tipi || []).map(k => rcTipo(k)[3]).join(", ")].filter(Boolean).join(" · "))}</span>${art.length ? `<span class="row-sub">${esc(art.slice(0, 2).join(", ") + (art.length > 2 ? " e altri " + (art.length - 2) : ""))}</span>` : ""}</span><span class="rc-st${ch}">${ch ? "Chiuso" : r.inviato ? "Inviato" : "Da inviare"}</span></button></li>`;
+    }).join("") : `<li class="empty">${reclami.length ? "Nessun reclamo trovato." : "Nessun reclamo ancora. Tocca <b>Nuovo</b> per segnalarne uno all’ufficio qualità."}</li>`}</ul>`;
+}
+// conteggi per tipologia, articolo e cliente (un reclamo conta una volta per ogni articolo, tipologia e cliente)
+function rcAggrega(L){
+  const tipi = new Map(), art = new Map(), cli = new Map();
+  L.forEach(r => {
+    (r.tipi && r.tipi.length ? r.tipi : ["altro"]).forEach(k => tipi.set(k, (tipi.get(k) || 0) + 1));
+    const ck = r.clienteId || "n:" + norm(r.cliente);
+    const c0 = cli.get(ck) || { id: r.clienteId, nome: r.cliente, codice: r.codice, n: 0 }; c0.n++; cli.set(ck, c0);
+    const visti = new Set();
+    (r.prodotti || []).forEach(p => {
+      const k = p.c ? "c:" + String(p.c).replace(/^0+/, "") : "n:" + norm(p.n);
+      if(k === "n:" || visti.has(k)) return; visti.add(k);
+      const a = art.get(k) || { c: p.c, n: p.n, n2: 0, cli: new Set() }; a.n2++; a.cli.add(ck); if(!a.n && p.n) a.n = p.n; art.set(k, a);
+    });
+  });
+  const ord = (a, b) => b.n - a.n;
+  return {
+    tipi: [...tipi].map(([k, n]) => ({ k, l: rcTipo(k)[1], n })).sort(ord),
+    art: [...art.values()].map(a => ({ c: a.c, nome: a.n, n: a.n2, clienti: a.cli.size })).sort((a, b) => b.n - a.n || b.clienti - a.clienti),
+    cli: [...cli.values()].sort(ord)
+  };
+}
+function rcAnni(){ return [...new Set([new Date().getFullYear(), ...reclami.map(r => +String(r.data || "").slice(0, 4)).filter(Boolean)])].sort((a, b) => b - a); }
+const rcDelAnno = anno => reclami.filter(r => +String(r.data || "").slice(0, 4) === anno);
+function rcStatHTML(){
+  const anni = rcAnni();
+  if(!anni.includes(rc.anno)) rc.anno = anni[0];
+  const dell = rcDelAnno(rc.anno);
+  const perMese = Array(12).fill(0); dell.forEach(r => { const m = +String(r.data || "").slice(5, 7) - 1; if(m >= 0) perMese[m]++; });
+  const L = rc.mese < 0 ? dell : dell.filter(r => +String(r.data || "").slice(5, 7) - 1 === rc.mese);
+  const A = rcAggrega(L), periodo = rc.mese < 0 ? "tutto il " + rc.anno : BDG_MESI[rc.mese].toLowerCase() + " " + rc.anno;
+  const aperti = L.filter(r => r.stato !== "chiuso").length;
+  const sez = (k, titolo, voci, riga) => {
+    const vis = rc.tutti[k] ? voci : voci.slice(0, 10);
+    return `<section class="bdg-card"><h2>${titolo} · ${periodo}</h2><div class="tg-list">${vis.map(riga).join("") || `<p class="hint">Nessun dato.</p>`}</div>${voci.length > 10 ? `<button type="button" class="link" data-rctutti="${k}" style="margin-top:6px">${rc.tutti[k] ? "Mostra meno" : "Mostra tutti (" + voci.length + ")"}</button>` : ""}</section>`;
+  };
+  const maxT = Math.max(1, ...A.tipi.map(t => t.n));
+  const grafico = bdgBarre(perMese.map(v => v || null), { titolo: "Reclami per mese", tick: v => v, fmt: v => v, classe: () => "bdg-ac" });
+  return `${bdgMeseChips(anni.map(a => [a, a]), rc.anno, "data-rcanno")}
+    <div class="bdg-kpis">
+      <div class="bdg-kpi"><small>Reclami</small><b>${L.length}</b><span>${periodo}</span></div>
+      <div class="bdg-kpi"><small>Ancora aperti</small><b>${aperti}</b><span>${L.length - aperti} chiusi</span></div>
+      <div class="bdg-kpi"><small>Clienti coinvolti</small><b>${A.cli.length}</b><span>${A.art.length} articoli diversi</span></div>
+    </div>
+    <section class="bdg-card"><h2>Reclami mese per mese · ${rc.anno}</h2><div class="bdg-scroll">${grafico}</div></section>
+    <div><p class="hint" style="margin:10px 0 0">Periodo per i riquadri qui sotto:</p>${bdgMeseChips([[-1, "Anno"], ...perMese.map((v, i) => v ? [i, BDG_MESI[i]] : null).filter(Boolean)], rc.mese, "data-rcmese")}</div>
+    ${sez("tipi", "Tipologie", A.tipi, t => `<div class="tg-cli"><span style="flex:1">${esc(t.l)}<span class="rc-bar"><i style="width:${Math.round(t.n / maxT * 100)}%"></i></span></span><b>${t.n}</b></div>`)}
+    ${sez("art", "Articoli più segnalati", A.art, a => `<div class="tg-cli"><span>${esc(a.nome || "Articolo senza nome")}<small>${esc([a.c ? "cod. " + a.c : "", a.clienti + (a.clienti === 1 ? " cliente" : " clienti")].filter(Boolean).join(" · "))}</small></span><b>${a.n}</b></div>`)}
+    ${sez("cli", "Clienti con più segnalazioni", A.cli, c => { const s = c.id && byId(c.id); const inner = `<span>${esc(s ? s.nome : c.nome)}<small>${esc(c.codice ? "cod. " + c.codice : "")}</small></span><b>${c.n}</b>`; return s ? `<button type="button" class="tg-cli" data-open="${s.id}">${inner}</button>` : `<div class="tg-cli">${inner}</div>`; })}
+    <section class="bdg-card"><h2>Report annuale ${rc.anno}</h2><p class="hint" style="margin:0">Riepilogo di tutto l’anno da mandare all’azienda: totali, mesi, tipologie, articoli, clienti e l’elenco completo dei reclami.</p>
+      <div class="rc-stat-az"><button class="btn btn-primary" type="button" id="rcPdf">Report PDF</button><button class="btn" type="button" id="rcXls">Excel</button></div></section>`;
+}
+$(".rc-tabs").addEventListener("click", e => { const t = e.target.closest("[data-rctab]"); if(t){ rc.tab = t.dataset.rctab; renderReclami(); window.scrollTo(0, 0); } });
+$("#rcQ").addEventListener("input", e => { rc.q = e.target.value; renderReclami(); });
+$("#rcBody").addEventListener("click", e => {
+  const o = e.target.closest("[data-rcopen]"); if(o){ rcApri(o.dataset.rcopen); return; }
+  const f = e.target.closest("[data-rcfil]"); if(f){ rc.filtro = f.dataset.rcfil; renderReclami(); return; }
+  const a = e.target.closest("[data-rcanno]"); if(a){ rc.anno = +a.dataset.rcanno; rc.mese = -1; renderReclami(); return; }
+  const m = e.target.closest("[data-rcmese]"); if(m){ rc.mese = +m.dataset.rcmese; renderReclami(); return; }
+  const t = e.target.closest("[data-rctutti]"); if(t){ rc.tutti[t.dataset.rctutti] = !rc.tutti[t.dataset.rctutti]; renderReclami(); return; }
+  if(e.target.closest("#rcPdf")){ rcReportPdf(rc.anno); return; }
+  if(e.target.closest("#rcXls")) rcReportXls(rc.anno);
+});
+
+/* ----- editor del reclamo ----- */
+function rcVuoto(){
+  return { id: doc(rcCol()).id, data: localISO(), clienteId: "", cliente: "", codice: "", luogo: "", prodotti: [], tipi: [], richiesta: "riscontro", descrizione: "",
+    email: { a: rcA(), cc: "", ogg: "", testo: "" }, stato: "aperto", esito: "", creato: nowISO() };
+}
+function rcNuovo(clienteId){
+  rcLiberaFoto();
+  rc.cur = rcVuoto(); rc.nuovo = true; rc.cliQ = ""; rc.iaMsg = ""; rc.iaErr = false; rc.ccMan = false; rc.sporco = false;
+  const c = clienteId && byId(clienteId);
+  if(c) rcSetCliente(c, false);
+  rcApriDlg();
+}
+function rcApri(id){
+  const r = reclami.find(x => x.id === id); if(!r) return;
+  if($("#dlgDetail").open) $("#dlgDetail").close();
+  rcLiberaFoto();
+  rc.cur = JSON.parse(JSON.stringify(r));
+  rc.cur.email = { a: "", cc: "", ogg: "", testo: "", ...(rc.cur.email || {}) };
+  rc.cur.prodotti = rc.cur.prodotti || []; rc.cur.tipi = rc.cur.tipi || [];
+  rc.nuovo = false; rc.cliQ = ""; rc.iaMsg = ""; rc.iaErr = false; rc.ccMan = true; rc.sporco = false;
+  rcApriDlg();
+}
+function rcApriDlg(){
+  if($("#dlgDetail").open) $("#dlgDetail").close();
+  rcRender(true);
+  if(!$("#dlgRc").open) $("#dlgRc").showModal();
+  $("#rcEd").scrollTop = 0;
+  if(!rc.cur.clienteId && !rc.cur.cliente && matchMedia("(pointer:fine)").matches && $("#rcCliQ")) $("#rcCliQ").focus();
+}
+function rcSetCliente(c, copia){
+  const r = rc.cur;
+  r.clienteId = c.id; r.cliente = c.nome || ""; r.luogo = c.luogo || ""; r.codice = rcCodiceDi(c);
+  if(!r.email.a) r.email.a = rcA();
+  if(!rc.ccMan) r.email.cc = rcCc(r.tipi);
+  if(copia && r.codice) rcCopia(r.codice);
+}
+function rcCopia(cod){
+  if(navigator.clipboard) navigator.clipboard.writeText(cod).then(() => toast("Codice cliente " + cod + " copiato"), () => toast("Codice cliente: " + cod));
+  else toast("Codice cliente: " + cod);
+}
+function rcCliRighe(){
+  const parole = rc.cliQ.split(/\s+/).map(norm).filter(Boolean);
+  const ord = c => (c.stato === "CLIENTE" ? 0 : rcCodiceDi(c) ? 1 : 2);
+  const rows = clienti.filter(c => !parole.length || (() => { const h = norm([c.nome, c.ragioneSociale, c.luogo, c.codice, c.codiceFatt, c.codiceReport, c.codiceDest].join(" ")); return parole.every(w => h.includes(w)); })())
+    .sort((a, b) => ord(a) - ord(b) || (a.nome || "").localeCompare(b.nome || "", "it")).slice(0, 60);
+  return rows.length ? rows.map(c => `<li><button class="row" type="button" data-rccli="${c.id}"><span class="row-main"><span class="row-name">${esc(c.nome)}</span><span class="row-sub">${esc([c.luogo, rcCodiceDi(c) ? "cod. " + rcCodiceDi(c) : "senza codice", statoLabel(c.stato)].filter(Boolean).join(" · "))}</span></span><span class="row-side">›</span></button></li>`).join("")
+    : `<li class="empty">Nessun cliente trovato.</li>`;
+}
+function rcProdHTML(p, k){
+  const testa = p.man
+    ? `<div class="rc-prod-man"><input class="input" data-f="p.${k}.c" value="${esc(p.c)}" placeholder="Codice" aria-label="Codice articolo"><input class="input" data-f="p.${k}.n" value="${esc(p.n)}" placeholder="Nome dell’articolo" aria-label="Nome dell’articolo"></div>`
+    : `<div><b>${esc(p.n)}</b><small>${p.c ? " · cod. " + esc(p.c) : ""}</small></div>`;
+  return `<div class="rc-prod">${testa}<button class="rc-x" type="button" data-rcx="${k}" aria-label="Togli l’articolo" title="Togli">×</button>
+    <div class="rc-prod-f"><label>Quantità<input class="input" data-f="p.${k}.qta" value="${esc(p.qta)}" placeholder="es. 2 cartoni"></label><label>Lotto<input class="input" data-f="p.${k}.lotto" value="${esc(p.lotto)}" autocomplete="off"></label><label>Scadenza<input class="input" type="date" data-f="p.${k}.scad" value="${esc(p.scad)}"></label></div></div>`;
+}
+const rcFotoHTML = () => rc.foto.map((f, k) => `<span><img src="${f.url}" alt="Foto ${k + 1}"><button type="button" data-rcfx="${k}" aria-label="Togli la foto">×</button></span>`).join("");
+function rcRender(inizio){
+  const r = rc.cur; if(!r) return;
+  const ed = $("#rcEd"), sc = inizio ? 0 : ed.scrollTop;
+  $("#rcT").firstChild.textContent = rc.nuovo ? "Nuovo reclamo" : "Reclamo del " + fmtDate(r.data);
+  const haCli = !!(r.clienteId || r.cliente);
+  $("#rcSub").textContent = !haCli ? "Scegli il cliente: poi si aprono gli altri passi." : r.inviato ? "Email inviata il " + fmtDate(r.inviato.slice(0, 10)) + "." : "Completa i passi e scrivi l’email all’ufficio qualità.";
+  $("#rcDel").classList.toggle("hidden", rc.nuovo);
+  let h = `<section class="rc-step"><h3><span class="rc-n">1</span>Cliente</h3>`;
+  if(!haCli) h += `<input class="input" id="rcCliQ" type="search" placeholder="Cerca per nome, località o codice" autocomplete="off" value="${esc(rc.cliQ)}" aria-label="Cerca il cliente"><ul class="list rc-cli-list" id="rcCliList">${rcCliRighe()}</ul>`;
+  else h += `<div class="rc-cli"><div style="flex:1;min-width:170px"><b>${esc(r.cliente)}</b><small>${esc(r.luogo || "")}</small></div>
+      <div class="rc-cod"><input class="input" data-f="codice" value="${esc(r.codice)}" placeholder="Codice cliente" aria-label="Codice cliente" autocomplete="off"><button class="btn" type="button" id="rcCopia">Copia</button></div>
+      <button class="link" type="button" id="rcCambia">Cambia cliente</button></div>
+      ${r.codice ? "" : `<p class="pv-hint pvm-warn" style="margin:8px 0 0">Questa scheda non ha il codice cliente: scrivilo qui sopra.</p>`}
+      <label class="field" style="margin-top:10px"><span>Data della segnalazione</span><input class="input" type="date" data-f="data" value="${esc(r.data)}"></label>`;
+  h += `</section>`;
+  if(haCli){
+    h += `<section class="rc-step"><h3><span class="rc-n">2</span>Prodotti coinvolti</h3>
+      ${r.prodotti.map(rcProdHTML).join("") || `<p class="pv-hint" style="margin:0 0 8px">Nessun articolo ancora. Quantità, lotto e scadenza sono facoltativi.</p>`}
+      <div class="rc-az"><button class="btn btn-primary" type="button" id="rcArt">+ Aggiungi dal catalogo</button><button class="btn" type="button" id="rcArtMano">Articolo a mano</button></div></section>
+    <section class="rc-step"><h3><span class="rc-n">3</span>Tipologia del reclamo</h3><p class="pv-hint" style="margin:0 0 8px">Puoi sceglierne più di una.</p>
+      <div class="rc-tipi">${RC_TIPI.map(([k, l, d]) => `<button type="button" data-rctipo="${k}" aria-pressed="${r.tipi.includes(k)}"${d ? ` title="${esc(d)}"` : ""}>${esc(l)}</button>`).join("")}</div>
+      <label class="field" style="margin-top:12px"><span>Cosa chiedi all’azienda</span><select class="input" data-f="richiesta">${RC_RICH.map(([k, l]) => `<option value="${k}"${r.richiesta === k ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label></section>
+    <section class="rc-step"><h3><span class="rc-n">4</span>Cosa è successo</h3>
+      <label class="field"><span>Descrivi brevemente cosa è successo</span><textarea class="input" data-f="descrizione" rows="4" placeholder="Es. il cliente ha aperto il cartone domenica e la carne aveva un cattivo odore; ha già buttato la merce.">${esc(r.descrizione)}</textarea></label>
+      <div class="rc-az"><button class="btn" type="button" id="rcFotoBtn">+ Aggiungi foto</button></div><div class="rc-foto" id="rcFoto">${rcFotoHTML()}</div>
+      <p class="pv-hint" style="margin:6px 0 0">Le foto non si salvano nell’app: servono solo da allegare all’email${r.foto && !rc.foto.length ? ` (la volta scorsa ne avevi allegate ${r.foto})` : ""}.</p></section>
+    <section class="rc-step" id="rcMail"><h3><span class="rc-n">5</span>Email all’ufficio qualità</h3>
+      <div class="rc-ia"><button class="btn btn-primary" type="button" id="rcGen">${r.email.testo ? "Riscrivi l’email con l’IA" : "Scrivi l’email con l’IA"}</button><span class="rc-ia-st${rc.iaErr ? " err" : ""}" id="rcIaSt">${esc(rc.iaMsg)}</span></div>
+      <label class="field"><span>A</span><input class="input" data-f="email.a" value="${esc(r.email.a)}" inputmode="email" autocomplete="off"></label>
+      <label class="field"><span>Copia a (CC)</span><input class="input" data-f="email.cc" value="${esc(r.email.cc)}" inputmode="email" autocomplete="off" placeholder="facoltativo, più indirizzi separati da virgola"></label>
+      <label class="field"><span>Oggetto</span><input class="input" data-f="email.ogg" value="${esc(r.email.ogg)}" autocomplete="off"></label>
+      <label class="field"><span>Testo</span><textarea class="input rc-testo" data-f="email.testo" rows="12" placeholder="Tocca «Scrivi l’email con l’IA», oppure scrivila tu.">${esc(r.email.testo)}</textarea></label>
+      <div class="rc-invia"><button class="btn btn-primary" type="button" id="rcInvia"></button><button class="btn" type="button" id="rcInviaAlt"></button></div>
+      <p class="pv-hint" id="rcCome"></p></section>
+    <section class="rc-step"><h3><span class="rc-n">6</span>Stato</h3>
+      <div class="ct-chips rc-stato"><button type="button" data-rcst="aperto" aria-pressed="${r.stato !== "chiuso"}">Aperto</button><button type="button" data-rcst="chiuso" aria-pressed="${r.stato === "chiuso"}">Chiuso${r.chiuso ? " il " + fmtDate(r.chiuso) : ""}</button></div>
+      <label class="field"><span>Esito o risposta dell’azienda</span><textarea class="input" data-f="esito" rows="2" placeholder="Es. nota di credito emessa, merce sostituita…">${esc(r.esito)}</textarea></label></section>`;
+  }
+  ed.innerHTML = h;
+  ed.scrollTop = sc;
+  if(haCli) rcInviaTesti();
+}
+const rcPuoShare = () => !!(pvMobile && rc.foto.length && navigator.canShare && (() => { try { return navigator.canShare({ files: rc.foto.map(f => f.file) }); } catch(e){ return false; } })());
+function rcInviaTesti(){
+  const share = rcPuoShare();
+  $("#rcInvia").textContent = share ? "Invia con le foto" : pvMobile ? "Apri l’app di posta" : "Apri in Outlook";
+  $("#rcInviaAlt").textContent = share ? "Senza foto" : pvMobile ? "Outlook sul web" : "Outlook sul web";
+  $("#rcCome").textContent = share
+    ? "Si apre il menu Condividi: scegli Outlook (o Mail). Foto e testo sono già nell’email; l’indirizzo A viene copiato: tieni premuto nel campo A e scegli Incolla" + (rc.cur.email.cc ? ", poi aggiungi la copia (CC)." : ".")
+    : rc.foto.length ? "Si apre il programma di posta con destinatari, oggetto e testo già scritti: allega le foto con Allega." : "Si apre il programma di posta con destinatari, oggetto e testo già scritti. Se hai foto del cliente, allegale lì.";
+}
+$("#rcEd").addEventListener("input", e => {
+  const t = e.target, r = rc.cur; if(!r) return;
+  if(t.id === "rcCliQ"){ rc.cliQ = t.value; $("#rcCliList").innerHTML = rcCliRighe(); return; }
+  const f = t.dataset.f; if(!f) return;
+  rc.sporco = true;
+  if(f.startsWith("email.")){ r.email[f.slice(6)] = t.value; if(f === "email.cc") rc.ccMan = true; if(f === "email.cc") rcInviaTesti(); return; }
+  if(f.startsWith("p.")){ const [, k, campo] = f.split("."); if(r.prodotti[+k]) r.prodotti[+k][campo] = t.value; return; }
+  r[f] = t.value;
+  if(f === "codice") t.closest(".rc-step").querySelector(".pvm-warn")?.classList.toggle("hidden", !!t.value.trim());
+});
+$("#rcEd").addEventListener("click", e => {
+  const r = rc.cur; if(!r) return;
+  const c = e.target.closest("[data-rccli]");
+  if(c){ const x = byId(c.dataset.rccli); if(!x) return; rcSetCliente(x, true); rc.sporco = true; rcRender(); return; }
+  if(e.target.closest("#rcCopia")){ const v = String(r.codice || "").trim(); if(v) rcCopia(v); else toast("Scrivi prima il codice del cliente"); return; }
+  if(e.target.closest("#rcCambia")){ r.clienteId = ""; r.cliente = ""; r.codice = ""; r.luogo = ""; rc.cliQ = ""; rcRender(); $("#rcCliQ")?.focus(); return; }
+  if(e.target.closest("#rcArt")){ pvaApri(null, "rc"); return; }
+  if(e.target.closest("#rcArtMano")){ rcArticoloAMano(); return; }
+  const x = e.target.closest("[data-rcx]"); if(x){ r.prodotti.splice(+x.dataset.rcx, 1); rc.sporco = true; rcRender(); return; }
+  const tp = e.target.closest("[data-rctipo]");
+  if(tp){
+    const k = tp.dataset.rctipo, i = r.tipi.indexOf(k);
+    if(i >= 0) r.tipi.splice(i, 1); else r.tipi.push(k);
+    if(!rc.ccMan) r.email.cc = rcCc(r.tipi);
+    rc.sporco = true; rcRender(); return;
+  }
+  if(e.target.closest("#rcFotoBtn")){ $("#rcFotoIn").click(); return; }
+  const fx = e.target.closest("[data-rcfx]");
+  if(fx){ const [f] = rc.foto.splice(+fx.dataset.rcfx, 1); if(f) URL.revokeObjectURL(f.url); $("#rcFoto").innerHTML = rcFotoHTML(); rcInviaTesti(); return; }
+  if(e.target.closest("#rcGen")){ rcGenera(); return; }
+  if(e.target.closest("#rcInvia")){ rcInvia(false); return; }
+  if(e.target.closest("#rcInviaAlt")){ rcInvia(true); return; }
+  const st = e.target.closest("[data-rcst]");
+  if(st){ r.stato = st.dataset.rcst; if(r.stato === "chiuso") r.chiuso = r.chiuso || localISO(); else delete r.chiuso; rc.sporco = true; rcRender(); }
+});
+function rcArticoloAMano(){
+  rc.cur.prodotti.push({ i: null, c: "", n: "", qta: "", lotto: "", scad: "", man: true }); rc.sporco = true; rcRender();
+  const ins = $$("#rcEd .rc-prod-man input"); if(ins.length) ins[ins.length - 2].focus();
+}
+// dalla finestra Articoli (pvaApri con destinazione "rc")
+function rcAggiungiArticoli(ids){
+  const r = rc.cur; if(!r || !art.dati) return;
+  let n = 0;
+  ids.forEach(id => { const x = art.dati.a.find(y => y.i === id); if(!x || r.prodotti.some(p => p.i === x.i)) return; r.prodotti.push({ i: x.i, c: x.c || "", n: x.n, qta: "", lotto: "", scad: "" }); n++; });
+  rc.sporco = true; rcRender();
+  if(n) toast(n === 1 ? "Articolo aggiunto al reclamo" : n + " articoli aggiunti al reclamo");
+}
+$("#rcFotoIn").addEventListener("change", e => {
+  [...e.target.files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name)).forEach(f => rc.foto.push({ file: f, url: URL.createObjectURL(f) }));
+  e.target.value = "";
+  if($("#rcFoto")){ $("#rcFoto").innerHTML = rcFotoHTML(); rcInviaTesti(); }
+});
+function rcLiberaFoto(){ rc.foto.forEach(f => URL.revokeObjectURL(f.url)); rc.foto = []; }
+
+/* ----- testo dell'email: Gemini (Worker) o modello pronto ----- */
+function rcDatiIA(){
+  const r = rc.cur, ora = new Date().getHours();
+  return { cliente: r.cliente, codice: String(r.codice || "").trim(), luogo: r.luogo, data: fmtDate(r.data),
+    prodotti: r.prodotti.filter(p => p.c || p.n).map(p => ({ c: p.c, n: p.n, qta: p.qta, lotto: p.lotto, scad: fmtDate(p.scad) })),
+    tipi: r.tipi.map(k => rcTipo(k)[1] + (rcTipo(k)[2] ? " (" + rcTipo(k)[2].toLowerCase() + ")" : "")), richiesta: rcRichLbl(r.richiesta), descrizione: r.descrizione,
+    saluto: ora < 13 ? "Buongiorno" : ora < 18 ? "Buon pomeriggio" : "Buonasera", firma: rcFirma(), foto: rc.foto.length };
+}
+// RCMOD-START (funzione pura: dati del reclamo → {oggetto, testo})
+function rcModello(d, richiesta, tipi){
+  const cli = d.cliente + (d.codice ? " (cod. " + d.codice + ")" : "");
+  const prod = (d.prodotti || []).map(p => "- " + [(p.n || "Articolo") + (p.c ? " cod." + p.c : ""), p.qta ? "quantità " + p.qta : "", p.lotto ? "lotto " + p.lotto : "", p.scad ? "scadenza " + p.scad : ""].filter(Boolean).join(", ") + ";");
+  if(prod.length) prod[prod.length - 1] = prod[prod.length - 1].replace(/;$/, ".");
+  const tl = (tipi || []).map(k => rcTipo(k)[1].toLowerCase());
+  let desc = String(d.descrizione || "").trim();
+  if(desc){ desc = desc.charAt(0).toUpperCase() + desc.slice(1); if(!/[.!?]$/.test(desc)) desc += "."; }
+  const RICH = {
+    nota: "Chiedo cortesemente di procedere con l’emissione di una nota di credito: fatemi sapere se avete bisogno che il prodotto rientri.",
+    sostituzione: "Chiedo cortesemente la sostituzione della merce non conforme.",
+    ritiro: "Chiedo cortesemente di organizzare il ritiro del prodotto e di procedere con la relativa nota di credito.",
+    nessuna: "Il cliente ha già provveduto allo smaltimento della merce: non è necessario emettere nota di credito."
+  };
+  const righe = [d.saluto + ",", "",
+    "con la presente segnalo " + (tl.length ? (tl.length > 1 ? "i seguenti problemi" : "un problema") + " (" + tl.join(", ") + ")" : "una non conformità") + " rilevat" + (tl.length > 1 ? "i" : "o") + " dal cliente " + cli + (d.data ? " il " + d.data : "") + (prod.length ? ", relativ" + (tl.length > 1 ? "i" : "o") + " a:" : ".")];
+  if(prod.length) righe.push(...prod);
+  if(desc) righe.push("", desc);
+  if(d.foto) righe.push("In allegato le foto inviate dal cliente.");
+  righe.push("");
+  if(RICH[richiesta]) righe.push(RICH[richiesta]);
+  righe.push("Attendo un gentile riscontro in merito.", "", "Grazie e buona giornata,", "", d.firma || "");
+  const primo = (d.prodotti || [])[0];
+  const titolo = richiesta === "nota" ? "Richiesta nota di credito" : tipi && tipi.length ? rcTipo(tipi[0])[3] : "Problema qualitativo";
+  const oggetto = [titolo, primo ? (primo.n || "") + (primo.c ? " cod. " + primo.c : "") + ((d.prodotti || []).length > 1 ? " e altri" : "") : "", d.cliente + (d.codice ? " cod. " + d.codice : "")].filter(s => String(s).trim()).join(" – ");
+  return { oggetto, testo: righe.join("\n").replace(/\n{3,}/g, "\n\n").trim() };
+}
+// RCMOD-END
+async function rcGenera(){
+  const r = rc.cur; if(!r) return;
+  if(!r.tipi.length && !String(r.descrizione || "").trim() && !r.prodotti.length){ toast("Scegli la tipologia o scrivi cosa è successo"); return; }
+  if(String(r.email.testo || "").trim() && !confirm("Vuoi sostituire il testo dell’email che c’è già?")) return;
+  const btn = $("#rcGen"); btn.disabled = true; btn.textContent = "Scrivo l’email…";
+  $("#rcIaSt").className = "rc-ia-st"; $("#rcIaSt").textContent = "Può servire qualche secondo.";
+  const dati = rcDatiIA(); let ok = false;
+  if(RC_SERVIZIO && navigator.onLine){
+    try{
+      const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 30000);
+      const res = await fetch(RC_SERVIZIO + "/email", { method: "POST", signal: ctl.signal, headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken(), "Content-Type": "application/json" }, body: JSON.stringify(dati) });
+      clearTimeout(timer);
+      const j = await res.json().catch(() => ({}));
+      if(res.ok && j.testo){ r.email.ogg = j.oggetto || r.email.ogg; r.email.testo = j.testo; r.ia = true; ok = true; rc.iaMsg = "Scritta con l’IA: controllala e modificala se serve."; rc.iaErr = false; }
+      else rc.iaMsg = "L’IA non ha risposto" + (j.errore && res.status !== 503 ? " (" + j.errore + ")" : "") + ": ho scritto l’email con il modello pronto. Controllala.";
+    }catch(err){ rc.iaMsg = "L’IA non è raggiungibile: ho scritto l’email con il modello pronto. Controllala."; }
+  } else rc.iaMsg = "Senza connessione: ho scritto l’email con il modello pronto. Controllala.";
+  if(!ok){ const m = rcModello(dati, r.richiesta, r.tipi); r.email.ogg = m.oggetto; r.email.testo = m.testo; r.ia = false; rc.iaErr = true; }
+  if(!r.email.a) r.email.a = rcA();
+  rc.sporco = true; rcRender();
+  $("#rcMail")?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+/* ----- invio: come i preventivi (app di posta, Outlook sul web, menu Condividi con le foto) ----- */
+function rcMailDati(){
+  const r = rc.cur;
+  const to = emSplit(r.email.a), cc = emSplit(r.email.cc);
+  const bad = [...to, ...cc].filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if(!to.length){ toast("Manca l’indirizzo A"); return null; }
+  if(bad.length){ toast("Indirizzo non valido: " + bad[0]); return null; }
+  if(!String(r.email.testo || "").trim()){ toast("Scrivi prima il testo dell’email"); return null; }
+  // senza oggetto si usa quello del modello pronto (problema – articolo – cliente)
+  if(!String(r.email.ogg || "").trim()){ r.email.ogg = rcModello(rcDatiIA(), r.richiesta, r.tipi).oggetto; const o = $("#rcEd [data-f='email.ogg']"); if(o) o.value = r.email.ogg; }
+  return { to: to.join(", "), cc: cc.join(", "), ogg: String(r.email.ogg || "").trim(), testo: r.email.testo };
+}
+function rcMailto(d){
+  const lista = s => s.split(",").map(x => encodeURIComponent(x.trim())).filter(Boolean).join(",");
+  location.href = "mailto:" + lista(d.to) + "?" + (d.cc ? "cc=" + lista(d.cc) + "&" : "") + "subject=" + encodeURIComponent(d.ogg) + "&body=" + encodeURIComponent(d.testo.replace(/\r?\n/g, "\r\n"));
+}
+function rcInvia(alt){
+  const d = rcMailDati(); if(!d) return;
+  const share = rcPuoShare();
+  if(share && !alt){
+    // niente attese prima di share(): il telefono vuole che parta subito dal tocco
+    if(navigator.clipboard) navigator.clipboard.writeText(d.to).catch(() => {});
+    navigator.share({ files: rc.foto.map(f => f.file), title: d.ogg, text: d.testo })
+      .then(() => rcInviato())
+      .catch(err => { if(err && err.name === "AbortError") return; rcMailto(d); rcInviato(); });
+    return;
+  }
+  if(alt && !share){
+    const q = "to=" + encodeURIComponent(d.to) + (d.cc ? "&cc=" + encodeURIComponent(d.cc) : "") + "&subject=" + encodeURIComponent(d.ogg) + "&body=" + encodeURIComponent(d.testo);
+    window.open("https://outlook.office.com/mail/deeplink/compose?" + q, "_blank", "noopener");
+  } else rcMailto(d);
+  if(rc.foto.length && !share) toast("Ricordati di allegare le foto");
+  rcInviato();
+}
+// segna il reclamo come inviato, lo salva e (la prima volta) scrive una riga nello storico del cliente
+function rcInviato(){
+  const r = rc.cur; if(!r) return;
+  const prima = !r.inviato;
+  r.inviato = r.inviato || nowISO();
+  r.foto = Math.max(r.foto || 0, rc.foto.length);
+  rcSalva(false);
+  const c = prima && r.clienteId && byId(r.clienteId);
+  if(c) updateDoc(ref(c.id), { storico: [...(c.storico || []), { d: localISO(), t: "Reclamo all’ufficio qualità: " + rcTipiTesto(r) + (r.prodotti.length ? " (" + r.prodotti.map(p => p.n || p.c).filter(Boolean).join(", ") + ")" : "") }], aggiornato: nowISO() }).catch(fail);
+  rcRender();
+}
+function rcSalva(chiudi){
+  const r = rc.cur; if(!r) return false;
+  if(!r.clienteId && !r.cliente){ toast("Scegli prima il cliente"); return false; }
+  const { id, ...data } = JSON.parse(JSON.stringify(r));
+  data.prodotti = (data.prodotti || []).filter(p => String(p.c || "").trim() || String(p.n || "").trim());
+  data.codice = String(data.codice || "").trim();
+  data.foto = Math.max(data.foto || 0, rc.foto.length);
+  data.aggiornato = nowISO();
+  setDoc(doc(rcCol(), id), data).catch(fail);   // con la cache offline la promessa arriva solo col server: non si aspetta
+  const era = rc.nuovo; rc.nuovo = false; rc.sporco = false;
+  if(chiudi){ rcLiberaFoto(); $("#dlgRc").close(); toast(era ? "Reclamo salvato" : "Modifiche salvate"); }
+  return true;
+}
+function rcChiudi(){
+  if(rc.sporco && !confirm("Ci sono modifiche non salvate. Chiudere lo stesso?")) return;
+  rcLiberaFoto(); rc.sporco = false; $("#dlgRc").close();
+}
+$("#rcOk").addEventListener("click", () => rcSalva(true));
+$("#rcNo").addEventListener("click", rcChiudi);
+$("#rcX").addEventListener("click", rcChiudi);
+$("#dlgRc").addEventListener("cancel", e => { e.preventDefault(); rcChiudi(); });
+$("#rcDel").addEventListener("click", async () => {
+  const r = rc.cur; if(!r || rc.nuovo) return;
+  if(!(await confermaElimina("il reclamo " + (r.cliente ? "di " + r.cliente + " " : "") + "del " + fmtDate(r.data)))) return;
+  deleteDoc(doc(rcCol(), r.id)).then(() => toast("Reclamo eliminato")).catch(fail);
+  rcLiberaFoto(); rc.sporco = false; $("#dlgRc").close();
+});
+
+/* ----- impostazioni (A, CC, firma) ----- */
+$("#rcSetBtn").addEventListener("click", () => {
+  $("#rcsA").value = rcA(); $("#rcsCc").value = rcSet.cc || ""; $("#rcsLog").value = rcSet.ccLog || ""; $("#rcsFirma").value = rcFirma();
+  $("#dlgRcSet").showModal();
+});
+$("#rcSetForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = { a: $("#rcsA").value.trim(), cc: emSplit($("#rcsCc").value).join(", "), ccLog: emSplit($("#rcsLog").value).join(", "), firma: $("#rcsFirma").value.replace(/\s+$/, "") };
+  const bad = [...emSplit(v.a), ...emSplit(v.cc), ...emSplit(v.ccLog)].filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if(bad.length){ toast("Indirizzo non valido: " + bad[0]); return; }
+  if(!v.a) v.a = RC_QUALITA;
+  rcSet = v; setDoc(rcSetRef(), v).catch(fail);
+  $("#dlgRcSet").close(); toast("Impostazioni dei reclami salvate");
+});
+
+/* ----- nella scheda cliente ----- */
+function rcDetailHTML(c){
+  const mine = reclami.filter(r => r.clienteId === c.id).sort((a, b) => (b.data || "").localeCompare(a.data || ""));
+  return `<div class="pv-detail"><h3>Reclami <button class="chip-btn" type="button" data-rcnew="${c.id}">Nuovo reclamo</button></h3>${mine.length ? `<ul>${mine.map(r => `<li><button type="button" data-rcopen="${r.id}">${esc(fmtDate(r.data))} · ${esc((r.tipi || []).map(k => rcTipo(k)[3]).join(", ") || "reclamo")} <span>${r.stato === "chiuso" ? "chiuso" : "aperto"} ›</span></button></li>`).join("")}</ul>` : `<p class="pv-hint">Nessun reclamo per questo cliente.</p>`}</div>`;
+}
+$("#dBody").addEventListener("click", e => {
+  const n = e.target.closest("[data-rcnew]"); if(n){ rcNuovo(n.dataset.rcnew); return; }
+  const o = e.target.closest("[data-rcopen]"); if(o) rcApri(o.dataset.rcopen);
+});
+
+/* ----- report annuale (PDF con jsPDF, Excel con SheetJS) ----- */
+function rcFileFuori(file){
+  if(pvMobile && navigator.canShare && navigator.canShare({ files: [file] })){
+    // dopo il caricamento della libreria il tocco è "scaduto": si mostra il riquadro con il tasto Condividi dei preventivi
+    pvPdfFile = file; $("#pvReadyName").textContent = file.name; $("#pvReady").classList.remove("hidden");
+  } else pvDownload(file);
+}
+async function rcReportPdf(anno){
+  const L = rcDelAnno(anno).sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  if(!L.length){ toast("Nessun reclamo nel " + anno); return; }
+  try { if(!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"); }
+  catch(err){ toast("Non riesco a creare il PDF: controlla la connessione."); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const M = 14, W = 182, BASSO = 284;
+  const pulito = s => String(s ?? "").replace(/[’‘]/g, "'").replace(/[“”«»]/g, '"').replace(/[–—]/g, "-").replace(/…/g, "...");
+  let y = 18;
+  const spazio = h => { if(y + h > BASSO){ pdf.addPage(); y = 18; return true; } return false; };
+  const testo = (t, o = {}) => {
+    pdf.setFont("helvetica", o.b ? "bold" : "normal"); pdf.setFontSize(o.s || 10); pdf.setTextColor(...(o.c || [34, 34, 34]));
+    pdf.splitTextToSize(pulito(t), o.w || W).forEach(r => { spazio((o.s || 10) * .45); pdf.text(r, o.x || M, y); y += (o.s || 10) * .45; });
+  };
+  const titolo = t => { y += 5; spazio(16); testo(t, { s: 13, b: true, c: [23, 96, 122] }); y += 1.5; };
+  // tabella: colonne [{t: intestazione, w: larghezza, a: "r" per numeri}], righe di testi
+  const tabella = (col, righe) => {
+    const testa = () => {
+      spazio(8); pdf.setFillColor(232, 238, 240); pdf.rect(M, y - 4.2, W, 6.4, "F");
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(9); pdf.setTextColor(40, 40, 40);
+      let x = M; col.forEach(c => { pdf.text(pulito(c.t), c.a === "r" ? x + c.w - 1.5 : x + 1.5, y, { align: c.a === "r" ? "right" : "left" }); x += c.w; });
+      y += 5;
+    };
+    testa();
+    righe.forEach(r => {
+      pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+      const celle = r.map((v, i) => pdf.splitTextToSize(pulito(v), col[i].w - 3));
+      const h = Math.max(...celle.map(c => c.length)) * 3.9 + 1.6;
+      if(spazio(h)) testa();
+      pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); pdf.setTextColor(34, 34, 34);
+      let x = M; celle.forEach((c, i) => { c.forEach((l, j) => pdf.text(l, col[i].a === "r" ? x + col[i].w - 1.5 : x + 1.5, y + j * 3.9, { align: col[i].a === "r" ? "right" : "left" })); x += col[i].w; });
+      y += h; pdf.setDrawColor(220, 220, 220); pdf.line(M, y - 3.2, M + W, y - 3.2);
+    });
+  };
+  const A = rcAggrega(L), aperti = L.filter(r => r.stato !== "chiuso").length;
+  const perMese = Array(12).fill(0); L.forEach(r => { const m = +String(r.data).slice(5, 7) - 1; if(m >= 0) perMese[m]++; });
+  testo("Reclami all'ufficio qualità - Report " + anno, { s: 18, b: true, c: [23, 96, 122] }); y += 1;
+  testo([agente.nome ? "Agente: " + agente.nome : "", "Creato il " + fmtDate(localISO())].filter(Boolean).join(" · "), { c: [100, 100, 100] });
+  titolo("Riepilogo");
+  testo(`Reclami: ${L.length} (aperti ${aperti}, chiusi ${L.length - aperti}) · Clienti coinvolti: ${A.cli.length} · Articoli diversi segnalati: ${A.art.length}`);
+  const nota = L.filter(r => r.richiesta === "nota" || r.richiesta === "ritiro").length;
+  if(nota) testo(`Reclami con richiesta di nota di credito: ${nota}`);
+  titolo("Reclami per mese");
+  tabella(BDG_MESI.map(m => ({ t: m, w: W / 12, a: "r" })), [perMese.map(String)]);
+  titolo("Per tipologia");
+  tabella([{ t: "Tipologia", w: 140 }, { t: "Reclami", w: 21, a: "r" }, { t: "%", w: 21, a: "r" }], A.tipi.map(t => [t.l, String(t.n), Math.round(t.n / L.length * 100) + "%"]));
+  titolo("Articoli più segnalati");
+  tabella([{ t: "Codice", w: 22 }, { t: "Articolo", w: 118 }, { t: "Reclami", w: 21, a: "r" }, { t: "Clienti", w: 21, a: "r" }], A.art.map(a => [a.c || "", a.nome || "", String(a.n), String(a.clienti)]));
+  titolo("Clienti con più segnalazioni");
+  tabella([{ t: "Cliente", w: 120 }, { t: "Codice", w: 41 }, { t: "Reclami", w: 21, a: "r" }], A.cli.map(c => [(c.id && byId(c.id) ? byId(c.id).nome : c.nome) || "", c.codice || "", String(c.n)]));
+  titolo("Elenco dei reclami");
+  tabella([{ t: "Data", w: 19 }, { t: "Cliente", w: 46 }, { t: "Articoli", w: 52 }, { t: "Tipologia", w: 46 }, { t: "Stato", w: 19 }],
+    L.map(r => [fmtDate(r.data), (r.cliente || "") + (r.codice ? "\ncod. " + r.codice : ""), (r.prodotti || []).map(p => (p.c ? p.c + " " : "") + (p.n || "")).join("\n"), rcTipiTesto(r) + (r.richiesta && r.richiesta !== "riscontro" ? "\nRichiesta: " + rcRichLbl(r.richiesta).toLowerCase() : ""), r.stato === "chiuso" ? "Chiuso" + (r.esito ? "\n" + r.esito : "") : "Aperto"]));
+  const n = pdf.getNumberOfPages();
+  for(let i = 1; i <= n; i++){ pdf.setPage(i); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8); pdf.setTextColor(140, 140, 140); pdf.text(`Pagina ${i} di ${n}`, M + W, 292, { align: "right" }); }
+  rcFileFuori(new File([pdf.output("blob")], `Report_reclami_${anno}.pdf`, { type: "application/pdf" }));
+}
+function rcReportXls(anno){
+  if(!window.XLSX){ toast("Excel non disponibile: controlla la connessione."); return; }
+  const L = rcDelAnno(anno).sort((a, b) => (a.data || "").localeCompare(b.data || ""));
+  if(!L.length){ toast("Nessun reclamo nel " + anno); return; }
+  const A = rcAggrega(L), wb = XLSX.utils.book_new();
+  const righe = [["Data", "Cliente", "Codice cliente", "Località", "Codice articolo", "Articolo", "Quantità", "Lotto", "Scadenza", "Tipologia", "Richiesta", "Descrizione", "Stato", "Chiuso il", "Esito", "Email inviata"]];
+  L.forEach(r => (r.prodotti && r.prodotti.length ? r.prodotti : [{}]).forEach(p => righe.push([fmtDate(r.data), r.cliente || "", r.codice || "", r.luogo || "", p.c || "", p.n || "", p.qta || "", p.lotto || "", fmtDate(p.scad), rcTipiTesto(r), rcRichLbl(r.richiesta || "riscontro"), r.descrizione || "", r.stato === "chiuso" ? "Chiuso" : "Aperto", fmtDate(r.chiuso), r.esito || "", r.inviato ? fmtDate(r.inviato.slice(0, 10)) : ""])));
+  const perMese = Array(12).fill(0); L.forEach(r => { const m = +String(r.data).slice(5, 7) - 1; if(m >= 0) perMese[m]++; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(righe), "Reclami");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Mese", "Reclami"], ...BDG_MESI.map((m, i) => [m, perMese[i]]), ["Totale", L.length]]), "Per mese");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Tipologia", "Reclami"], ...A.tipi.map(t => [t.l, t.n])]), "Per tipologia");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Codice", "Articolo", "Reclami", "Clienti"], ...A.art.map(a => [a.c || "", a.nome || "", a.n, a.clienti])]), "Per articolo");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Cliente", "Codice", "Reclami"], ...A.cli.map(c => [c.nome || "", c.codice || "", c.n])]), "Per cliente");
+  XLSX.writeFile(wb, `Reclami_${anno}.xlsx`);
+}
 
 /* ---------- offline ---------- */
 const net = () => $("#offline").classList.toggle("hidden", navigator.onLine);
