@@ -1072,6 +1072,33 @@ main.view{padding-top:14px}
 .gc-logo.gc-icloud{background:linear-gradient(180deg,#3FA9F5,#1B73E8)}
 .gc-uno{margin:12px 0 0!important;padding-top:10px;border-top:1px dashed var(--line)}
 .cal-gdot.ic{border-radius:3px}
+.cal-vista{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden;margin-left:auto}
+.cal-vista button{border:0;background:var(--surface);color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:7px 14px;cursor:pointer}
+.cal-vista button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.cg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg,18px);padding:10px 10px 12px;margin-top:12px}
+.cg-testa{font-family:var(--font-cond);font-size:20px;padding:2px 4px 8px}
+.cg-testa span{font-family:var(--font);font-size:13px;font-weight:700;color:var(--accent-ink);background:var(--accent);border-radius:99px;padding:2px 8px;vertical-align:3px}
+.cg-tutto,.cg-senza{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--line)}
+.cg-senza{border-bottom:0;border-top:1px solid var(--line);margin-top:6px}
+.cg-et{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-right:4px}
+.cg-chip{display:flex;flex-direction:column;align-items:flex-start;border:0;border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 16%,var(--surface));color:var(--ink);border-radius:8px;padding:5px 10px;font:inherit;text-align:left;cursor:pointer;max-width:100%}
+.cg-chip b{font-size:14px}.cg-chip small{font-size:12px;color:var(--muted)}
+.cg-scroll{max-height:68vh;overflow-y:auto;position:relative;margin-top:6px}
+.cg-corpo{position:relative;margin:8px 0}
+.cg-ora{position:absolute;left:0;right:0;height:0;border-top:1px solid var(--line)}
+.cg-ora span{position:absolute;left:0;top:-9px;width:48px;font-size:12px;color:var(--muted);background:var(--surface);font-variant-numeric:tabular-nums}
+.cg-eventi{position:absolute;inset:0 0 0 54px}
+.cg-ev{position:absolute;left:calc(100% / var(--n) * var(--k));width:calc(100% / var(--n) - 4px);display:flex;flex-direction:column;justify-content:flex-start;border:0;border-left:4px solid var(--c);
+  background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--ink);border-radius:8px;padding:3px 7px;font:inherit;text-align:left;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cg-ev:hover{background:color-mix(in srgb,var(--c) 28%,var(--surface))}
+.cg-ev b{font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg-ev small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg-ev.corto{flex-direction:row;align-items:center;gap:6px}
+.cg-ev.corto small{flex:1;min-width:0}
+.cg-ev.fatto,.cg-chip.fatto{opacity:.55}.cg-ev.fatto b,.cg-chip.fatto b{text-decoration:line-through}
+.cg-ora-ora{position:absolute;left:50px;right:0;height:2px;background:var(--danger);z-index:2;pointer-events:none}
+.cg-ora-ora::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--danger)}
+@media (min-width:1100px){ .cg{max-width:900px} .cg-scroll{max-height:72vh} }
 /* ===== /Calendario ===== */
 
 /* ===== Reclami (v6.5) ===== */
@@ -1315,6 +1342,7 @@ dialog.rc-dlg{max-width:720px}
         <button class="cal-nav" type="button" id="calNext" aria-label="Mese successivo">›</button>
         <button class="chip-btn" type="button" id="calOggi">Oggi</button>
         <button class="chip-btn cal-scad hidden" type="button" id="calScad"></button>
+        <div class="cal-vista" role="group" aria-label="Vista"><button type="button" data-calv="mese">Mese</button><button type="button" data-calv="giorno">Giorno</button></div>
       </div>
       <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>Collega a Google Calendar / iCloud</button>
     </div></header>
@@ -4557,7 +4585,8 @@ function coloriApplica(col){
 async function prefCarica(){
   try{ const s = await getDoc(prefRef()); pref = s.exists() ? s.data() : {}; }catch(err){ pref = {}; }
   temaApplica(pref.tema || ""); stileApplica(pref.stile || ""); coloriApplica(pref.colori || {});
-  if(pref.articoliVista === "elenco" || pref.articoliVista === "box"){ art.vista = pref.articoliVista; renderArticoli(); }}
+  if(pref.articoliVista === "elenco" || pref.articoliVista === "box"){ art.vista = pref.articoliVista; renderArticoli(); }
+  if(pref.calVista === "giorno" || pref.calVista === "mese"){ ui.calVista = pref.calVista; if(ui.view === "richiami") renderRichiami(); }}
 function prefSalva(p){ Object.assign(pref, p); if(uid) setDoc(prefRef(), p, { merge: true }).catch(() => {}); }
 temaApplica("");
 
@@ -4578,7 +4607,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.15 (v6.15)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.16 (v6.16)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4734,6 +4763,11 @@ function renderCalendario(all, t){
     for(let d = d0, n = 0; d <= d1 && n < 62; d = localISO(new Date(new Date(d + "T12:00:00").getTime() + 864e5)), n++) (gPer[d] = gPer[d] || []).push(e);
   }
 
+  $$("[data-calv]").forEach(b => b.setAttribute("aria-pressed", String((ui.calVista || "mese") === b.dataset.calv)));
+  $("#calPrev").setAttribute("aria-label", ui.calVista === "giorno" ? "Giorno precedente" : "Mese precedente");
+  $("#calNext").setAttribute("aria-label", ui.calVista === "giorno" ? "Giorno successivo" : "Mese successivo");
+  if(ui.calVista === "giorno"){ calGiornoEv = gPer[ui.calSel] || []; calVistaGiorno(ui.calSel, t, perData, gPer); return; }
+
   // griglia: da lunedì della prima settimana a domenica dell'ultima
   const primo = new Date(Y, M - 1, 1, 12), spost = (primo.getDay() + 6) % 7;
   const inizio = new Date(primo); inizio.setDate(1 - spost);
@@ -4786,8 +4820,72 @@ function renderCalendario(all, t){
     ${giorno}
   </div>`;
 }
+/* ----- Vista giorno (v6.16): griglia con le ore, come il calendario del telefono ----- */
+const CG_ORA = 60;                                          // pixel per ora
+function calVistaGiorno(sel, t, perData, gPer){
+  const ds = calD(sel), G = CAL_GIORNI[ds.getDay()];
+  $("#calMese").textContent = G.slice(0, 3) + " " + ds.getDate() + " " + CAL_MESI[ds.getMonth()].slice(0, 3).toLowerCase() + (ds.getFullYear() !== new Date().getFullYear() ? " " + ds.getFullYear() : "");
+  const aMin = o => { const m = /^(\d{1,2})[:.](\d{2})$/.exec(String(o || "").trim()); return m ? +m[1] * 60 + +m[2] : null; };
+  const hhmm = n => String(Math.floor(n / 60)).padStart(2, "0") + ":" + String(n % 60).padStart(2, "0");
+  const blocchi = [], senzaOra = [], tutto = [];
+  (gPer[sel] || []).forEach((e, i) => {
+    const base = { tipo: "evx", key: i, titolo: e.t, col: e._c.colore || "#4285F4", sub: [e._c.nome, e._p, e.l].filter(Boolean).join(" · ") };
+    if(e.g){ tutto.push(base); return; }
+    const da = e.s.slice(0, 10) < sel ? 0 : aMin(e.s.slice(11)), a = e.e.slice(0, 10) > sel ? 1440 : aMin(e.e.slice(11));
+    if(da == null){ senzaOra.push(base); return; }
+    blocchi.push({ ...base, da, a: Math.max(a == null ? da + 30 : a, da + 15), ora: (e.s.slice(0, 10) < sel ? "…" : e.s.slice(11, 16)) + "–" + (e.e.slice(0, 10) > sel ? "…" : e.e.slice(11, 16)) });
+  });
+  (perData[sel] || []).forEach(c => {
+    const da = aMin(c.ricontattareOra), tit = (GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : "") + c.nome;
+    const o = { tipo: "app", key: c.id, titolo: tit, col: "var(--st-contattato)", sub: ["Appuntamento", c.luogo].filter(Boolean).join(" · ") };
+    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: da + 30, ora: hhmm(da) });
+  });
+  if(ds.getDay() !== 0) calOrdini(sel).forEach(c => {
+    const v = (c.giro || []).find(x => x.g === G), ora = (v && v.ora) || c.orarioOrdine, da = aMin(ora), fatto = ordineFatto(c, sel);
+    const o = { tipo: "gir", key: c.id, titolo: (v && GIRO_ICONA[v.modo] ? GIRO_ICONA[v.modo] + " " : "") + c.nome, col: "var(--st-cliente)", fatto,
+      sub: ["Ordine del giro", c.luogo, fatto && "✓ raccolto"].filter(Boolean).join(" · ") };
+    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: da + 15, ora: hhmm(da) });
+  });
+  // ore da mostrare: almeno 7–21, allargate se serve
+  const inizio = Math.max(0, Math.min(7, ...blocchi.map(b => Math.floor(b.da / 60)))), fine = Math.min(24, Math.max(21, ...blocchi.map(b => Math.ceil(b.a / 60))));
+  // impegni che si sovrappongono: uno accanto all'altro
+  blocchi.sort((a, b) => a.da - b.da || b.a - a.a);
+  let gruppo = [], colonne = [], fineGruppo = -1;
+  const chiudi = () => { gruppo.forEach(b => (b.n = colonne.length)); gruppo = []; colonne = []; };
+  for(const b of blocchi){
+    if(b.da >= fineGruppo) chiudi();
+    let k = colonne.findIndex(f => f <= b.da); if(k < 0){ k = colonne.length; colonne.push(0); }
+    colonne[k] = b.a; b.k = k; gruppo.push(b); fineGruppo = Math.max(fineGruppo, b.a);
+  }
+  chiudi();
+  const dati = b => `data-${b.tipo}="${esc(String(b.key))}"`;
+  const ore = Array.from({ length: fine - inizio + 1 }, (_, i) => inizio + i).map(o => `<div class="cg-ora" style="top:${(o - inizio) * CG_ORA}px"><span>${String(o).padStart(2, "0")}:00</span></div>`).join("");
+  const ev = blocchi.map(b => {
+    const top = (b.da - inizio * 60) / 60 * CG_ORA, alto = Math.max(24, (b.a - b.da) / 60 * CG_ORA - 2);
+    return `<button type="button" class="cg-ev${b.fatto ? " fatto" : ""}${alto < 40 ? " corto" : ""}" ${dati(b)} style="top:${top}px;height:${alto}px;--k:${b.k};--n:${b.n};--c:${esc(b.col)}">
+      <b>${esc(b.titolo)}</b><small>${esc(b.ora)}${b.sub ? " · " + esc(b.sub) : ""}</small></button>`;
+  }).join("");
+  const adesso = new Date(), nowMin = adesso.getHours() * 60 + adesso.getMinutes();
+  const linea = sel === t && nowMin >= inizio * 60 && nowMin <= fine * 60 ? `<div class="cg-ora-ora" style="top:${(nowMin - inizio * 60) / 60 * CG_ORA}px"></div>` : "";
+  const chip = b => `<button type="button" class="cg-chip${b.fatto ? " fatto" : ""}" ${dati(b)} style="--c:${esc(b.col)}"><b>${esc(b.titolo)}</b>${b.sub ? `<small>${esc(b.sub)}</small>` : ""}</button>`;
+  const vuoto = !blocchi.length && !tutto.length && !senzaOra.length;
+  $("#richBody").innerHTML = `<div class="cg">
+    <div class="cg-testa"><b>${G} ${ds.getDate()} ${CAL_MESI[ds.getMonth()].toLowerCase()}</b>${sel === t ? " <span>oggi</span>" : ""}</div>
+    ${tutto.length ? `<div class="cg-tutto"><span class="cg-et">Tutto il giorno</span>${tutto.map(chip).join("")}</div>` : ""}
+    <div class="cg-scroll"><div class="cg-corpo" style="height:${(fine - inizio) * CG_ORA}px">${ore}<div class="cg-eventi">${ev}</div>${linea}</div></div>
+    ${senzaOra.length ? `<div class="cg-senza"><span class="cg-et">Senza orario</span>${senzaOra.map(chip).join("")}</div>` : ""}
+    ${vuoto ? `<p class="empty cal-vuoto">Niente in programma. Tocca <b>Nuovo</b> per fissare un appuntamento.</p>` : ""}
+  </div>`;
+  // si parte dall'ora attuale (oggi) o dal primo impegno
+  const sc = $("#richBody .cg-scroll");
+  if(sc){ const primo = sel === t ? nowMin - 60 : blocchi.length ? blocchi[0].da - 30 : 8 * 60; sc.scrollTop = Math.max(0, (primo - inizio * 60) / 60 * CG_ORA); }
+}
 const calVai = (mese, sel) => { ui.calMese = mese; if(sel) ui.calSel = sel; renderRichiami(); };
-const calSposta = n => { const [y, m] = ui.calMese.split("-").map(Number); const d = new Date(y, m - 1 + n, 1, 12); calVai(localISO(d).slice(0, 7)); };
+const calSposta = n => {
+  if(ui.calVista === "giorno"){ const d = calD(ui.calSel || localISO()); d.setDate(d.getDate() + n); const iso = localISO(d); calVai(iso.slice(0, 7), iso); return; }
+  const [y, m] = ui.calMese.split("-").map(Number); const d = new Date(y, m - 1 + n, 1, 12); calVai(localISO(d).slice(0, 7));
+};
+$$("[data-calv]").forEach(b => b.addEventListener("click", () => { ui.calVista = b.dataset.calv; prefSalva({ calVista: ui.calVista }); renderRichiami(); }));
 $("#calPrev").addEventListener("click", () => calSposta(-1));
 $("#calNext").addEventListener("click", () => calSposta(1));
 $("#calOggi").addEventListener("click", () => { const t = localISO(); calVai(t.slice(0, 7), t); });
@@ -4803,7 +4901,7 @@ $("#richBody").addEventListener("click", e => {
 });
 // scorrere a destra/sinistra sul mese cambia mese (telefono e iPad)
 { let x0 = null, y0 = 0;
-  $("#richBody").addEventListener("touchstart", e => { if(!e.target.closest(".cal-grid")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  $("#richBody").addEventListener("touchstart", e => { if(!e.target.closest(".cal-grid, .cg")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
   $("#richBody").addEventListener("touchend", e => { if(x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null; if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) calSposta(dx < 0 ? 1 : -1); }, { passive: true });
 }
 
