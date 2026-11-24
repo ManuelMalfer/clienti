@@ -4578,7 +4578,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.14 (v6.14)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.15 (v6.15)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -6379,6 +6379,8 @@ $("#evScheda").addEventListener("click", () => { if(!evEd || !evEd.cliente) retu
 // impegno di Google o iCloud
 function evApriEsterno(e){
   if(!e) return;
+  // impegno iCloud salvato da una versione vecchia (manca il file): si aggiorna il calendario e si riprova
+  if(e._p === "iCloud" && !e.h){ toast("Sto aggiornando i tuoi calendari: riprova tra qualche secondo", 6000); gcChiama("sincronizza", { calendari: true }).catch(err => toast("Non riuscito: " + err.message, 10000)); return; }
   const google = e._p === "Google", calObj = e._c || {}, ripete = google ? !!e.r : !!e.ri;
   const modo = modoDaTitolo(e.t);
   evRiempi({ tipo: google ? "google" : "icloud", e, ripete, dataFissaInSerie: true, titolo: senzaIcone(e.t), titoloPuro: senzaIcone(e.t), modo,
