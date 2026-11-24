@@ -1041,6 +1041,16 @@ main.view{padding-top:14px}
 .gc-st{font-size:13.5px;color:var(--muted);margin:6px 0 10px;line-height:1.45}
 .gc-st.err{color:var(--danger);font-weight:600}
 .gc-az{display:flex;gap:8px;flex-wrap:wrap}
+.gi-box{border-top:1px dashed var(--line);margin:4px 0 12px;padding-top:10px}
+.gi-box .gc-st{margin-top:0}
+#dlgGiro .gi-row{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1.1fr);gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+#dlgGiro .gi-ico{font-size:20px;text-align:center}
+#dlgGiro .gi-txt b{display:block;font-size:15px}
+#dlgGiro .gi-txt small,#dlgGiro .gi-cli small{color:var(--muted);font-size:12.5px}
+#dlgGiro .gi-cli .input{width:100%;min-width:0}
+#dlgGiro .gi-gia .gi-cli small{color:var(--st-cliente);font-weight:600}
+#dlgGiro .gi-err{border-color:var(--danger)}
+@media (max-width:600px){ #dlgGiro .gi-row{grid-template-columns:30px minmax(0,1fr)} #dlgGiro .gi-cli{grid-column:1/-1} }
 .gc-logo.gc-icloud{background:linear-gradient(180deg,#3FA9F5,#1B73E8)}
 .gc-uno{margin:12px 0 0!important;padding-top:10px;border-top:1px dashed var(--line)}
 .cal-gdot.ic{border-radius:3px}
@@ -1795,6 +1805,17 @@ dialog.rc-dlg{max-width:720px}
     <div class="dlg-foot"><button class="btn" type="button" id="pvmAlt"></button><button class="btn btn-primary" type="button" id="pvmInvia"></button></div>
   </div>
 </dialog>
+<dialog id="dlgGiro" aria-labelledby="giT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="giT">Collega il tuo giro<span class="sub">Gli eventi che si ripetono ogni settimana nel tuo calendario iCloud: scegli a quale cliente corrisponde ognuno.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <p class="pv-hint" id="giInfo">Leggo il calendario…</p>
+      <div id="giList"></div>
+      <datalist id="dlGiroCli"></datalist>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="button" id="giOk" disabled>Collega</button></div>
+  </div>
+</dialog>
 <dialog id="dlgCal" aria-labelledby="calT">
   <div class="dlg">
     <div class="dlg-head"><h2 id="calT">Collega il calendario<span class="sub">Gli appuntamenti dei clienti nel tuo calendario, e i tuoi impegni qui nell’app.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
@@ -1835,6 +1856,7 @@ dialog.rc-dlg{max-width:720px}
             </label>
             <div class="gc-vedi"><span>Calendari da vedere nell’app</span><div id="icMostra"></div></div>
             <p class="gc-st" id="icSt"></p>
+            <div class="gi-box"><p class="gc-st" id="icGiroSt"></p><button class="btn btn-primary" type="button" id="icGiro">Collega il tuo giro</button></div>
             <div class="gc-az"><button class="btn" type="button" id="icSync">Sincronizza ora</button><button class="btn btn-danger" type="button" id="icStacca">Scollega iCloud</button></div>
           </div>
           <p class="pv-hint gc-uno">Gli appuntamenti vanno in <b>un solo</b> calendario, di Google o di iCloud: scegliendolo qui si tolgono dall’altro. Dall’altro servizio si vedono comunque i tuoi impegni.</p>
@@ -2140,7 +2162,8 @@ function subscribe(){
     // un richiamo cambiato da QUESTO dispositivo (scrittura non ancora confermata): avvisa il servizio di Google Calendar
     if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
       const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
-      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || p.nome !== n.nome; })()))) gcPresto();
+      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || p.nome !== n.nome ||
+        (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || ""))); })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
     renderAll();
@@ -4501,7 +4524,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.10 (v6.10)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.11 (v6.11)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4579,7 +4602,7 @@ function renderGiro(){
     const tel = firstPhone(c.tel) || firstPhone(c.cellulare);
     const av = `<span class="av av-chk" role="checkbox" aria-checked="${fatto}" tabindex="0" data-fatto="${c.id}" data-giorno="${iso}" aria-label="Ordine raccolto: ${esc(c.nome)}">${fatto ? giroCheck : esc(inizialiDi(c.nome))}</span>`;
     return `<li class="giro-li${fatto ? " fatto" : ""}">
-      <div class="giro-main">${rowHTML(c, esc(c.orarioOrdine || ""), av)}</div>
+      <div class="giro-main">${rowHTML(c, esc(giroOra(c, day)), av)}</div>
       ${tel ? `<a class="icon-btn" href="tel:${tel}" aria-label="Chiama ${esc(c.nome)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg></a>` : ""}
     </li>`;
   };
@@ -4681,7 +4704,7 @@ function renderCalendario(all, t){
   const ord = calOrdini(sel).sort((a, b) => (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
   const oraFlag = c => `<span class="flag">${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) : "in giornata"}</span>`;
   const scadFlag = c => `<span class="flag late">${fmtDate(c.ricontattare).slice(0, 5)}${c.ricontattareOra ? "<br>ore " + esc(c.ricontattareOra) : ""}</span>`;
-  const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(c.orarioOrdine || "")}</span>`;
+  const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(giroOra(c, CAL_GIORNI[ds.getDay()]))}</span>`;
   const lista = (arr, f) => `<ul class="list">${arr.map(c => "<li>" + rowHTML(c, f(c)) + "</li>").join("")}</ul>`;
   const titolo = `${CAL_GIORNI[ds.getDay()]} ${ds.getDate()} ${CAL_MESI[ds.getMonth()].toLowerCase()}${sel === t ? " · oggi" : ""}`;
   const giorno = `<section class="cal-day" aria-live="polite">
@@ -6024,8 +6047,9 @@ async function gcChiama(percorso, corpo = {}, servizio = "google"){
   return j;
 }
 // dopo una modifica fatta da questo dispositivo a un richiamo: sincronizza dopo qualche secondo
+const giroCollegato = () => !!(ical.collegato && ical.giro && Object.keys(ical.giro).length);
 function gcPresto(){
-  if(!(gcal.collegato && gcal.calId) && !(ical.collegato && ical.calId)) return;
+  if(!(gcal.collegato && gcal.calId) && !(ical.collegato && ical.calId) && !giroCollegato()) return;
   clearTimeout(gcTimer);
   gcTimer = setTimeout(() => gcChiama("sincronizza").catch(err => console.warn("Calendario:", err.message)), 2500);
 }
@@ -6090,6 +6114,10 @@ function gcEsito(r){
 }
 function icRender(){
   const on = !!ical.collegato;
+  const nGiro = Object.keys(ical.giro || {}).length;
+  $("#icGiroSt").textContent = nGiro ? `Giro: ${nGiro} ${nGiro === 1 ? "evento ricorrente collegato" : "eventi ricorrenti collegati"} ai clienti. Giorni e orari dell'ordine si aggiornano nei due sensi.`
+    : "Hai il giro nel calendario con eventi che si ripetono ogni settimana (📞 al telefono, 💼 di persona)? Collegali ai clienti: niente doppioni e giorni dell'ordine sempre allineati.";
+  $("#icGiro").textContent = nGiro ? "Rivedi il giro collegato" : "Collega il tuo giro";
   $("#icOff").classList.toggle("hidden", on); $("#icOn").classList.toggle("hidden", !on);
   $("#icErr").textContent = !on && ical.errore ? ical.errore : ""; $("#icErr").classList.toggle("hidden", on || !ical.errore);
   if(!on) return;
@@ -6138,6 +6166,73 @@ $("#icSync").addEventListener("click", async () => {
   try { gcEsito(await gcChiama("sincronizza", { calendari: true }, "icloud")); }
   catch(err){ toast("Non riuscito: " + err.message); }
   finally { $("#icSync").disabled = false; icRender(); }
+});
+/* ----- Giro dal calendario iCloud (v6.11): abbinamento eventi ricorrenti ↔ clienti; il resto lo fa il servizio ----- */
+const GIRO_ICONA = { telefono: "📞", visita: "💼" };
+// ora (e icona 📞/💼) del giro di un cliente in un certo giorno della settimana
+function giroOra(c, giorno){
+  const e = (c.giro || []).find(x => x.g === giorno);
+  const ora = (e && e.ora) || c.orarioOrdine || "";
+  return (e && GIRO_ICONA[e.modo] ? GIRO_ICONA[e.modo] + " " : "") + ora;
+}
+const GIRO_VUOTE = new Set(["bar", "ristorante", "pizzeria", "hotel", "albergo", "trattoria", "osteria", "agriturismo", "srl", "snc", "sas", "spa", "da", "di", "del", "della", "dei", "il", "la", "lo", "le", "al", "alla", "ai", "e"]);
+const giroParole = s => deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1 && !GIRO_VUOTE.has(w));
+function giroPunti(nome, c){
+  const a = giroParole(nome), tutto = norm(nome); let meglio = 0;
+  for(const t of [c.nome, c.ragioneSociale, ...(c.altriNomi || [])]){
+    if(!t) continue;
+    const nt = norm(t); if(nt && nt === tutto) return 100;
+    const b = new Set(giroParole(t)), comuni = a.filter(w => b.has(w)).length;
+    meglio = Math.max(meglio, (a.length ? comuni / a.length * 80 : 0) + (nt && tutto && (nt.includes(tutto) || tutto.includes(nt)) ? 15 : 0));
+  }
+  return meglio;
+}
+const giroEtichetta = c => [c.nome, c.luogo, c.codice && "cod. " + c.codice].filter(Boolean).join(" · ");
+let giroEv = [], giroPerEtichetta = new Map();
+async function giroApri(){
+  $("#giInfo").textContent = "Leggo il calendario…"; $("#giList").innerHTML = ""; $("#giOk").disabled = true;
+  $("#dlgGiro").showModal();
+  giroPerEtichetta = new Map(clienti.map(c => [giroEtichetta(c), c.id]));
+  $("#dlGiroCli").innerHTML = clienti.map(c => `<option value="${esc(giroEtichetta(c))}"></option>`).join("");
+  try { giroEv = (await gcChiama("giro/eventi", {}, "icloud")).eventi || []; }
+  catch(err){ $("#giInfo").textContent = "Non riesco a leggere il calendario: " + err.message; return; }
+  if(!giroEv.length){ $("#giInfo").textContent = "Non ho trovato eventi che si ripetono ogni settimana nei calendari iCloud scelti da vedere nell'app."; return; }
+  const giaUsati = new Set(giroEv.map(e => e.cliente).filter(Boolean));
+  $("#giInfo").innerHTML = `Trovati <b>${giroEv.length}</b> eventi ricorrenti. Ti propongo il cliente con il nome più simile: controlla, cambia scrivendo il nome, oppure svuota il campo per non collegarlo.`;
+  $("#giList").innerHTML = giroEv.map((e, i) => {
+    const gia = e.cliente && byId(e.cliente);
+    let proposta = gia, punti = gia ? 100 : 0;
+    if(!gia){ for(const c of clienti){ const p = giroPunti(e.nome, c); if(p > punti){ punti = p; proposta = c; } } if(punti < 55) proposta = null; }
+    return `<div class="gi-row${gia ? " gi-gia" : ""}">
+      <span class="gi-ico" aria-hidden="true">${GIRO_ICONA[e.modo] || "🔁"}</span>
+      <div class="gi-txt"><b>${esc(e.nome || e.titolo || "(senza titolo)")}</b><small>${esc(e.giorni.join(", "))}${e.ora ? " · " + esc(e.ora) : ""}${e.intervallo > 1 ? " · ogni " + e.intervallo + " settimane" : ""} · ${esc(e.calNome)}</small></div>
+      <div class="gi-cli"><input class="input" list="dlGiroCli" data-gi="${i}" value="${proposta ? esc(giroEtichetta(proposta)) : ""}" placeholder="Non collegare" autocomplete="off" aria-label="Cliente per ${esc(e.nome)}">
+        <small>${gia ? "✓ collegato" : proposta ? "proposta" : ""}</small></div>
+    </div>`;
+  }).join("");
+  giroControlla();
+}
+function giroScelte(){
+  return $$("#giList [data-gi]").map(inp => { const e = giroEv[+inp.dataset.gi], v = inp.value.trim(); return { e, id: v ? giroPerEtichetta.get(v) || null : null, vuoto: !v, sbagliato: !!v && !giroPerEtichetta.has(v) }; });
+}
+function giroControlla(){
+  const s = giroScelte(), cambi = s.filter(x => !x.sbagliato && (x.id || null) !== (x.e.cliente || null)).length, errati = s.filter(x => x.sbagliato).length;
+  $("#giOk").disabled = !cambi || !!errati;
+  $("#giOk").textContent = errati ? "Scegli i clienti dall'elenco" : cambi ? `Salva (${cambi})` : "Nessun cambiamento";
+  $$("#giList [data-gi]").forEach(inp => inp.classList.toggle("gi-err", !!inp.value.trim() && !giroPerEtichetta.has(inp.value.trim())));
+}
+$("#giList").addEventListener("input", giroControlla);
+$("#icGiro").addEventListener("click", giroApri);
+$("#giOk").addEventListener("click", async () => {
+  const s = giroScelte();
+  const voci = s.filter(x => x.id && x.id !== x.e.cliente).map(x => ({ uid: x.e.uid, href: x.e.href, cal: x.e.cal, cliente: x.id }));
+  const togli = s.filter(x => x.vuoto && x.e.cliente).map(x => x.e.uid);
+  $("#giOk").disabled = true; $("#giOk").textContent = "Salvo…";
+  try {
+    const r = await gcChiama("giro/abbina", { voci, togli }, "icloud");
+    $("#dlgGiro").close();
+    toast(`Giro salvato: ${r.collegati || 0} collegati${r.tolti ? ", " + r.tolti + " scollegati" : ""}`);
+  } catch(err){ toast("Non riuscito: " + err.message); giroControlla(); }
 });
 $("#icStacca").addEventListener("click", async () => {
   if(!confirm("Scollego iCloud? Gli appuntamenti già creati restano nel tuo calendario iCloud, ma non si aggiorneranno più. La password per app la puoi revocare su account.apple.com.")) return;

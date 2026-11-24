@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.11** = v6.10 + **giro dal calendario iCloud** (sezione "Giro dal calendario iCloud (v6.11)"): gli eventi ricorrenti di Manuel (📞 ordine al telefono, 💼 di persona) si abbinano ai clienti e giorni/ora/modo passano nei due sensi; niente doppioni nel Calendario; icona e ora del giorno nel Giro e nel Calendario. Tag Git `v6.11`.
 - **v6.10** = v6.9 + **ricarica automatica alle 00:01** (blocco dopo `localISO`: `giornoAvvio`, `ricaricaSeNuovoGiorno`): un timer per le 00:01 del giorno dopo; se c'è una finestra (`dialog[open]`) o l'editor del preventivo aperti, o la pagina è in secondo piano, riprova ogni minuto; su iPhone/iPad (timer fermi quando l'app è in pausa) ricarica a `visibilitychange`/`pageshow` se il giorno è cambiato. Nello stesso commit la lettura più tollerante dei calendari iCloud nel Worker (`ICloud.calendari`: conta come calendario anche un elemento con VEVENT senza `resourcetype` calendar; scarta cartella principale, inbox/outbox/notification e i soli VTODO; rapporto `diag` più completo). Tag Git `v6.10`.
 - **v6.9** = v6.8 + **rapporto tecnico** quando iCloud non mostra calendari (Worker: `ICloud.calendari` prepara `diag` con solo i nomi dei tag della risposta, l'errore "iCloud non mostra calendari. Dettagli per Claude: …" va nello stato `impostazioni/icloud.errore`; app: l'errore iCloud si vede sempre nel riquadro). Caso reale: con le credenziali di Rosario l'accesso riusciva ma il calendario "Lavoro" non compariva. Tag Git `v6.9`.
 - **v6.8** = v6.7 + **iCloud nei due sensi** come Google (sezione "iCloud nei due sensi (v6.8)"): email Apple + password per app, scelta o creazione del calendario, impegni iCloud nel Calendario; gli appuntamenti vanno in **un solo** servizio (Google o iCloud). Tag Git `v6.8`; la versione nelle Impostazioni dice 6.8.
@@ -557,6 +558,33 @@ l'email del suo account Apple e una **password per app** (creata da lui su accou
   sync-token non valido, password revocata con Google che continua, scollega iCloud con Google che resta); prove solo-Google (40) e link .ics (18) ancora tutte ok;
   app con finto Firebase (collega con password e con Rosario, scelta calendario, impegni dei due servizi nel giorno, legenda, sincronizzazione dopo un cambio).
 - **Dopo la pubblicazione**: il codice del Worker `calendario` va incollato di nuovo su Cloudflare (nessun segreto nuovo: la password Apple la scrive Manuel nell'app).
+
+## Giro dal calendario iCloud (v6.11)
+
+Manuel aveva già il giro nel suo calendario iCloud: **un evento ricorrente ogni settimana per cliente**, con 📞 nel titolo quando fa l'ordine al telefono
+e 💼 quando passa di persona. Scelta di Manuel: abbinarli ai clienti e tenerli allineati **nei due sensi**.
+- **Dati**: nel cliente `giro` = `[{g: "Lunedì", ora: "09:30", modo: "telefono"|"visita"|"", ev: UID dell'evento}]` (una voce per giorno; un cliente può avere più
+  eventi, es. telefono il lunedì e visita il giovedì). `giorniOrdine`/`orarioOrdine` restano quelli che l'app usa da sempre e vengono tenuti allineati.
+  Nel documento segreto `icloud.giro` = `{UID: {cal, href, cliente, k, nome}}` (`k` = "giorni|ora|modo" scritto per ultimo) e `icloud.giroTok` (sync-token per
+  calendario); per l'app `impostazioni/icloud.giro` = `{UID: {cliente, nome}}`.
+- **Servizio** (`worker-calendario.js`, blocco "GIRO DAL CALENDARIO iCLOUD"): `ICloud.serie(cal)` legge le serie settimanali (calendar-query senza expand,
+  `serieIcs`: giorni da BYDAY, ora di Roma anche da UTC, modo dall'icona, titolo senza icone, serie finite escluse); `POST /icloud/giro/eventi` (serie dei
+  calendari da vedere + quello degli appuntamenti) e `POST /icloud/giro/abbina` `{voci: [{uid, href, cal, cliente}], togli: [uid]}`. Nella sincronizzazione
+  (`b2`): da iCloud (sync-collection solo se il `getctag` del calendario è cambiato) serie spostata → `giroSuCliente` (storico "Giro cambiato da iCloud…"),
+  serie cancellata → giorni tolti (storico); dall'app (giro completo, cioè dopo una modifica nell'app o ogni ora) `chiaveClienteGiro` ≠ `k` → `cambiaSerie`
+  riscrive solo DTSTART/DTEND (stessa durata, primo giorno valido dopo l'inizio della serie, UTC se era UTC), BYDAY e l'icona del titolo, lascia il resto
+  (promemoria, note, eccezioni) e salva con `If-Match`. Giorni nuovi aggiunti nell'app vanno al **primo** evento abbinato del cliente (l'ordine delle voci resta
+  stabile); `orarioOrdine` HH:MM vale per l'ora solo se il cliente ha un solo evento. Se nell'app si tolgono tutti i giorni di un evento, l'evento si **scollega** e
+  resta sull'iPhone (non si cancella mai una serie dal servizio). Gli eventi abbinati non compaiono più tra gli impegni iCloud dell'app.
+- **Nell'app**: nel riquadro iCloud di `#dlgCal` il tasto **Collega il tuo giro** (`#icGiro`) apre `#dlgGiro`: una riga per serie (icona, nome, giorni, ora,
+  calendario) con il cliente proposto per somiglianza del nome (`giroPunti`, soglia 55; parole come bar/ristorante/srl non contano) in un campo con elenco
+  (`#dlGiroCli`, "Nome · Località · cod."); campo vuoto = non collegare (o scollegare). `giroOra(c, giorno)` mostra "📞 09:30" / "💼 15:00" nel Giro e negli
+  ordini del Calendario. Cambiare giorni/orario dell'ordine di un cliente fa partire la sincronizzazione (`gcPresto`, `giroCollegato`).
+- Limiti: una ripetizione singola spostata sull'iPhone (eccezione) non cambia la scheda; le serie ogni 2+ settimane si abbinano ma il giro dell'app resta
+  settimanale; un evento con più clienti nel titolo va abbinato a uno solo.
+- Prove: finto iCloud con serie (19 casi nuovi, 90 in tutto con Google/iCloud: lettura serie e modo, UTC, serie finite escluse, abbinamento con giorni già
+  presenti, nessun doppione tra gli impegni, serie spostata/cambiata d'icona/cancellata su iPhone, giorni e orario cambiati nell'app con durata tenuta e resto
+  dell'evento intatto, nessun rimbalzo, scollegamenti); app con finto Firebase (proposte dei clienti, nome non valido, salvataggio).
 
 ## Impostazioni e stile Livrea Marchi (v6.6)
 

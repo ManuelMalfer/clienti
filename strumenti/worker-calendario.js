@@ -143,7 +143,7 @@ async function scrivi(env, scritture){
 // solo alcuni clienti, in una richiesta (giro leggero)
 async function clientiPerId(env, uid, ids){
   if(!ids.length) return [];
-  const r = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: ids.map(id => radice(env) + "/utenti/" + uid + "/clienti/" + id), mask: { fieldPaths: [...CAMPI, "storico"] } });
+  const r = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: ids.map(id => radice(env) + "/utenti/" + uid + "/clienti/" + id), mask: { fieldPaths: [...CAMPI, "storico", "giro"] } });
   return (r || []).filter(x => x.found).map(x => ({ id: decodeURIComponent(x.found.name.split("/").pop()), ...campi(x.found.fields || {}) }));
 }
 function impronta(s){ let a = 5381, b = 52711; for(let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); a = (a * 33) ^ c; b = (b * 33) ^ c; } return (a >>> 0).toString(36) + (b >>> 0).toString(36) + s.length.toString(36); }
@@ -587,8 +587,31 @@ export class ICloud {
       hrefs.map(h => `<d:href>${xmlEsc(h)}</d:href>`).join("") + `</c:calendar-multiget>`, { depth: "1" });
     if(r.s >= 400) throw new Errore(502, "iCloud non dà gli eventi (" + r.s + ")");
     const out = new Map();
-    for(const resp of xmlTutti(r.t, "response")){ const d = xmlUno(resp, "calendar-data"); if(d) out.set(percorso(xmlTesto(xmlUno(resp, "href")), cal), xmlTesto(d)); }
+    this.etag = this.etag || new Map();
+    for(const resp of xmlTutti(r.t, "response")){
+      const d = xmlUno(resp, "calendar-data"), href = percorso(xmlTesto(xmlUno(resp, "href")), cal);
+      if(d){ out.set(href, xmlTesto(d)); this.etag.set(href, xmlTesto(xmlUno(resp, "getetag"))); }
+    }
     return out;
+  }
+  // eventi ricorrenti ogni settimana di un calendario (le serie, senza "espandere" le ripetizioni)
+  async serie(cal){
+    const z = iso => iso.replace(/-/g, "") + "T000000Z", da = oggiRoma(), a = piuGiorni(da, 15);
+    const r = await this.dav("REPORT", cal, `<?xml version="1.0" encoding="utf-8"?><c:calendar-query ${DAV}><d:prop><d:getetag/><c:calendar-data/></d:prop>` +
+      `<c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:time-range start="${z(da)}" end="${z(a)}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`, { depth: "1" });
+    if(r.s >= 400) throw new Errore(502, "iCloud non dà gli eventi del giro (" + r.s + ")");
+    const out = [];
+    for(const resp of xmlTutti(r.t, "response")){
+      const s = serieIcs(xmlTesto(xmlUno(resp, "calendar-data")));
+      if(s && s.uid && !/^clienti-/.test(s.uid) && !s.finita) out.push({ ...s, cal, href: percorso(xmlTesto(xmlUno(resp, "href")), cal) });
+    }
+    return out;
+  }
+  async aggiorna(href, testo, etag){
+    const r = await this.dav("PUT", href, testo, etag ? { "if-match": etag } : {});
+    if(r.s === 412) return false;                               // cambiato nel frattempo: si riprova al giro dopo
+    if(r.s >= 300) throw new Errore(502, "iCloud non ha aggiornato l'evento del giro (" + r.s + ")");
+    return true;
   }
   // appuntamenti di un calendario in un periodo (ricorrenze già "espanse" da iCloud)
   async eventi(cal, da, a){
@@ -667,6 +690,125 @@ function icsCliente(c){
   return L.map(piega).join("\r\n") + "\r\n";
 }
 
+
+/* ---------- GIRO DAL CALENDARIO iCLOUD (v6.11) ----------
+   Manuel ha il giro nel suo calendario iCloud: un evento ricorrente ogni settimana per cliente, con 📞 (ordine al telefono)
+   o 💼 (passa di persona) nel titolo. Ogni evento si abbina una volta al suo cliente; da lì giorni, ora e modo passano nei due sensi:
+   evento ↔ cliente.giro [{g, ora, modo, ev}] + giorniOrdine/orarioOrdine (che l'app usa da sempre). */
+const BYDAY = { MO: "Lunedì", TU: "Martedì", WE: "Mercoledì", TH: "Giovedì", FR: "Venerdì", SA: "Sabato", SU: "Domenica" };
+const ORDINE_G = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+const DAYBY = Object.fromEntries(Object.entries(BYDAY).map(([k, v]) => [v, k]));
+const ICONA = { telefono: "📞", visita: "💼" };
+const modoDi = t => /📞|☎|📱/u.test(t) ? "telefono" : /💼|🧳/u.test(t) ? "visita" : "";
+const senzaIcone = t => String(t || "").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️‍]/gu, "")
+  .replace(/^[\s\-–—:·|]+|[\s\-–—:·|]+$/g, "").replace(/\s{2,}/g, " ").trim();
+const ordinaG = arr => [...new Set(arr)].filter(g => ORDINE_G.includes(g)).sort((a, b) => ORDINE_G.indexOf(a) - ORDINE_G.indexOf(b));
+const chiaveGiro = (giorni, ora, modo) => ordinaG(giorni).join(",") + "|" + (ora || "") + "|" + (modo || "");
+const giornoDi = iso => ORDINE_G[(new Date(iso + "T12:00:00Z").getUTCDay() + 6) % 7];
+const oraNorm = s => { const m = /^(\d{1,2})[:.](\d{2})$/.exec(String(s || "").trim()); return m ? pad(+m[1]) + ":" + m[2] : ""; };
+
+// la serie settimanale (evento "padre", senza RECURRENCE-ID) di un file .ics
+function serieIcs(testo){
+  for(const e of icsEventi(testo)){
+    if(e["RECURRENCE-ID"] || !e.RRULE || !/FREQ=WEEKLY/i.test(e.RRULE.v)) continue;
+    const s = icsData(e.DTSTART); if(!s) continue;
+    const by = (/BYDAY=([^;]+)/i.exec(e.RRULE.v) || [])[1];
+    const giorni = by ? by.split(",").map(x => BYDAY[x.replace(/^[+-]?\d+/, "").toUpperCase()]).filter(Boolean) : [giornoDi(s.d)];
+    const fine = /UNTIL=(\d{8})/i.exec(e.RRULE.v);
+    const titolo = icsTesto(e.SUMMARY ? e.SUMMARY.v : "");
+    return { uid: e.UID ? e.UID.v : "", titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "",
+      intervallo: +((/INTERVAL=(\d+)/i.exec(e.RRULE.v) || [])[1] || 1), finita: !!(fine && fine[1] < oggiRoma().replace(/-/g, "")) };
+  }
+  return null;
+}
+// ora di Roma → UTC ("20261123T083000Z")
+function romaAUtc(d, o){
+  const voluto = Date.parse(d + "T" + o + ":00Z");
+  let t = voluto;
+  for(let i = 0; i < 3; i++){ const r = romaDi(new Date(t).toISOString()); t -= Date.parse(r.d + "T" + r.o + ":00Z") - voluto; }
+  return new Date(t).toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+}
+// cambia giorni/ora/modo della serie lasciando com'è tutto il resto (promemoria, note, eccezioni)
+export function cambiaSerie(testo, giorni, ora, modo){
+  const righe = String(testo).replace(/\r?\n[ \t]/g, "").split(/\r?\n/).filter((r, i, a) => r || i < a.length - 1);
+  const out = []; let blocco = null, livello = 0;
+  const lavora = b => {
+    const top = []; let liv = 0;
+    b.forEach((r, i) => { if(i > 0 && i < b.length - 1){ if(/^BEGIN:/.test(r)) liv++; else if(/^END:/.test(r)) liv--; else if(!liv) top.push(i); } });
+    const trova = k => top.find(i => new RegExp("^" + k + "[;:]", "i").test(b[i]));
+    if(trova("RECURRENCE-ID") !== undefined || trova("RRULE") === undefined) return b;
+    const iS = trova("DTSTART"), iE = trova("DTEND"), iR = trova("RRULE"), iT = trova("SUMMARY");
+    const mS = /^DTSTART((?:;[^:]*)?):(.*)$/i.exec(b[iS]); if(!mS) return b;
+    const vecchio = icsData({ p: mS[1], v: mS[2] }); if(!vecchio) return b;
+    // nuovo giorno: lo stesso se va bene, altrimenti il primo giorno scelto dopo l'inizio della serie
+    let d = vecchio.d;
+    for(let n = 0; n < 7 && !giorni.includes(giornoDi(d)); n++) d = piuGiorni(d, 1);
+    const tutto = !vecchio.o, oNuova = tutto ? "" : (ora || vecchio.o);
+    const fmt = (dd, oo, p, utc) => utc ? romaAUtc(dd, oo) : dd.replace(/-/g, "") + (oo ? "T" + oo.replace(":", "") + "00" : "");
+    const utcS = /Z$/.test(mS[2]);
+    let durata = null;
+    if(iE !== undefined){
+      const mE = /^DTEND((?:;[^:]*)?):(.*)$/i.exec(b[iE]); const fe = mE && icsData({ p: mE[1], v: mE[2] });
+      if(fe) durata = Date.parse(fe.d + "T" + (fe.o || "00:00") + ":00Z") - Date.parse(vecchio.d + "T" + (vecchio.o || "00:00") + ":00Z");
+      if(fe && durata != null){
+        const fine = new Date(Date.parse(d + "T" + (oNuova || "00:00") + ":00Z") + durata).toISOString();
+        b[iE] = "DTEND" + mE[1] + ":" + fmt(fine.slice(0, 10), tutto ? "" : fine.slice(11, 16), mE[1], /Z$/.test(mE[2]));
+      }
+    }
+    b[iS] = "DTSTART" + mS[1] + ":" + fmt(d, oNuova, mS[1], utcS);
+    const by = "BYDAY=" + ordinaG(giorni).map(g => DAYBY[g]).join(",");
+    b[iR] = /BYDAY=[^;]*/i.test(b[iR]) ? b[iR].replace(/BYDAY=[^;]*/i, by) : b[iR] + ";" + by;
+    if(modo && iT !== undefined){
+      const mT = /^SUMMARY((?:;[^:]*)?):(.*)$/i.exec(b[iT]);
+      if(mT && modoDi(mT[2]) !== modo) b[iT] = "SUMMARY" + mT[1] + ":" + ICONA[modo] + " " + senzaIcone(mT[2]);
+    }
+    return b;
+  };
+  for(const r of righe){
+    if(r === "BEGIN:VEVENT" && !blocco){ blocco = [r]; livello = 0; continue; }
+    if(blocco){
+      blocco.push(r);
+      if(/^BEGIN:/.test(r)) livello++;
+      else if(r === "END:VEVENT" && !livello){ out.push(...lavora(blocco)); blocco = null; }
+      else if(/^END:/.test(r)) livello--;
+      continue;
+    }
+    out.push(r);
+  }
+  return out.filter(Boolean).map(piega).join("\r\n") + "\r\n";
+}
+// cosa vuole la scheda del cliente per quell'evento: giorni (da giorniOrdine), ora, modo
+function chiaveClienteGiro(c, uid){
+  const giro = Array.isArray(c.giro) ? c.giro : [];
+  const voci = giro.filter(e => e.ev === uid); if(!voci.length) return "";
+  const go = new Set(c.giorniOrdine || []);
+  let giorni = voci.map(e => e.g).filter(g => go.has(g));
+  const delGiro = new Set(giro.map(e => e.g));
+  if(giro[0].ev === uid) giorni = giorni.concat([...go].filter(g => !delGiro.has(g)));      // giorni nuovi della scheda → al primo evento
+  const eventi = new Set(giro.map(e => e.ev));
+  const ora = eventi.size === 1 && oraNorm(c.orarioOrdine) ? oraNorm(c.orarioOrdine) : voci[0].ora || "";
+  return giorni.length ? chiaveGiro(giorni, ora, voci[0].modo) : "";
+}
+// porta nella scheda i giorni/ora/modo di un evento
+function giroSuCliente(c, uid, s){
+  const giro = Array.isArray(c.giro) ? c.giro : [];
+  const prima = giro.filter(e => e.ev === uid).map(e => e.g), altri = giro.filter(e => e.ev !== uid), altriG = new Set(altri.map(e => e.g));
+  // le voci dell'evento restano al loro posto: il primo evento abbinato resta il primo (lì vanno i giorni aggiunti nell'app)
+  const nuove = ordinaG(s.giorni).map(g => ({ g, ora: s.ora || "", modo: s.modo || "", ev: uid })), pos = giro.findIndex(e => e.ev === uid);
+  c.giro = pos < 0 ? [...altri, ...nuove] : [...giro.slice(0, pos).filter(e => e.ev !== uid), ...nuove, ...giro.slice(pos).filter(e => e.ev !== uid)];
+  c.giorniOrdine = ordinaG([...(c.giorniOrdine || []).filter(g => !prima.includes(g) || altriG.has(g)), ...s.giorni]);
+  if(new Set(c.giro.map(e => e.ev)).size === 1 && s.ora && (!String(c.orarioOrdine || "").trim() || oraNorm(c.orarioOrdine))) c.orarioOrdine = s.ora;
+  c._giro = true;
+}
+function giroViaDaCliente(c, uid, ancheGiorni){
+  const giro = Array.isArray(c.giro) ? c.giro : [];
+  const prima = giro.filter(e => e.ev === uid).map(e => e.g);
+  c.giro = giro.filter(e => e.ev !== uid);
+  if(ancheGiorni){ const resta = new Set(c.giro.map(e => e.g)); c.giorniOrdine = (c.giorniOrdine || []).filter(g => !prima.includes(g) || resta.has(g)); }
+  c._giro = true;
+}
+const scrittaGiro = s => ordinaG(s.giorni).join(", ") + (s.ora ? " ore " + s.ora : "") + (s.modo ? " (" + (s.modo === "telefono" ? "al telefono" : "di persona") + ")" : "");
+
 export async function sincronizzaICloud(env, uid, opz = {}){
   const S = opz.S !== undefined ? opz.S : await leggiDoc(env, "calendario_segreti/" + uid);
   const I = S && S.icloud;
@@ -700,7 +842,7 @@ export async function sincronizzaICloud(env, uid, opz = {}){
       const hrefCliente = new Map(Object.entries(mappa).map(([cid, m]) => [m.ev, cid]));
       const daLeggere = cambiati.filter(h => hrefCliente.has(h));
       const toccati = [...new Set([...daLeggere, ...cancellati].filter(h => hrefCliente.has(h)).map(h => hrefCliente.get(h)))];
-      clienti = opz.leggero ? await clientiPerId(env, uid, toccati) : await clientiDi(env, uid, ["storico"]);
+      clienti = opz.leggero ? await clientiPerId(env, uid, toccati) : await clientiDi(env, uid, ["storico", "giro"]);
       const perId = new Map(clienti.map(c => [c.id, c]));
       for(const h of cancellati){
         const cid = hrefCliente.get(h); if(!cid || !mappa[cid]) continue;
@@ -747,21 +889,84 @@ export async function sincronizzaICloud(env, uid, opz = {}){
       }
     }
 
+    // b2) il giro: eventi ricorrenti abbinati ai clienti, nei due sensi
+    const giro = I.giro && typeof I.giro === "object" ? I.giro : {}, giroTok = I.giroTok && typeof I.giroTok === "object" ? I.giroTok : {};
+    if(Object.keys(giro).length){
+      const cambiatiG = new Map();                                // uid → testo dell'evento, oppure null se cancellato
+      for(const cal of [...new Set(Object.values(giro).map(L => L.cal))]){
+        if(!calendari.some(c => c.id === cal)) continue;
+        if(opz.leggero && nuoviCtag[cal] === ctag[cal] && giroTok[cal]) continue;
+        let r;
+        try { r = await ic.sync(cal, giroTok[cal] || ""); } catch(e){ if(!e.invalido) throw e; r = await ic.sync(cal, ""); }
+        giroTok[cal] = r.token || giroTok[cal] || "";
+        const perHref = new Map(Object.entries(giro).filter(([, L]) => L.cal === cal).map(([u, L]) => [L.href, u]));
+        for(const hh of r.cancellati) if(perHref.has(hh)) cambiatiG.set(perHref.get(hh), null);
+        const leggere = r.cambiati.filter(hh => perHref.has(hh));
+        if(leggere.length) for(const [hh, t] of await ic.multiget(cal, leggere)) cambiatiG.set(perHref.get(hh), t);
+      }
+      // i clienti che servono (nel giro leggero solo quelli degli eventi cambiati)
+      const perTutti = new Map(clienti.map(c => [c.id, c]));
+      const servono = opz.leggero ? [...new Set([...cambiatiG.keys()].map(u => giro[u].cliente))] : [];
+      if(!opz.leggero && !clienti.length){ clienti = await clientiDi(env, uid, ["storico", "giro"]); clienti.forEach(c => perTutti.set(c.id, c)); }
+      const mancano = servono.filter(id => !perTutti.has(id));
+      if(mancano.length) for(const c of await clientiPerId(env, uid, mancano)){ clienti.push(c); perTutti.set(c.id, c); }
+      for(const u of Object.keys(giro)){
+        const L = giro[u], c = perTutti.get(L.cliente);
+        if(!c){ if(!opz.leggero) delete giro[u]; continue; }                      // cliente eliminato
+        const kc = chiaveClienteGiro(c, u);
+        let testo = null;
+        if(cambiatiG.has(u)){
+          testo = cambiatiG.get(u);
+          if(testo === null){                                                     // serie cancellata su iCloud
+            if(kc === L.k){ giroViaDaCliente(c, u, true); c.storico = [...(c.storico || []), { d: oggi, t: "Giro: evento «" + L.nome + "» tolto da iCloud" }]; stat.daICloud++; }
+            else giroViaDaCliente(c, u, false);
+            delete giro[u]; continue;
+          }
+          const s = serieIcs(testo);
+          if(s){
+            const ke = chiaveGiro(s.giorni, s.ora, s.modo);
+            if(ke !== L.k){
+              if(kc === L.k){ giroSuCliente(c, u, s); c.storico = [...(c.storico || []), { d: oggi, t: "Giro cambiato da iCloud: «" + s.nome + "» " + scrittaGiro(s) }]; stat.daICloud++; }
+              L.k = ke; L.nome = s.nome;
+            }
+          }
+        } else if(opz.leggero) continue;
+        // dall'app a iCloud
+        const kc2 = chiaveClienteGiro(c, u);
+        if(kc2 === L.k) continue;
+        if(!kc2){ giroViaDaCliente(c, u, false); delete giro[u]; continue; }          // tolti tutti i giorni nell'app: si scollega, l'evento resta
+        if(!tocca()) continue;
+        if(testo == null){ const d = await ic.multiget(L.cal, [L.href]); testo = d.get(L.href) || null; }
+        if(testo == null){ delete giro[u]; giroViaDaCliente(c, u, false); continue; }
+        const [gs, ora, modo] = kc2.split("|");
+        const nuovo = { giorni: gs.split(",").filter(Boolean), ora, modo };
+        if(await ic.aggiorna(L.href, cambiaSerie(testo, nuovo.giorni, nuovo.ora, nuovo.modo), ic.etag && ic.etag.get(L.href))){
+          giroSuCliente(c, u, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo); stat.cambiati++;
+        }
+      }
+    }
+
     // c) appuntamenti iCloud da mostrare nell'app (sola lettura)
     const mostra = (Array.isArray(I.mostra) ? I.mostra : []).filter(id => calendari.some(c => c.id === id)).slice(0, 4);
     for(const id of mostra) if(!opz.leggero || nuoviCtag[id] !== ctag[id] || !Array.isArray(evPer[id]))
       evPer[id] = (await ic.eventi(id, piuGiorni(oggi, -14), piuGiorni(oggi, 120))).slice(0, 300);
     for(const id of Object.keys(evPer)) if(!mostra.includes(id)) delete evPer[id];
-    const ev = mostra.flatMap(id => (evPer[id] || []).map(e => ({ ...e, c: calendari.findIndex(c => c.id === id) }))).sort((a, b) => a.s.localeCompare(b.s)).slice(0, 600);
+    const ev = mostra.flatMap(id => (evPer[id] || []).filter(e => !giro[String(e.id).split("|")[0]]).map(e => ({ ...e, c: calendari.findIndex(c => c.id === id) })))     // gli eventi del giro abbinati non si ripetono
+      .sort((a, b) => a.s.localeCompare(b.s)).slice(0, 600);
     const evHash = impronta(JSON.stringify(ev));
 
     const scritture = [];
-    for(const c of clienti) if(c._cambiato)
-      scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi: ["ricontattare", "ricontattareOra", "storico", "aggiornato"],
-        dati: { ricontattare: c.ricontattare, ricontattareOra: c.ricontattareOra, storico: c.storico, aggiornato: new Date().toISOString() } });
-    scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["icloud"], dati: { icloud: { ...I, home: ic.home, calendari, mostra, mappa, syncToken, ctag: nuoviCtag, ev: evPer, evHash, pulizia } } });
-    scritture.push({ percorso: "utenti/" + uid + "/impostazioni/icloud", campi: ["collegato", "ultimo", "errore", "calendari", "mostra"],
-      dati: { collegato: true, ultimo: new Date().toISOString(), errore: stat.rimandati ? "Molti appuntamenti da copiare: finisco tra pochi minuti" : null, calendari, mostra } });
+    for(const c of clienti) if(c._cambiato || c._giro){
+      const campi = [...(c._cambiato ? ["ricontattare", "ricontattareOra"] : []), ...(c._giro ? ["giro", "giorniOrdine", "orarioOrdine"] : []), "storico", "aggiornato"];
+      const dati = { storico: c.storico || [], aggiornato: new Date().toISOString() };
+      if(c._cambiato){ dati.ricontattare = c.ricontattare; dati.ricontattareOra = c.ricontattareOra; }
+      if(c._giro){ dati.giro = c.giro || []; dati.giorniOrdine = c.giorniOrdine || []; dati.orarioOrdine = c.orarioOrdine || ""; }
+      scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi, dati });
+    }
+    scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["icloud"], dati: { icloud: { ...I, home: ic.home, calendari, mostra, mappa, syncToken, ctag: nuoviCtag, ev: evPer, evHash, pulizia, giro, giroTok } } });
+    scritture.push({ percorso: "utenti/" + uid + "/impostazioni/icloud", campi: ["collegato", "ultimo", "errore", "calendari", "mostra", "giro"],
+      dati: { collegato: true, ultimo: new Date().toISOString(), errore: stat.rimandati ? "Molti appuntamenti da copiare: finisco tra pochi minuti" : null, calendari, mostra,
+        giro: Object.fromEntries(Object.entries(giro).map(([u, L]) => [u, { cliente: L.cliente, nome: L.nome || "" }])) } });
     if(evHash !== I.evHash) scritture.push({ percorso: "utenti/" + uid + "/impostazioni/icloud_eventi", dati: { agg: new Date().toISOString(), ev } });
     await scrivi(env, scritture);
     return { collegato: true, ...stat, chiamateICloud: ic.chiamate };
@@ -992,6 +1197,47 @@ export default {
           } else throw new Errore(400, "richiesta non valida");
           const r = await sincronizzaTutto(env, uid, { calendari: true });
           return json({ ok: true, ...r }, 200, cors);
+        }
+        if(p === "/icloud/giro/eventi"){
+          const I = S.icloud, ic = new ICloud(env, I.user, I.pass, I.home);
+          if(!ic.home) await ic.scopri();
+          const cals = [...new Set([...(I.mostra || []), I.calId].filter(Boolean))];
+          const eventi = [];
+          for(const cal of cals) for(const s of await ic.serie(cal))
+            eventi.push({ ...s, calNome: ((I.calendari || []).find(c => c.id === cal) || {}).nome || "", cliente: (I.giro || {})[s.uid] ? I.giro[s.uid].cliente : null });
+          return json({ ok: true, eventi: eventi.sort((a, b) => a.nome.localeCompare(b.nome, "it")).slice(0, 400) }, 200, cors);
+        }
+        if(p === "/icloud/giro/abbina"){
+          const I = S.icloud, ic = new ICloud(env, I.user, I.pass, I.home);
+          const giro = { ...(I.giro || {}) };
+          const voci = (Array.isArray(corpo.voci) ? corpo.voci : []).filter(v => v && typeof v.uid === "string" && typeof v.cliente === "string" && typeof v.href === "string" && typeof v.cal === "string").slice(0, 200);
+          const togli = (Array.isArray(corpo.togli) ? corpo.togli : []).filter(u => typeof u === "string" && giro[u]).slice(0, 200);
+          const ids = [...new Set([...voci.map(v => v.cliente), ...voci.map(v => giro[v.uid] && giro[v.uid].cliente).filter(Boolean), ...togli.map(u => giro[u].cliente)])];
+          const perId = new Map((await clientiPerId(env, uid, ids)).map(c => [c.id, c]));
+          for(const u of togli){ const c = perId.get(giro[u].cliente); if(c) giroViaDaCliente(c, u, false); delete giro[u]; }
+          let fatti = 0;
+          const perCal = new Map(); voci.forEach(v => perCal.set(v.cal, [...(perCal.get(v.cal) || []), v]));
+          for(const [cal, vv] of perCal){
+            if(!(I.calendari || []).some(c => c.id === cal)) continue;
+            const testi = await ic.multiget(cal, vv.map(v => v.href));
+            for(const v of vv){
+              const s = testi.has(v.href) && serieIcs(testi.get(v.href)), c = perId.get(v.cliente);
+              if(!s || !c || s.uid !== v.uid) continue;
+              if(giro[v.uid] && giro[v.uid].cliente !== v.cliente){ const vecchio = perId.get(giro[v.uid].cliente); if(vecchio) giroViaDaCliente(vecchio, v.uid, false); }
+              giroSuCliente(c, v.uid, s);
+              c.storico = [...(c.storico || []), { d: oggiRoma(), t: "Giro collegato al calendario iCloud: «" + s.nome + "» " + scrittaGiro(s) }];
+              giro[v.uid] = { cal, href: v.href, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo), nome: s.nome };
+              fatti++;
+            }
+          }
+          const scritture = [...perId.values()].filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
+            campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
+            dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+          scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["icloud"], dati: { icloud: { ...I, giro, evHash: "" } } });
+          scritture.push({ percorso: "utenti/" + uid + "/impostazioni/icloud", campi: ["giro"], dati: { giro: Object.fromEntries(Object.entries(giro).map(([u, L]) => [u, { cliente: L.cliente, nome: L.nome || "" }])) } });
+          await scrivi(env, scritture);
+          await sincronizzaICloud(env, uid).catch(() => {});
+          return json({ ok: true, collegati: fatti, tolti: togli.length }, 200, cors);
         }
         return json({ errore: "percorso sconosciuto" }, 404, cors);
       } catch(err){
