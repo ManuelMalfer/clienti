@@ -446,6 +446,7 @@ export async function sincronizza(env, uid, opz = {}){
       const j = await g.chiama("GET", cal(id) + "/events?" + q);
       for(const e of j.items || []){
         if(e.status === "cancelled" || (e.extendedProperties && e.extendedProperties.private && e.extendedProperties.private.app === "clienti")) continue;
+        if(S.ggiro && (S.ggiro[e.recurringEventId] || S.ggiro[e.id])) continue;                // ordine del giro collegato: si vede tra gli ordini
         const tg = !!(e.start && e.start.date);
         const s = tg ? e.start.date : e.start && e.start.dateTime ? romaDi(e.start.dateTime) : null;
         const f = tg ? e.end && e.end.date : e.end && e.end.dateTime ? romaDi(e.end.dateTime) : null;
@@ -939,6 +940,27 @@ async function eventoICloud(env, uid, S, x){
 async function eventoGoogle(env, S, x){
   const g = new Google(env, S.refresh);
   if(!(S.calendari || []).some(c => c.id === x.cal && c.scrivibile)) throw new Errore(400, "calendario non modificabile");
+  // ordine del giro: x.r è la serie, x.occorrenza il giorno toccato
+  if(x.r && x.occorrenza){
+    const m = await g.chiama("GET", cal(x.cal) + "/events/" + encodeURIComponent(x.r));
+    if(x.serie){
+      if(x.elimina){ try { await g.chiama("DELETE", cal(x.cal) + "/events/" + encodeURIComponent(x.r)); } catch(e){ if(e.google !== 404 && e.google !== 410) throw e; } return; }
+      const s = serieGoogle(m) || { giorni: [], modo: "" };
+      const corpo = patchSerieGoogle(m, x.giorni && x.giorni.length ? x.giorni : s.giorni, x.tutto ? "" : x.inizio, x.modo != null ? x.modo : s.modo, x.fine);
+      if(x.titolo != null) corpo.summary = x.titolo;
+      await g.chiama("PATCH", cal(x.cal) + "/events/" + encodeURIComponent(x.r), corpo);
+      return;
+    }
+    const iid = encodeURIComponent(idIstanza(m, x.occorrenza));
+    if(x.elimina){ try { await g.chiama("DELETE", cal(x.cal) + "/events/" + iid); } catch(e){ if(e.google !== 404 && e.google !== 410) throw e; } return; }
+    const corpo = {};
+    if(x.titolo != null) corpo.summary = x.titolo;
+    const d = x.data || x.occorrenza, ini = x.inizio || (m.start.dateTime ? romaDi(m.start.dateTime).o : "");
+    if(x.tutto || !ini){ corpo.start = { date: d, dateTime: null, timeZone: null }; corpo.end = { date: piuGiorni(d, 1), dateTime: null, timeZone: null }; }
+    else { const f = x.fine && x.fine > ini ? x.fine : ini; corpo.start = { dateTime: d + "T" + ini + ":00", timeZone: "Europe/Rome", date: null }; corpo.end = { dateTime: d + "T" + f + ":00", timeZone: "Europe/Rome", date: null }; }
+    await g.chiama("PATCH", cal(x.cal) + "/events/" + iid, corpo);
+    return;
+  }
   const id = encodeURIComponent(x.serie && x.r ? x.r : x.id);
   if(x.elimina){ try { await g.chiama("DELETE", cal(x.cal) + "/events/" + id); } catch(e){ if(e.google !== 404 && e.google !== 410) throw e; } return; }
   const corpo = {};
@@ -971,6 +993,123 @@ function datiEvento(c){
   for(const k of ["href", "ri", "id", "r"]) if(typeof c[k] === "string") x[k] = c[k].slice(0, 500);
   if(!x.cal) throw new Errore(400, "calendario mancante");
   return x;
+}
+
+/* ---------- GIRO DAL CALENDARIO GOOGLE (v6.17) ----------
+   Come il giro di iCloud: eventi che si ripetono ogni settimana (📞 / 💼 nel titolo) abbinati ai clienti, nei due sensi.
+   Documento segreto: ggiro = { idSerie: { cal, cliente, k, nome } }, ggiroTok = { calendario: syncToken }; nel cliente le voci del giro
+   hanno ev = "g:" + idSerie; stato per l'app: impostazioni/gcal.giro = { "g:"+id: { cliente, nome, cal, id } }. */
+function serieGoogle(e){
+  if(!e || e.status === "cancelled" || !Array.isArray(e.recurrence) || !e.start) return null;
+  if(e.extendedProperties && e.extendedProperties.private && e.extendedProperties.private.app === "clienti") return null;
+  const rr = e.recurrence.find(x => /^RRULE:/i.test(x)); if(!rr || !/FREQ=WEEKLY/i.test(rr)) return null;
+  const s = e.start.date ? { d: e.start.date, o: "" } : e.start.dateTime ? romaDi(e.start.dateTime) : null; if(!s) return null;
+  const by = (/BYDAY=([^;]+)/i.exec(rr) || [])[1];
+  const giorni = by ? by.split(",").map(x => BYDAY[x.replace(/^[+-]?\d+/, "").toUpperCase()]).filter(Boolean) : [giornoDi(s.d)];
+  const fine = /UNTIL=(\d{8})/i.exec(rr), titolo = String(e.summary || "");
+  return { id: e.id, titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "",
+    intervallo: +((/INTERVAL=(\d+)/i.exec(rr) || [])[1] || 1), finita: !!(fine && fine[1] < oggiRoma().replace(/-/g, "")) };
+}
+async function serieGoogleCal(g, calId){
+  const q = new URLSearchParams({ maxResults: "250", singleEvents: "false", timeMin: oggiRoma() + "T00:00:00Z" });
+  const j = await g.chiama("GET", cal(calId) + "/events?" + q);
+  return (j.items || []).map(serieGoogle).filter(s => s && !s.finita).map(s => ({ ...s, cal: calId }));
+}
+// nuove regole della serie: giorni (BYDAY), ora (stessa durata, o fino a "fine"), icona del titolo
+function patchSerieGoogle(m, giorni, ora, modo, fine){
+  const by = "BYDAY=" + ordinaG(giorni).map(gg => DAYBY[gg]).join(",");
+  const corpo = { recurrence: m.recurrence.map(x => /^RRULE:/i.test(x) ? (/BYDAY=[^;]*/i.test(x) ? x.replace(/BYDAY=[^;]*/i, by) : x + ";" + by) : x) };
+  const allinea = d => { for(let n = 0; n < 7 && !giorni.includes(giornoDi(d)); n++) d = piuGiorni(d, 1); return d; };
+  if(m.start.date){
+    const giorniDurata = Math.max(1, Math.round((Date.parse(m.end.date) - Date.parse(m.start.date)) / 864e5)), d = allinea(m.start.date);
+    corpo.start = { date: d }; corpo.end = { date: piuGiorni(d, giorniDurata) };
+  } else {
+    const s = romaDi(m.start.dateTime), e = romaDi(m.end.dateTime);
+    const o = ora || s.o, d = allinea(s.d);
+    const durata = fine && oraNorm(fine) && oraNorm(fine) > o ? Date.parse("2000-01-01T" + oraNorm(fine) + ":00Z") - Date.parse("2000-01-01T" + o + ":00Z")
+      : Date.parse(e.d + "T" + e.o + ":00Z") - Date.parse(s.d + "T" + s.o + ":00Z");
+    const f = new Date(Date.parse(d + "T" + o + ":00Z") + durata).toISOString();
+    corpo.start = { dateTime: d + "T" + o + ":00", timeZone: "Europe/Rome" };
+    corpo.end = { dateTime: f.slice(0, 16) + ":00", timeZone: "Europe/Rome" };
+  }
+  if(modo && modoDi(m.summary || "") !== modo) corpo.summary = ICONA[modo] + " " + senzaIcone(m.summary || "");
+  return corpo;
+}
+// id dell'evento di un singolo giorno di una serie Google
+function idIstanza(m, occ){
+  if(m.start.date) return m.id + "_" + occ.replace(/-/g, "");
+  return m.id + "_" + romaAUtc(occ, romaDi(m.start.dateTime).o);
+}
+// elenco delle modifiche di un calendario dal syncToken (al primo giro: tutto, per avere il token)
+async function modificheGoogle(g, calId, token){
+  const fai = async t => {
+    let pag = "", prossimo = null, n = 0; const out = [];
+    do {
+      const q = new URLSearchParams({ maxResults: "2500", singleEvents: "false", showDeleted: "true" });
+      if(t) q.set("syncToken", t); if(pag) q.set("pageToken", pag);
+      const j = await g.chiama("GET", cal(calId) + "/events?" + q);
+      (j.items || []).forEach(e => out.push(e)); pag = j.nextPageToken || ""; prossimo = j.nextSyncToken || prossimo;
+    } while(pag && ++n < 10);
+    return { eventi: out, token: prossimo };
+  };
+  try { return await fai(token); } catch(e){ if(e.google === 410 && token) return fai(null); throw e; }
+}
+const statoGiroGoogle = ggiro => Object.fromEntries(Object.entries(ggiro).map(([id, L]) => ["g:" + id, { cliente: L.cliente, nome: L.nome || "", cal: L.cal, id }]));
+
+export async function sincronizzaGiroGoogle(env, uid, opz = {}){
+  const S = opz.S !== undefined ? opz.S : await leggiDoc(env, "calendario_segreti/" + uid);
+  if(!S || !S.refresh || !S.ggiro || !Object.keys(S.ggiro).length) return { collegato: false };
+  const g = new Google(env, S.refresh), oggi = opz.oggi || oggiRoma();
+  const ggiro = JSON.parse(JSON.stringify(S.ggiro)), tok = { ...(S.ggiroTok || {}) };
+  const stat = { cambiati: 0, daGoogle: 0, rimandati: 0 }; let scritte = 0;
+  const cambiati = new Map();                                   // id della serie → evento padre, oppure null se cancellata
+  for(const calId of [...new Set(Object.values(ggiro).map(L => L.cal))]){
+    const r = await modificheGoogle(g, calId, tok[calId] || null);
+    if(r.token) tok[calId] = r.token;
+    for(const e of r.eventi) if(ggiro[e.id] && ggiro[e.id].cal === calId) cambiati.set(e.id, e.status === "cancelled" ? null : e);
+  }
+  const clienti = opz.leggero ? await clientiPerId(env, uid, [...new Set([...cambiati.keys()].map(id => ggiro[id].cliente))]) : await clientiDi(env, uid, ["storico", "giro"]);
+  const perId = new Map(clienti.map(c => [c.id, c]));
+  for(const id of Object.keys(ggiro)){
+    const L = ggiro[id], ev = "g:" + id, c = perId.get(L.cliente);
+    if(!c){ if(!opz.leggero) delete ggiro[id]; continue; }
+    const kc = chiaveClienteGiro(c, ev);
+    let m = null;
+    if(cambiati.has(id)){
+      m = cambiati.get(id);
+      if(m === null){
+        if(kc === L.k){ giroViaDaCliente(c, ev, true); c.storico = [...(c.storico || []), { d: oggi, t: "Giro: evento «" + L.nome + "» tolto da Google Calendar" }]; stat.daGoogle++; }
+        else giroViaDaCliente(c, ev, false);
+        delete ggiro[id]; continue;
+      }
+      const s = serieGoogle(m);
+      if(s){
+        const ke = chiaveGiro(s.giorni, s.ora, s.modo);
+        if(ke !== L.k){
+          if(kc === L.k){ giroSuCliente(c, ev, s); c.storico = [...(c.storico || []), { d: oggi, t: "Giro cambiato da Google Calendar: «" + s.nome + "» " + scrittaGiro(s) }]; stat.daGoogle++; }
+          L.k = ke; L.nome = s.nome;
+        }
+      }
+    } else if(opz.leggero) continue;
+    const kc2 = chiaveClienteGiro(c, ev);
+    if(kc2 === L.k) continue;
+    if(!kc2){ giroViaDaCliente(c, ev, false); delete ggiro[id]; continue; }
+    if(scritte >= MAX_SCRITTURE){ stat.rimandati++; continue; }
+    scritte++;
+    try { if(!m) m = await g.chiama("GET", cal(L.cal) + "/events/" + encodeURIComponent(id)); }
+    catch(e){ if(e.google === 404 || e.google === 410){ giroViaDaCliente(c, ev, false); delete ggiro[id]; continue; } throw e; }
+    const [gs, ora, modo] = kc2.split("|"), nuovo = { giorni: gs.split(",").filter(Boolean), ora, modo };
+    await g.chiama("PATCH", cal(L.cal) + "/events/" + encodeURIComponent(id), patchSerieGoogle(m, nuovo.giorni, nuovo.ora, nuovo.modo));
+    giroSuCliente(c, ev, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo); stat.cambiati++;
+  }
+  if(opz.leggero && !clienti.some(c => c._giro) && JSON.stringify(ggiro) === JSON.stringify(S.ggiro) && JSON.stringify(tok) === JSON.stringify(S.ggiroTok || {})) return { collegato: true, ...stat };
+  const scritture = clienti.filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
+    campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
+    dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+  scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["ggiro", "ggiroTok"], dati: { ggiro, ggiroTok: tok } });
+  scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["giro"], dati: { giro: statoGiroGoogle(ggiro) } });
+  await scrivi(env, scritture);
+  return { collegato: true, ...stat };
 }
 
 export async function sincronizzaICloud(env, uid, opz = {}){
@@ -1165,6 +1304,7 @@ async function sincronizzaTutto(env, uid, opz = {}){
   const out = { creati: 0, cambiati: 0, tolti: 0, daGoogle: 0, daICloud: 0, errori: [] };
   const somma = r => { for(const k of ["creati", "cambiati", "tolti", "daGoogle", "daICloud"]) out[k] += r[k] || 0; };
   if(S && S.refresh){ try { const r = await sincronizza(env, uid, { ...opz, S }); somma(r); out.google = true; } catch(e){ out.errori.push({ servizio: "google", stato: e.stato, msg: e.message }); } }
+  if(S && S.refresh && S.ggiro && Object.keys(S.ggiro).length){ try { somma(await sincronizzaGiroGoogle(env, uid, { ...opz, S })); } catch(e){ out.errori.push({ servizio: "google", stato: e.stato, msg: e.message }); } }
   if(S && S.icloud){ try { const r = await sincronizzaICloud(env, uid, { ...opz, S }); somma(r); out.icloud = true; } catch(e){ out.errori.push({ servizio: "icloud", stato: e.stato, msg: e.message }); } }
   return out;
 }
@@ -1297,9 +1437,45 @@ export default {
             const r = await sincronizzaTutto(env, uid, { calendari: true });
             return json({ ok: true, ...r }, 200, cors);
           }
+          if(p === "/google/giro/eventi"){
+            const g = new Google(env, S.refresh), cals = [...new Set([...(S.mostra || []), S.calId].filter(Boolean))], eventi = [];
+            for(const c of cals) for(const s of await serieGoogleCal(g, c))
+              eventi.push({ ...s, uid: s.id, calNome: ((S.calendari || []).find(x => x.id === c) || {}).nome || "", cliente: (S.ggiro || {})[s.id] ? S.ggiro[s.id].cliente : null });
+            return json({ ok: true, eventi: eventi.sort((a, b) => a.nome.localeCompare(b.nome, "it")).slice(0, 400) }, 200, cors);
+          }
+          if(p === "/google/giro/abbina"){
+            const g = new Google(env, S.refresh), ggiro = { ...(S.ggiro || {}) }, tok = { ...(S.ggiroTok || {}) };
+            const voci = (Array.isArray(corpo.voci) ? corpo.voci : []).filter(v => v && typeof v.id === "string" && typeof v.cal === "string" && typeof v.cliente === "string").slice(0, 100);
+            const togli = (Array.isArray(corpo.togli) ? corpo.togli : []).map(String).filter(id => ggiro[id]).slice(0, 200);
+            const ids = [...new Set([...voci.map(v => v.cliente), ...voci.map(v => ggiro[v.id] && ggiro[v.id].cliente).filter(Boolean), ...togli.map(id => ggiro[id].cliente)])];
+            const perId = new Map((await clientiPerId(env, uid, ids)).map(c => [c.id, c]));
+            for(const id of togli){ const c = perId.get(ggiro[id].cliente); if(c) giroViaDaCliente(c, "g:" + id, false); delete ggiro[id]; }
+            let fatti = 0;
+            for(const v of voci){
+              if(!(S.calendari || []).some(c => c.id === v.cal)) continue;
+              let m; try { m = await g.chiama("GET", cal(v.cal) + "/events/" + encodeURIComponent(v.id)); } catch(e){ continue; }
+              const s = serieGoogle(m), c = perId.get(v.cliente);
+              if(!s || !c) continue;
+              if(ggiro[v.id] && ggiro[v.id].cliente !== v.cliente){ const vecchio = perId.get(ggiro[v.id].cliente); if(vecchio) giroViaDaCliente(vecchio, "g:" + v.id, false); }
+              giroSuCliente(c, "g:" + v.id, s);
+              c.storico = [...(c.storico || []), { d: oggiRoma(), t: "Giro collegato a Google Calendar: «" + s.nome + "» " + scrittaGiro(s) }];
+              ggiro[v.id] = { cal: v.cal, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo), nome: s.nome };
+              fatti++;
+            }
+            // primo elenco delle modifiche dei calendari del giro: serve il "segnalino" per i giri successivi
+            for(const c of [...new Set(Object.values(ggiro).map(L => L.cal))]) if(!tok[c]){ const rr = await modificheGoogle(g, c, null); if(rr.token) tok[c] = rr.token; }
+            const scritture = [...perId.values()].filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
+              campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
+              dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+            scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["ggiro", "ggiroTok", "evHash"], dati: { ggiro, ggiroTok: tok, evHash: "" } });
+            scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["giro"], dati: { giro: statoGiroGoogle(ggiro) } });
+            await scrivi(env, scritture);
+            await sincronizzaTutto(env, uid, {}).catch(() => {});
+            return json({ ok: true, collegati: fatti, tolti: togli.length }, 200, cors);
+          }
           if(p === "/google/evento"){
             const x = datiEvento(corpo);
-            if(!x.id) throw new Errore(400, "evento mancante");
+            if(!x.id && !x.r) throw new Errore(400, "evento mancante");
             await eventoGoogle(env, S, x);
             const r = await sincronizzaTutto(env, uid, {});
             return json({ ok: true, ...r }, 200, cors);

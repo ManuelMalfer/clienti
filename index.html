@@ -1344,7 +1344,7 @@ dialog.rc-dlg{max-width:720px}
         <button class="chip-btn cal-scad hidden" type="button" id="calScad"></button>
         <div class="cal-vista" role="group" aria-label="Vista"><button type="button" data-calv="mese">Mese</button><button type="button" data-calv="giorno">Giorno</button></div>
       </div>
-      <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>Collega a Google Calendar / iCloud</button>
+      <button class="btn btn-cal" type="button" id="calAllBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>Impostazioni calendario</button>
     </div></header>
     <main class="wrap view" id="richBody"></main>
   </section>
@@ -1889,7 +1889,7 @@ dialog.rc-dlg{max-width:720px}
 </dialog>
 <dialog id="dlgGiro" aria-labelledby="giT">
   <div class="dlg">
-    <div class="dlg-head"><h2 id="giT">Collega il tuo giro<span class="sub">Gli eventi che si ripetono ogni settimana nel tuo calendario iCloud: scegli a quale cliente corrisponde ognuno.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-head"><h2 id="giT">Collega il tuo giro<span class="sub">Gli eventi che si ripetono ogni settimana nel tuo calendario: scegli a quale cliente corrisponde ognuno.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
       <p class="pv-hint" id="giInfo">Leggo il calendario…</p>
       <div id="giList"></div>
@@ -1900,7 +1900,7 @@ dialog.rc-dlg{max-width:720px}
 </dialog>
 <dialog id="dlgCal" aria-labelledby="calT">
   <div class="dlg">
-    <div class="dlg-head"><h2 id="calT">Collega il calendario<span class="sub">Gli appuntamenti dei clienti nel tuo calendario, e i tuoi impegni qui nell’app.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-head"><h2 id="calT">Impostazioni calendario<span class="sub">Gli appuntamenti dei clienti nel tuo calendario, e i tuoi impegni qui nell’app.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
       <p class="cal-msg" id="calStato">Controllo il servizio…</p>
       <div id="calOn" class="hidden">
@@ -1918,6 +1918,7 @@ dialog.rc-dlg{max-width:720px}
             </label>
             <div class="gc-vedi"><span>Calendari da vedere nell’app</span><div id="gcMostra"></div></div>
             <p class="gc-st" id="gcSt"></p>
+            <div class="gi-box"><p class="gc-st" id="gcGiroSt"></p><button class="btn btn-primary" type="button" id="gcGiro">Collega il tuo giro</button></div>
             <div class="gc-az"><button class="btn" type="button" id="gcSync">Sincronizza ora</button><button class="btn btn-danger" type="button" id="gcStacca">Scollega Google</button></div>
           </div>
         </section>
@@ -4607,7 +4608,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.16 (v6.16)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.17 (v6.17)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -6204,7 +6205,7 @@ async function gcChiama(percorso, corpo = {}, servizio = "google"){
   return j;
 }
 // dopo una modifica fatta da questo dispositivo a un richiamo: sincronizza dopo qualche secondo
-const giroCollegato = () => !!(ical.collegato && ical.giro && Object.keys(ical.giro).length);
+const giroCollegato = () => !!((ical.collegato && ical.giro && Object.keys(ical.giro).length) || (gcal.collegato && gcal.giro && Object.keys(gcal.giro).length));
 function gcPresto(){
   if(!(gcal.collegato && gcal.calId) && !(ical.collegato && ical.calId) && !giroCollegato()) return;
   clearTimeout(gcTimer);
@@ -6214,6 +6215,10 @@ const gcQuando = iso => { if(!iso) return "mai"; const d = new Date(iso); return
 function gcRender(){
   icRender();
   const on = !!gcal.collegato;
+  const nG = Object.keys(gcal.giro || {}).length;
+  $("#gcGiroSt").textContent = nG ? `Giro: ${nG} ${nG === 1 ? "evento ricorrente collegato" : "eventi ricorrenti collegati"} ai clienti. Giorni e orari dell'ordine si aggiornano nei due sensi.`
+    : "Hai il giro in Google Calendar con eventi che si ripetono ogni settimana (📞 al telefono, 💼 di persona)? Collegali ai clienti: niente doppioni e giorni dell'ordine sempre allineati.";
+  $("#gcGiro").textContent = nG ? "Rivedi il giro collegato" : "Collega il tuo giro";
   $("#gcOff").classList.toggle("hidden", on); $("#gcOn").classList.toggle("hidden", !on);
   if(!on) return;
   const cal = Array.isArray(gcal.calendari) ? gcal.calendari : [];
@@ -6345,15 +6350,17 @@ function giroPunti(nome, c){
   return meglio;
 }
 const giroEtichetta = c => [c.nome, c.luogo, c.codice && "cod. " + c.codice].filter(Boolean).join(" · ");
-let giroEv = [], giroPerEtichetta = new Map();
-async function giroApri(){
+let giroEv = [], giroPerEtichetta = new Map(), giroServ = "icloud";
+async function giroApri(servizio){
+  giroServ = servizio === "google" ? "google" : "icloud";
+  $("#giT").firstChild.textContent = "Collega il tuo giro" + (giroServ === "google" ? " (Google)" : " (iCloud)");
   $("#giInfo").textContent = "Leggo il calendario…"; $("#giList").innerHTML = ""; $("#giOk").disabled = true;
   $("#dlgGiro").showModal();
   giroPerEtichetta = new Map(clienti.map(c => [giroEtichetta(c), c.id]));
   $("#dlGiroCli").innerHTML = clienti.map(c => `<option value="${esc(giroEtichetta(c))}"></option>`).join("");
-  try { giroEv = (await gcChiama("giro/eventi", {}, "icloud")).eventi || []; }
+  try { giroEv = (await gcChiama("giro/eventi", {}, giroServ)).eventi || []; }
   catch(err){ $("#giInfo").textContent = "Non riesco a leggere il calendario: " + err.message; return; }
-  if(!giroEv.length){ $("#giInfo").textContent = "Non ho trovato eventi che si ripetono ogni settimana nei calendari iCloud scelti da vedere nell'app."; return; }
+  if(!giroEv.length){ $("#giInfo").textContent = `Non ho trovato eventi che si ripetono ogni settimana nei calendari ${giroServ === "google" ? "Google" : "iCloud"} scelti da vedere nell'app.`; return; }
   const giaUsati = new Set(giroEv.map(e => e.cliente).filter(Boolean));
   $("#giInfo").innerHTML = `Trovati <b>${giroEv.length}</b> eventi ricorrenti. Ti propongo il cliente con il nome più simile: controlla, cambia scrivendo il nome, oppure svuota il campo per non collegarlo.`;
   $("#giList").innerHTML = giroEv.map((e, i) => {
@@ -6497,12 +6504,13 @@ function evApriApp(c){
 // ordine del giro di un cliente in un certo giorno
 function evApriGiro(c, iso){
   if(!c) return;
-  const G = CAL_GIORNI[calD(iso).getDay()], v = (c.giro || []).find(x => x.g === G), L = v && v.ev && ical.giro && ical.giro[v.ev];
+  const G = CAL_GIORNI[calD(iso).getDay()], v = (c.giro || []).find(x => x.g === G);
+  const gL = v && v.ev && /^g:/.test(v.ev) && gcal.giro && gcal.giro[v.ev], L = gL ? { ...gL, google: true } : v && v.ev && ical.giro && ical.giro[v.ev];
   const inizio = (v && v.ora) || (/^\d{1,2}[:.]\d{2}$/.test((c.orarioOrdine || "").trim()) ? c.orarioOrdine.trim().replace(".", ":").padStart(5, "0") : "");
   evRiempi({ tipo: "giro", c, G, v, L, iso, cliente: c.id, ripete: !!L, tutteDiBase: true, titolo: L ? L.nome : c.nome,
     titoloFisso: L ? "" : "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: (v && v.modo) || "",
     sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: inizio ? piuMin(inizio, 15) : "", senzaTutto: true, senzaFine: !L,
-    info: L ? "Collegato al tuo giro su iCloud. Tutte le settimane: cambiano giorno, orario e modo del giro (anche nella scheda). Solo questa volta: si sposta solo questa data sul calendario."
+    info: L ? `Collegato al tuo giro su ${L.google ? "Google Calendar" : "iCloud"}. Tutte le settimane: cambiano giorno, orario e modo del giro (anche nella scheda). Solo questa volta: si sposta solo questa data sul calendario.`
       : "Vale per tutte le settimane: cambia il giorno o l'orario dell'ordine nella scheda del cliente." });
 }
 $("#evSalva").addEventListener("click", async () => {
@@ -6530,9 +6538,12 @@ $("#evSalva").addEventListener("click", async () => {
       if(o.L){
         if(tutte){
           const giorni = [...new Set((o.c.giro || []).filter(x => x.ev === o.v.ev).map(x => x.g === o.G ? nuovoG : x.g))];
-          await gcChiama("evento", { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: true, giorni, titolo: icona + tit, inizio, fine, modo }, "icloud");
-        } else await gcChiama("evento", { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: false, titolo: icona + tit, data, inizio, fine: fine || inizio }, "icloud");
-        toast(tutte ? "Giro aggiornato (anche su iCloud)" : "Spostato solo per questa volta su iCloud");
+          await gcChiama("evento", o.L.google ? { cal: o.L.cal, r: o.L.id, occorrenza: o.iso, serie: true, giorni, titolo: icona + tit, inizio, fine, modo }
+            : { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: true, giorni, titolo: icona + tit, inizio, fine, modo }, o.L.google ? "google" : "icloud");
+        } else await gcChiama("evento", o.L.google ? { cal: o.L.cal, r: o.L.id, occorrenza: o.iso, serie: false, titolo: icona + tit, data, inizio, fine: fine || inizio }
+            : { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: false, titolo: icona + tit, data, inizio, fine: fine || inizio }, o.L.google ? "google" : "icloud");
+        const dove = o.L.google ? "Google Calendar" : "iCloud";
+        toast(tutte ? "Giro aggiornato (anche su " + dove + ")" : "Spostato solo per questa volta su " + dove);
       } else {
         if(nuovoG === "Domenica"){ toast("Il giro va dal lunedì al sabato"); return; }
         const giorni = [...new Set((o.c.giorniOrdine || []).map(g => g === o.G ? nuovoG : g))];
@@ -6554,27 +6565,28 @@ $("#evDel").addEventListener("click", async () => {
     : o.ripete ? (tutte ? "«" + nome + "» per tutte le settimane" : "«" + nome + "» solo per questa volta") : "«" + nome + "»";
   const dett = o.tipo === "app" ? "L'appuntamento si toglie dalla scheda del cliente (e dal calendario collegato)."
     : o.tipo === "giro" && !o.L ? "Il " + o.G.toLowerCase() + " si toglie dai giorni dell'ordine del cliente."
-    : "Si toglie anche dal tuo calendario " + (o.tipo === "google" ? "Google" : "iCloud") + ".";
+    : "Si toglie anche dal tuo calendario " + (o.tipo === "google" || (o.L && o.L.google) ? "Google" : "iCloud") + ".";
   $("#dlgEv").close();                                   // la finestra si chiude subito, resta solo la conferma
   if(!(await confermaElimina(cosa, dett))) return;
   try {
     if(o.tipo === "google") await gcChiama("evento", { azione: "elimina", cal: o.e._c.id, id: o.e.id, r: o.e.r || "", serie: tutte }, "google");
     else if(o.tipo === "icloud") await gcChiama("evento", { azione: "elimina", cal: o.e._c.id, href: o.e.h, ri: o.e.ri || "", serie: tutte }, "icloud");
     else if(o.tipo === "app") await update(o.c.id, { ricontattare: "", ricontattareOra: "", ricontattareModo: "", storico: [...(o.c.storico || []), { d: localISO(), t: "Appuntamento tolto" }] });
-    else if(o.L) await gcChiama("evento", { azione: "elimina", cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: tutte }, "icloud");
+    else if(o.L) await gcChiama("evento", o.L.google ? { azione: "elimina", cal: o.L.cal, r: o.L.id, occorrenza: o.iso, serie: tutte } : { azione: "elimina", cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: tutte }, o.L.google ? "google" : "icloud");
     else await update(o.c.id, { giorniOrdine: (o.c.giorniOrdine || []).filter(g => g !== o.G), giro: (o.c.giro || []).filter(x => x.g !== o.G),
       storico: [...(o.c.storico || []), { d: localISO(), t: "Giro: tolto il " + o.G.toLowerCase() }] });
     toast("Eliminato");
   } catch(err){ toast("Non riuscito: " + err.message, 10000); }
 });
-$("#icGiro").addEventListener("click", giroApri);
+$("#icGiro").addEventListener("click", () => giroApri("icloud"));
+$("#gcGiro").addEventListener("click", () => giroApri("google"));
 $("#giOk").addEventListener("click", async () => {
   const s = giroScelte();
-  const voci = s.filter(x => x.id && x.id !== x.e.cliente).map(x => ({ uid: x.e.uid, href: x.e.href, cal: x.e.cal, cliente: x.id }));
-  const togli = s.filter(x => x.vuoto && x.e.cliente).map(x => x.e.uid);
+  const voci = s.filter(x => x.id && x.id !== x.e.cliente).map(x => giroServ === "google" ? { id: x.e.id, cal: x.e.cal, cliente: x.id } : { uid: x.e.uid, href: x.e.href, cal: x.e.cal, cliente: x.id });
+  const togli = s.filter(x => x.vuoto && x.e.cliente).map(x => giroServ === "google" ? x.e.id : x.e.uid);
   $("#giOk").disabled = true; $("#giOk").textContent = "Salvo…";
   try {
-    const r = await gcChiama("giro/abbina", { voci, togli }, "icloud");
+    const r = await gcChiama("giro/abbina", { voci, togli }, giroServ);
     $("#dlgGiro").close();
     toast(`Giro salvato: ${r.collegati || 0} collegati${r.tolti ? ", " + r.tolti + " scollegati" : ""}`);
   } catch(err){ toast("Non riuscito: " + err.message); giroControlla(); }
