@@ -4616,7 +4616,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.19 (v6.19)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.20 (v6.20)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4798,7 +4798,9 @@ function renderCalendario(all, t){
 
   // giorno scelto
   const sel = ui.calSel, ds = calD(sel), rs = perData[sel] || [];
-  const ord = calOrdini(sel).sort((a, b) => (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
+  // ordini del giro in ordine di orario (quelli senza un orario preciso in fondo), poi per località e nome
+  const Gsel = CAL_GIORNI[ds.getDay()], oraOrd = c => { const e = (c.giro || []).find(x => x.g === Gsel); return ooOra((e && e.ora) || c.orarioOrdine) || "99:99"; };
+  const ord = calOrdini(sel).sort((a, b) => oraOrd(a).localeCompare(oraOrd(b)) || (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
   const oraFlag = c => `<span class="flag">${GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : ""}${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) + (c.ricontattareFine ? "–" + esc(c.ricontattareFine) : "") : "in giornata"}</span>`;
   const scadFlag = c => `<span class="flag late">${fmtDate(c.ricontattare).slice(0, 5)}${c.ricontattareOra ? "<br>ore " + esc(c.ricontattareOra) : ""}</span>`;
   const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(giroOra(c, CAL_GIORNI[ds.getDay()]))}</span>`;
