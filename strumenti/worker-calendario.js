@@ -505,7 +505,7 @@ const xmlEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").repla
 const b64 = s => { let x = ""; new TextEncoder().encode(s).forEach(b => (x += String.fromCharCode(b))); return btoa(x); };
 const percorso = (href, rif) => { try { return new URL(href, rif).pathname; } catch(e){ return String(href || ""); } };
 
-class ICloud {
+export class ICloud {
   constructor(env, user, pass, home){ this.env = env; this.auth = "Basic " + b64(user + ":" + pass); this.home = home || ""; this.chiamate = 0; }
   get radice(){ return this.env.ICLOUD_URL || "https://caldav.icloud.com"; }
   async dav(metodo, url, corpo, extra = {}){
@@ -534,22 +534,29 @@ class ICloud {
     const r = await this.dav("PROPFIND", this.home, `<?xml version="1.0" encoding="utf-8"?><d:propfind ${DAV}><d:prop><d:displayname/><d:resourcetype/><a:calendar-color/>` +
       `<c:supported-calendar-component-set/><d:current-user-privilege-set/><cs:getctag/></d:prop></d:propfind>`, { depth: "1" });
     if(r.s >= 400) throw new Errore(502, "iCloud non dà l'elenco dei calendari (" + r.s + ")");
-    const out = [], risp = xmlTutti(r.t, "response");
-    // rapporto tecnico (solo nomi dei tag, niente dati) per capire cosa manda iCloud se non si trova nessun calendario
-    const soloTag = s => (String(s || "").match(/<[w:-]+/g) || []).map(t => t.slice(1).replace(/^[w-]+:/, "")).join(",");
-    this.diag = "stato " + r.s + ", home " + new URL(this.home).host + new URL(this.home).pathname.replace(/d+/g, "N") + ", risposte " + risp.length + ": " +
-      risp.slice(0, 6).map(resp => "[" + soloTag(xmlUno(resp, "resourcetype")) + " | " + soloTag(xmlUno(resp, "supported-calendar-component-set")) + " | " + (xmlUno(resp, "supported-calendar-component-set") || "").replace(/<[^>]*name=.([A-Z]+).[^>]*>/g, "$1 ").replace(/<[^>]*>/g, "").trim() + "]").join(" ") +
-      (risp.length ? "" : " inizio: " + r.t.slice(0, 160).replace(/d{4,}/g, "N"));
-    for(const resp of risp){
-      const tipo = xmlUno(resp, "resourcetype") || "";
-      if(!xmlHa(tipo, "calendar")) continue;
-      const comp = xmlUno(resp, "supported-calendar-component-set");
-      if(comp && !/name="VEVENT"/i.test(comp)) continue;
-      const priv = xmlUno(resp, "current-user-privilege-set");
+    const out = [], risp = xmlTutti(r.t, "response"), homePath = new URL(this.home).pathname;
+    // rapporto tecnico (solo nomi dei tag, niente dati personali) per capire cosa manda iCloud se non si trova nessun calendario
+    const soloTag = s => [...new Set((String(s || "").match(/<[\w:-]+/g) || []).map(t => t.slice(1).replace(/^[\w-]+:/, "")))].join(",");
+    const compNomi = s => (String(s || "").match(/name\s*=\s*["']?([A-Za-z]+)/g) || []).map(x => x.replace(/.*["'=]\s*/, "").replace(/^name/i, "")).join(" ");
+    this.diag = "stato " + r.s + ", home " + homePath.replace(/[0-9]{4,}/g, "N") + ", risposte " + risp.length + ": " + risp.slice(0, 8).map(resp => {
       const href = percorso(xmlTesto(xmlUno(resp, "href")), this.home);
+      return "[" + (href === homePath ? "HOME" : href.replace(homePath, "").replace(/[0-9a-f-]{8,}/gi, "X")) + " | tipo:" + soloTag(xmlUno(resp, "resourcetype")) +
+        " | comp:" + compNomi(xmlUno(resp, "supported-calendar-component-set")) + " | nome:" + (xmlTesto(xmlUno(resp, "displayname")) ? "sì" : "no") + " | prop:" + soloTag(resp).slice(0, 160) + "]";
+    }).join(" ");
+    for(const resp of risp){
+      const href = percorso(xmlTesto(xmlUno(resp, "href")), this.home);
+      if(href === homePath || /\/(inbox|outbox|notification|dropbox|freebusy)\/?$/i.test(href)) continue;     // cartella principale e caselle di sistema
+      const tipo = xmlUno(resp, "resourcetype") || "";
+      if(/schedule-(inbox|outbox)|notification/i.test(tipo)) continue;
+      const comp = xmlUno(resp, "supported-calendar-component-set");
+      const haEventi = comp ? /name\s*=\s*["']?VEVENT/i.test(comp) : null;
+      // è un calendario se lo dice resourcetype, oppure se accetta eventi (iCloud a volte non manda resourcetype come ci si aspetta)
+      if(!(xmlHa(tipo, "calendar") || haEventi)) continue;
+      if(haEventi === false) continue;                                                                   // solo promemoria (VTODO)
+      const priv = xmlUno(resp, "current-user-privilege-set");
       out.push({ id: new URL(href, this.home).toString().replace(/\/?$/, "/"), nome: xmlTesto(xmlUno(resp, "displayname")) || "Calendario",
         colore: (xmlTesto(xmlUno(resp, "calendar-color")).match(/^#[0-9a-f]{6}/i) || ["#FF9500"])[0], principale: false,
-        scrivibile: !priv || xmlHa(priv, "write") || xmlHa(priv, "all"), ctag: xmlTesto(xmlUno(resp, "getctag")) });
+        scrivibile: !priv || xmlHa(priv, "write") || xmlHa(priv, "all") || xmlHa(priv, "write-content"), ctag: xmlTesto(xmlUno(resp, "getctag")) });
     }
     return out;
   }

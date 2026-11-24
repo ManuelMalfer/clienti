@@ -2042,6 +2042,22 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const localISO = (d = new Date()) => new Date(d - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+/* Ricarica automatica alle 00:01 (v6.10): così ogni mattina l'app parte dal giorno nuovo e con l'ultima versione.
+   Se in quel momento c'è una finestra o il preventivo aperti, aspetta che si chiudano (riprova ogni minuto); se il telefono
+   era in pausa (iPhone/iPad), ricarica appena l'app torna in primo piano e il giorno è cambiato. */
+const giornoAvvio = localISO();
+function ricaricaSeNuovoGiorno(){
+  if(localISO() === giornoAvvio) return;
+  const occupato = document.querySelector("dialog[open]") || (document.getElementById("pvEditor") && !document.getElementById("pvEditor").classList.contains("hidden"));
+  if(occupato || document.visibilityState === "hidden"){ setTimeout(ricaricaSeNuovoGiorno, 60000); return; }
+  location.reload();
+}
+(function programmaMezzanotte(){
+  const ora = new Date(), alle = new Date(ora.getFullYear(), ora.getMonth(), ora.getDate() + 1, 0, 1, 0);
+  setTimeout(ricaricaSeNuovoGiorno, Math.min(alle - ora, 2147483000));
+})();
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") ricaricaSeNuovoGiorno(); });
+addEventListener("pageshow", () => ricaricaSeNuovoGiorno());
 const addDays = n => { const d = new Date(); d.setDate(d.getDate()+n); return localISO(d); };
 const fmtDate = iso => iso ? iso.split("-").reverse().join("/") : "";
 // periodo di chiusura: chiusoDal (facoltativo, vuoto = da subito) e chiusoAl (ultimo giorno di chiusura, vuoto = senza fine)
@@ -4485,7 +4501,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.9 (v6.9)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.10 (v6.10)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
