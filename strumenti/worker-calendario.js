@@ -42,7 +42,7 @@
 
 const GIORNI = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 const STATI = { "DA CONTATTARE": "Da contattare", "CONTATTATO": "Contattato", "CLIENTE": "Cliente", "CLIENTE PERSO": "Cliente perso", "NON SERVIBILE": "Non servibile" };
-const CAMPI = ["nome", "luogo", "indirizzo", "referente", "tel", "cellulare", "email", "stato", "note", "ricontattare", "ricontattareOra", "ricontattareModo",
+const CAMPI = ["nome", "luogo", "indirizzo", "referente", "tel", "cellulare", "email", "stato", "note", "ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine",
   "giorniOrdine", "orarioOrdine", "chiusoDal", "chiusoAl"];
 const PERCORSO = /^\/cal\/([A-Za-z0-9_-]{6,128})\/([a-f0-9]{32,128})\.ics$/;
 const SCOPE = "openid email https://www.googleapis.com/auth/calendar";
@@ -297,13 +297,22 @@ class Google {
 
 /* ---------- 2) sincronizzazione ---------- */
 // "data|ora" e, se c'è, "|telefono" o "|visita" (icona 📞/💼 nel titolo dell'evento)
-const chiaveCliente = c => c && c.ricontattare && /^\d{4}-\d{2}-\d{2}$/.test(c.ricontattare) ? c.ricontattare + "|" + (/^\d{1,2}:\d{2}$/.test(c.ricontattareOra || "") ? c.ricontattareOra.padStart(5, "0") : "") + (c.ricontattareModo === "telefono" || c.ricontattareModo === "visita" ? "|" + c.ricontattareModo : "") : "";
+// "data|ora", poi "|modo" (telefono/visita) e "|fine" solo se l'ora di fine non è la solita mezz'ora dopo
+const piuMezzora = o => { const [hh, mm] = o.split(":").map(Number), t = (hh * 60 + mm + 30) % 1440; return pad(Math.floor(t / 60)) + ":" + pad(t % 60); };
+function chiaveDa(d, o, modo, fine){
+  const m = modo === "telefono" || modo === "visita" ? modo : "", f = o && /^\d{2}:\d{2}$/.test(fine || "") && fine !== piuMezzora(o) ? fine : "";
+  return d + "|" + o + (f ? "|" + m + "|" + f : m ? "|" + m : "");
+}
+const chiaveCliente = c => c && c.ricontattare && /^\d{4}-\d{2}-\d{2}$/.test(c.ricontattare)
+  ? chiaveDa(c.ricontattare, /^\d{1,2}:\d{2}$/.test(c.ricontattareOra || "") ? c.ricontattareOra.padStart(5, "0") : "", c.ricontattareModo, oraNorm(c.ricontattareFine)) : "";
+// l'ora di fine scelta nell'app (se è dopo l'inizio), altrimenti mezz'ora
+const fineCliente = (c, o) => { const f = oraNorm(c.ricontattareFine); return f && f > o ? f : piuMezzora(o); };
 const titoloApp = c => ({ telefono: "📞 ", visita: "💼 " }[c.ricontattareModo] || "") + "Richiamare: " + (c.nome || "cliente");
 function chiaveEvento(ev){
   if(!ev || !ev.start) return "";
-  const m = modoDi(ev.summary || ""), coda = m ? "|" + m : "";
-  if(ev.start.date) return ev.start.date + "|" + coda;
-  if(ev.start.dateTime){ const r = romaDi(ev.start.dateTime); return r.d + "|" + r.o + coda; }
+  const m = modoDi(ev.summary || "");
+  if(ev.start.date) return chiaveDa(ev.start.date, "", m, "");
+  if(ev.start.dateTime){ const r = romaDi(ev.start.dateTime), f = ev.end && ev.end.dateTime ? romaDi(ev.end.dateTime) : null; return chiaveDa(r.d, r.o, m, f && f.d === r.d ? f.o : ""); }
   return "";
 }
 function corpoEvento(c){
@@ -312,10 +321,9 @@ function corpoEvento(c){
     extendedProperties: { private: { app: "clienti", cliente: c.id } }, status: "confirmed" };
   const luogo = [c.indirizzo, c.luogo].filter(Boolean).join(", "); if(luogo) ev.location = luogo;
   if(o){
-    const [h, m] = o.split(":").map(Number), t = new Date(Date.UTC(2000, 0, 1, h, m + 30));
-    const fineD = t.getUTCDate() === 1 ? d : piuGiorni(d, 1);
+    const f = fineCliente(c, o), fineD = f > o ? d : piuGiorni(d, 1);
     ev.start = { dateTime: d + "T" + o + ":00", timeZone: "Europe/Rome" };
-    ev.end = { dateTime: fineD + "T" + pad(t.getUTCHours()) + ":" + pad(t.getUTCMinutes()) + ":00", timeZone: "Europe/Rome" };
+    ev.end = { dateTime: fineD + "T" + f + ":00", timeZone: "Europe/Rome" };
     ev.reminders = { useDefault: false, overrides: [{ method: "popup", minutes: 15 }] };
   } else {
     ev.start = { date: d }; ev.end = { date: piuGiorni(d, 1) };
@@ -401,8 +409,8 @@ export async function sincronizza(env, uid, opz = {}){
         const kg = chiaveEvento(ev);
         if(kg && kg !== m.k){
           if(c && chiaveCliente(c) === m.k){
-            const [d, o, mo] = kg.split("|");
-            c.ricontattare = d; c.ricontattareOra = o; c.ricontattareModo = mo || "";
+            const [d, o, mo, fi] = kg.split("|");
+            c.ricontattare = d; c.ricontattareOra = o; c.ricontattareModo = mo || ""; c.ricontattareFine = fi || "";
             c.storico = [...(c.storico || []), { d: storicoOggi, t: "Richiamo spostato da Google Calendar al " + scrittaStorico(kg) }];
             c._cambiato = true; stat.daGoogle++;
           }
@@ -460,8 +468,8 @@ export async function sincronizza(env, uid, opz = {}){
 
     // d) salvataggio
     for(const c of clienti) if(c._cambiato)
-      scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi: ["ricontattare", "ricontattareOra", "ricontattareModo", "storico", "aggiornato"],
-        dati: { ricontattare: c.ricontattare, ricontattareOra: c.ricontattareOra, ricontattareModo: c.ricontattareModo || "", storico: c.storico, aggiornato: new Date().toISOString() } });
+      scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi: ["ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine", "storico", "aggiornato"],
+        dati: { ricontattare: c.ricontattare, ricontattareOra: c.ricontattareOra, ricontattareModo: c.ricontattareModo || "", ricontattareFine: c.ricontattareFine || "", storico: c.storico, aggiornato: new Date().toISOString() } });
     const evHash = impronta(JSON.stringify(ev.slice(0, 600)) + JSON.stringify(mostra));
     scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["mappa", "syncToken", "calendari", "evHash", "pulizia"], dati: { mappa, syncToken, calendari, evHash, pulizia } });
     scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["collegato", "ultimo", "errore", "calendari", "mostra"],
@@ -683,9 +691,8 @@ function icsCliente(c){
     "UID:clienti-" + c.id + "@clienti.malfer.it", "DTSTAMP:" + stamp, "X-CLIENTI-ID:" + c.id];
   const dd = d.replace(/-/g, "");
   if(o){
-    const [h, m] = o.split(":").map(Number), t = new Date(Date.UTC(2000, 0, 1, h, m + 30));
-    const fineD = (t.getUTCDate() === 1 ? d : piuGiorni(d, 1)).replace(/-/g, "");
-    L.push("DTSTART;TZID=Europe/Rome:" + dd + "T" + pad(h) + pad(m) + "00", "DTEND;TZID=Europe/Rome:" + fineD + "T" + pad(t.getUTCHours()) + pad(t.getUTCMinutes()) + "00");
+    const f = fineCliente(c, o), fineD = (f > o ? d : piuGiorni(d, 1)).replace(/-/g, "");
+    L.push("DTSTART;TZID=Europe/Rome:" + dd + "T" + o.replace(":", "") + "00", "DTEND;TZID=Europe/Rome:" + fineD + "T" + f.replace(":", "") + "00");
   } else L.push("DTSTART;VALUE=DATE:" + dd, "DTEND;VALUE=DATE:" + piuGiorni(d, 1).replace(/-/g, ""), "TRANSP:TRANSPARENT");
   L.push("SUMMARY:" + esc(titoloApp(c)));
   const luogo = [c.indirizzo, c.luogo].filter(Boolean).join(", ");
@@ -1162,12 +1169,13 @@ export async function sincronizzaICloud(env, uid, opz = {}){
         for(const [h, testo] of dati){
           const cid = hrefCliente.get(h), m = cid && mappa[cid]; if(!m) continue;
           const e0 = icsEventi(testo).find(e => !e["RECURRENCE-ID"]) || icsEventi(testo)[0] || {}, m0 = modoDi(icsTesto(e0.SUMMARY ? e0.SUMMARY.v : ""));
-          const kg = chiaveIcs(icsData(e0.DTSTART)) + (chiaveIcs(icsData(e0.DTSTART)) && m0 ? "|" + m0 : "");
+          const s0 = icsData(e0.DTSTART), f0 = icsData(e0.DTEND);
+          const kg = s0 ? chiaveDa(s0.d, s0.o || "", m0, f0 && f0.o && f0.d === s0.d ? f0.o : "") : "";
           if(!kg || kg === m.k) continue;
           const c = perId.get(cid);
           if(c && chiaveCliente(c) === m.k){
-            const [d, o, mo] = kg.split("|");
-            c.ricontattare = d; c.ricontattareOra = o; c.ricontattareModo = mo || "";
+            const [d, o, mo, fi] = kg.split("|");
+            c.ricontattare = d; c.ricontattareOra = o; c.ricontattareModo = mo || ""; c.ricontattareFine = fi || "";
             c.storico = [...(c.storico || []), { d: oggi, t: "Appuntamento spostato da iCloud al " + scrittaStorico(kg) }];
             c._cambiato = true; stat.daICloud++;
           }
@@ -1262,9 +1270,9 @@ export async function sincronizzaICloud(env, uid, opz = {}){
 
     const scritture = [];
     for(const c of clienti) if(c._cambiato || c._giro){
-      const campi = [...(c._cambiato ? ["ricontattare", "ricontattareOra", "ricontattareModo"] : []), ...(c._giro ? ["giro", "giorniOrdine", "orarioOrdine"] : []), "storico", "aggiornato"];
+      const campi = [...(c._cambiato ? ["ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine"] : []), ...(c._giro ? ["giro", "giorniOrdine", "orarioOrdine"] : []), "storico", "aggiornato"];
       const dati = { storico: c.storico || [], aggiornato: new Date().toISOString() };
-      if(c._cambiato){ dati.ricontattare = c.ricontattare; dati.ricontattareOra = c.ricontattareOra; dati.ricontattareModo = c.ricontattareModo || ""; }
+      if(c._cambiato){ dati.ricontattare = c.ricontattare; dati.ricontattareOra = c.ricontattareOra; dati.ricontattareModo = c.ricontattareModo || ""; dati.ricontattareFine = c.ricontattareFine || ""; }
       if(c._giro){ dati.giro = c.giro || []; dati.giorniOrdine = c.giorniOrdine || []; dati.orarioOrdine = c.orarioOrdine || ""; }
       scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi, dati });
     }

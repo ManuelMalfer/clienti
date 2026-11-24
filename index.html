@@ -2245,7 +2245,7 @@ function subscribe(){
     // un richiamo cambiato da QUESTO dispositivo (scrittura non ancora confermata): avvisa il servizio di Google Calendar
     if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
       const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
-      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || (p.ricontattareModo || "") !== (n.ricontattareModo || "") || p.nome !== n.nome ||
+      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || (p.ricontattareModo || "") !== (n.ricontattareModo || "") || (p.ricontattareFine || "") !== (n.ricontattareFine || "") || p.nome !== n.nome ||
         (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || ""))); })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
@@ -4608,7 +4608,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.17 (v6.17)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.18 (v6.18)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4791,7 +4791,7 @@ function renderCalendario(all, t){
   // giorno scelto
   const sel = ui.calSel, ds = calD(sel), rs = perData[sel] || [];
   const ord = calOrdini(sel).sort((a, b) => (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
-  const oraFlag = c => `<span class="flag">${GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : ""}${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) : "in giornata"}</span>`;
+  const oraFlag = c => `<span class="flag">${GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : ""}${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) + (c.ricontattareFine ? "–" + esc(c.ricontattareFine) : "") : "in giornata"}</span>`;
   const scadFlag = c => `<span class="flag late">${fmtDate(c.ricontattare).slice(0, 5)}${c.ricontattareOra ? "<br>ore " + esc(c.ricontattareOra) : ""}</span>`;
   const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(giroOra(c, CAL_GIORNI[ds.getDay()]))}</span>`;
   // le righe del giorno aprono la finestra "Appuntamento" (data-app / data-gir) invece della scheda
@@ -4839,13 +4839,15 @@ function calVistaGiorno(sel, t, perData, gPer){
   (perData[sel] || []).forEach(c => {
     const da = aMin(c.ricontattareOra), tit = (GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : "") + c.nome;
     const o = { tipo: "app", key: c.id, titolo: tit, col: "var(--st-contattato)", sub: ["Appuntamento", c.luogo].filter(Boolean).join(" · ") };
-    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: da + 30, ora: hhmm(da) });
+    const fi = aMin(c.ricontattareFine);
+    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: fi && fi > da ? fi : da + 30, ora: hhmm(da) + "–" + hhmm(fi && fi > da ? fi : da + 30) });
   });
   if(ds.getDay() !== 0) calOrdini(sel).forEach(c => {
     const v = (c.giro || []).find(x => x.g === G), ora = (v && v.ora) || c.orarioOrdine, da = aMin(ora), fatto = ordineFatto(c, sel);
     const o = { tipo: "gir", key: c.id, titolo: (v && GIRO_ICONA[v.modo] ? GIRO_ICONA[v.modo] + " " : "") + c.nome, col: "var(--st-cliente)", fatto,
       sub: ["Ordine del giro", c.luogo, fatto && "✓ raccolto"].filter(Boolean).join(" · ") };
-    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: da + 15, ora: hhmm(da) });
+    const fi = aMin(v && v.fine);
+    if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: fi && fi > da ? fi : da + 15, ora: hhmm(da) + (fi && fi > da ? "–" + hhmm(fi) : "") });
   });
   // ore da mostrare: almeno 7–21, allargate se serve
   const inizio = Math.max(0, Math.min(7, ...blocchi.map(b => Math.floor(b.da / 60)))), fine = Math.min(24, Math.max(21, ...blocchi.map(b => Math.ceil(b.a / 60))));
@@ -6335,7 +6337,7 @@ const GIRO_ICONA = { telefono: "📞", visita: "💼" };
 function giroOra(c, giorno){
   const e = (c.giro || []).find(x => x.g === giorno);
   const ora = (e && e.ora) || c.orarioOrdine || "";
-  return (e && GIRO_ICONA[e.modo] ? GIRO_ICONA[e.modo] + " " : "") + ora;
+  return (e && GIRO_ICONA[e.modo] ? GIRO_ICONA[e.modo] + " " : "") + ora + (e && e.fine && e.ora ? "–" + e.fine : "");
 }
 const GIRO_VUOTE = new Set(["bar", "ristorante", "pizzeria", "hotel", "albergo", "trattoria", "osteria", "agriturismo", "srl", "snc", "sas", "spa", "da", "di", "del", "della", "dei", "il", "la", "lo", "le", "al", "alla", "ai", "e"]);
 const giroParole = s => deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1 && !GIRO_VUOTE.has(w));
@@ -6498,7 +6500,8 @@ function evApriEsterno(e){
 function evApriApp(c){
   if(!c) return;
   evRiempi({ tipo: "app", c, cliente: c.id, titolo: c.nome, titoloFisso: "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: c.ricontattareModo || "",
-    sub: [c.luogo, c.codice && "cod. " + c.codice].filter(Boolean).join(" · "), data: c.ricontattare, inizio: c.ricontattareOra || "", tutto: !c.ricontattareOra, senzaFine: true,
+    sub: [c.luogo, c.codice && "cod. " + c.codice].filter(Boolean).join(" · "), data: c.ricontattare, inizio: c.ricontattareOra || "",
+    fine: c.ricontattareFine || (c.ricontattareOra ? piuMin(c.ricontattareOra, 30) : ""), tutto: !c.ricontattareOra,
     info: (gcal.calId || ical.calId) ? "Le modifiche vanno anche nel tuo calendario " + (ical.calId ? "iCloud" : "Google") + "." : "" });
 }
 // ordine del giro di un cliente in un certo giorno
@@ -6509,7 +6512,7 @@ function evApriGiro(c, iso){
   const inizio = (v && v.ora) || (/^\d{1,2}[:.]\d{2}$/.test((c.orarioOrdine || "").trim()) ? c.orarioOrdine.trim().replace(".", ":").padStart(5, "0") : "");
   evRiempi({ tipo: "giro", c, G, v, L, iso, cliente: c.id, ripete: !!L, tutteDiBase: true, titolo: L ? L.nome : c.nome,
     titoloFisso: L ? "" : "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: (v && v.modo) || "",
-    sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: inizio ? piuMin(inizio, 15) : "", senzaTutto: true, senzaFine: !L,
+    sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: (v && v.fine) || (inizio ? piuMin(inizio, 15) : ""), senzaTutto: true,
     info: L ? `Collegato al tuo giro su ${L.google ? "Google Calendar" : "iCloud"}. Tutte le settimane: cambiano giorno, orario e modo del giro (anche nella scheda). Solo questa volta: si sposta solo questa data sul calendario.`
       : "Vale per tutte le settimane: cambia il giorno o l'orario dell'ordine nella scheda del cliente." });
 }
@@ -6530,7 +6533,7 @@ $("#evSalva").addEventListener("click", async () => {
       else await gcChiama("evento", { ...base, href: o.e.h, ri: o.e.ri || "" }, "icloud");
       toast("Appuntamento aggiornato");
     } else if(o.tipo === "app"){
-      const dati = { ricontattare: data, ricontattareOra: inizio, ricontattareModo: modo };
+      const dati = { ricontattare: data, ricontattareOra: inizio, ricontattareModo: modo, ricontattareFine: inizio && fine && fine > inizio && fine !== piuMin(inizio, 30) ? fine : "" };
       if(data !== o.c.ricontattare || inizio !== (o.c.ricontattareOra || "")) dati.storico = [...(o.c.storico || []), { d: localISO(), t: "Appuntamento spostato al " + fmtDate(data) + (inizio ? " ore " + inizio : "") }];
       await update(o.c.id, dati); toast("Appuntamento aggiornato");
     } else if(o.tipo === "giro"){
@@ -6548,7 +6551,7 @@ $("#evSalva").addEventListener("click", async () => {
         if(nuovoG === "Domenica"){ toast("Il giro va dal lunedì al sabato"); return; }
         const giorni = [...new Set((o.c.giorniOrdine || []).map(g => g === o.G ? nuovoG : g))];
         const giro = (o.c.giro || []).filter(x => !(x.g === o.G && !x.ev));
-        if(modo || inizio) giro.push({ g: nuovoG, ora: inizio, modo, ev: "" });
+        if(modo || inizio) giro.push({ g: nuovoG, ora: inizio, fine: inizio && fine && fine > inizio ? fine : "", modo, ev: "" });
         await update(o.c.id, { giorniOrdine: giorni, giro, storico: [...(o.c.storico || []), { d: localISO(), t: "Giro del " + (nuovoG === o.G ? o.G.toLowerCase() + ":" : o.G.toLowerCase() + " spostato al " + nuovoG.toLowerCase()) + (inizio ? " ore " + inizio : "") + (modo ? (modo === "telefono" ? " (al telefono)" : " (di persona)") : "") }] });
         toast("Giro aggiornato");
       }
