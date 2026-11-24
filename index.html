@@ -1042,6 +1042,10 @@ main.view{padding-top:14px}
 .gc-st.err{color:var(--danger);font-weight:600}
 .gc-az{display:flex;gap:8px;flex-wrap:wrap}
 .gi-box{border-top:1px dashed var(--line);margin:4px 0 12px;padding-top:10px}
+.oo-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.oo-l{display:flex;flex-direction:column;gap:3px;min-width:0}
+.oo-l small{font-size:12px;color:var(--muted)}
+.oo-nota{display:block;margin-top:4px;font-size:12.5px;color:var(--muted)}
 #dlgEv .ev-modo,#dlgEv .ev-rip{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
 #dlgEv .ev-chk{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm,10px);font-size:15px;cursor:pointer;background:var(--surface)}
 #dlgEv .ev-chk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
@@ -1648,7 +1652,11 @@ dialog.rc-dlg{max-width:720px}
       <p class="hint">Più fornitori separati da virgola, es. Pregis, Marr</p>
       <span class="field"><span>Giorni di ordine</span></span>
       <div class="days" data-days="giorniOrdine"></div>
-      <label class="field"><span>Orario ordine</span><input class="input" name="orarioOrdine" placeholder="Es. entro le 11:00" autocomplete="off"></label>
+      <div class="field oo-field"><span>Orario ordine</span>
+        <input type="hidden" name="orarioOrdine"><input type="hidden" name="orarioOrdineFine">
+        <div class="oo-row"><label class="oo-l"><small>Dalle</small><input class="input" type="time" id="ooDa" aria-label="Orario ordine dalle"></label><label class="oo-l"><small>Alle</small><input class="input" type="time" id="ooA" aria-label="Orario ordine alle"></label></div>
+        <small class="oo-nota hidden" id="ooNota"></small>
+      </div>
       <span class="field"><span>Giorni di consegna</span></span>
       <div class="days" data-days="giorniConsegna"></div>
       <label class="field"><span>Orario consegna</span><input class="input" name="orarioConsegna" placeholder="Es. dalle 7:30 alle 11:00" autocomplete="off"></label>
@@ -2246,7 +2254,7 @@ function subscribe(){
     if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
       const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
       return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || (p.ricontattareModo || "") !== (n.ricontattareModo || "") || (p.ricontattareFine || "") !== (n.ricontattareFine || "") || p.nome !== n.nome ||
-        (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || ""))); })()))) gcPresto();
+        (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || "") || (p.orarioOrdineFine || "") !== (n.orarioOrdineFine || ""))); })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
     renderAll();
@@ -4608,7 +4616,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.18 (v6.18)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.19 (v6.19)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4846,7 +4854,7 @@ function calVistaGiorno(sel, t, perData, gPer){
     const v = (c.giro || []).find(x => x.g === G), ora = (v && v.ora) || c.orarioOrdine, da = aMin(ora), fatto = ordineFatto(c, sel);
     const o = { tipo: "gir", key: c.id, titolo: (v && GIRO_ICONA[v.modo] ? GIRO_ICONA[v.modo] + " " : "") + c.nome, col: "var(--st-cliente)", fatto,
       sub: ["Ordine del giro", c.luogo, fatto && "✓ raccolto"].filter(Boolean).join(" · ") };
-    const fi = aMin(v && v.fine);
+    const fi = aMin(v && v.ora ? v.fine : c.orarioOrdineFine);
     if(da == null) senzaOra.push(o); else blocchi.push({ ...o, da, a: fi && fi > da ? fi : da + 15, ora: hhmm(da) + (fi && fi > da ? "–" + hhmm(fi) : "") });
   });
   // ore da mostrare: almeno 7–21, allargate se serve
@@ -5348,7 +5356,7 @@ function renderDetail(){
     ["Pagamento", esc(c.pagamento)],
     ["Cod. univoco", esc(c.codiceUnivoco)],
     ["Fornitori", esc((c.fornitori||[]).join(", "))],
-    ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine].filter(Boolean).join(" · "))],
+    ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine ? c.orarioOrdine + (c.orarioOrdineFine ? "–" + c.orarioOrdineFine : "") : ""].filter(Boolean).join(" · "))],
     ["Consegna", esc([(c.giorniConsegna||[]).join(", "), c.orarioConsegna].filter(Boolean).join(" · "))],
     ["Chiusura", esc(chiusuraTesto(c))],
     ["Note", esc(c.note)]
@@ -5484,6 +5492,7 @@ function openForm(id = null, preset = {}, opts = {}){
     el.value = v ?? (el.name === "stato" ? "DA CONTATTARE" : "");
   }
   emRender(emSplit(c.email));
+  ooRiempi(c);
   $$("[data-days]").forEach(box => {
     const sel = c[box.dataset.days] || [];
     box.querySelectorAll("input").forEach(i => i.checked = sel.includes(i.value));
@@ -5492,6 +5501,23 @@ function openForm(id = null, preset = {}, opts = {}){
   if(!opts.fromShot) F.querySelector("[name=nome]").focus();
   F.querySelector(".dlg-body").scrollTop = 0;
 }
+// Orario ordine dalle–alle (v6.19): i testi scritti prima ("entro le 11") restano finché non si sceglie un orario
+let ooPrima = "";
+const ooOra = s => { const m = /^(\d{1,2})[:.](\d{2})$/.exec(String(s || "").trim()); return m ? String(+m[1]).padStart(2, "0") + ":" + m[2] : ""; };
+function ooRiempi(c){
+  ooPrima = String(c.orarioOrdine || "").trim();
+  const da = ooOra(ooPrima);
+  $("#ooDa").value = da; $("#ooA").value = da ? ooOra(c.orarioOrdineFine) : "";
+  const testo = ooPrima && !da;
+  $("#ooNota").textContent = testo ? "Prima era scritto: «" + ooPrima + "». Resta così finché non scegli un orario." : "";
+  $("#ooNota").classList.toggle("hidden", !testo);
+}
+function ooScrivi(){
+  const da = $("#ooDa").value, a = $("#ooA").value;
+  F.querySelector("[name=orarioOrdine]").value = da || (ooOra(ooPrima) ? "" : ooPrima);
+  F.querySelector("[name=orarioOrdineFine]").value = da && a && a > da ? a : "";
+}
+$("#ooDa").addEventListener("change", () => { const da = $("#ooDa").value, a = $("#ooA").value; if(da && (!a || a <= da)) $("#ooA").value = piuMin(da, 15); });
 // più email: ogni riga è un campo; la prima ha il "+" per aggiungerne un'altra, le altre la "×" per toglierla
 const emSplit = s => String(s || "").split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
 function emRender(vals, focusLast){
@@ -5509,6 +5535,7 @@ $("#emList").addEventListener("click", e => {
 });
 function readForm(){
   F.querySelector("[name=email]").value = emValori().filter(Boolean).join(", ");
+  ooScrivi();
   const d = {};
   for(const el of F.elements){ if(el.name) d[el.name] = el.value.trim(); }
   d.fornitori = splitList(d.fornitori);
@@ -6336,8 +6363,8 @@ const GIRO_ICONA = { telefono: "📞", visita: "💼" };
 // ora (e icona 📞/💼) del giro di un cliente in un certo giorno della settimana
 function giroOra(c, giorno){
   const e = (c.giro || []).find(x => x.g === giorno);
-  const ora = (e && e.ora) || c.orarioOrdine || "";
-  return (e && GIRO_ICONA[e.modo] ? GIRO_ICONA[e.modo] + " " : "") + ora + (e && e.fine && e.ora ? "–" + e.fine : "");
+  const ora = (e && e.ora) || c.orarioOrdine || "", fine = e && e.ora ? e.fine : c.orarioOrdineFine;
+  return (e && GIRO_ICONA[e.modo] ? GIRO_ICONA[e.modo] + " " : "") + ora + (ora && fine ? "–" + fine : "");
 }
 const GIRO_VUOTE = new Set(["bar", "ristorante", "pizzeria", "hotel", "albergo", "trattoria", "osteria", "agriturismo", "srl", "snc", "sas", "spa", "da", "di", "del", "della", "dei", "il", "la", "lo", "le", "al", "alla", "ai", "e"]);
 const giroParole = s => deaccent(s).toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1 && !GIRO_VUOTE.has(w));
@@ -6512,7 +6539,7 @@ function evApriGiro(c, iso){
   const inizio = (v && v.ora) || (/^\d{1,2}[:.]\d{2}$/.test((c.orarioOrdine || "").trim()) ? c.orarioOrdine.trim().replace(".", ":").padStart(5, "0") : "");
   evRiempi({ tipo: "giro", c, G, v, L, iso, cliente: c.id, ripete: !!L, tutteDiBase: true, titolo: L ? L.nome : c.nome,
     titoloFisso: L ? "" : "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: (v && v.modo) || "",
-    sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: (v && v.fine) || (inizio ? piuMin(inizio, 15) : ""), senzaTutto: true,
+    sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: (v && v.ora ? v.fine : ooOra(c.orarioOrdineFine)) || (inizio ? piuMin(inizio, 15) : ""), senzaTutto: true,
     info: L ? `Collegato al tuo giro su ${L.google ? "Google Calendar" : "iCloud"}. Tutte le settimane: cambiano giorno, orario e modo del giro (anche nella scheda). Solo questa volta: si sposta solo questa data sul calendario.`
       : "Vale per tutte le settimane: cambia il giorno o l'orario dell'ordine nella scheda del cliente." });
 }

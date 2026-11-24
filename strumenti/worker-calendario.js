@@ -43,7 +43,7 @@
 const GIORNI = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 const STATI = { "DA CONTATTARE": "Da contattare", "CONTATTATO": "Contattato", "CLIENTE": "Cliente", "CLIENTE PERSO": "Cliente perso", "NON SERVIBILE": "Non servibile" };
 const CAMPI = ["nome", "luogo", "indirizzo", "referente", "tel", "cellulare", "email", "stato", "note", "ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine",
-  "giorniOrdine", "orarioOrdine", "chiusoDal", "chiusoAl"];
+  "giorniOrdine", "orarioOrdine", "orarioOrdineFine", "chiusoDal", "chiusoAl"];
 const PERCORSO = /^\/cal\/([A-Za-z0-9_-]{6,128})\/([a-f0-9]{32,128})\.ics$/;
 const SCOPE = "openid email https://www.googleapis.com/auth/calendar";
 const MAX_SCRITTURE = 25;          // eventi Google creati/cambiati per giro di sincronizzazione (limite di richieste del Worker gratuito)
@@ -716,7 +716,8 @@ const modoDi = t => /📞|☎|📱/u.test(t) ? "telefono" : /💼|🧳/u.test(t)
 const senzaIcone = t => String(t || "").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}️‍]/gu, "")
   .replace(/^[\s\-–—:·|]+|[\s\-–—:·|]+$/g, "").replace(/\s{2,}/g, " ").trim();
 const ordinaG = arr => [...new Set(arr)].filter(g => ORDINE_G.includes(g)).sort((a, b) => ORDINE_G.indexOf(a) - ORDINE_G.indexOf(b));
-const chiaveGiro = (giorni, ora, modo) => ordinaG(giorni).join(",") + "|" + (ora || "") + "|" + (modo || "");
+// "giorni|ora|modo" e, se c'è un'ora di fine (dopo l'inizio), "|fine"
+const chiaveGiro = (giorni, ora, modo, fine) => ordinaG(giorni).join(",") + "|" + (ora || "") + "|" + (modo || "") + (ora && fine && fine > ora ? "|" + fine : "");
 const giornoDi = iso => ORDINE_G[(new Date(iso + "T12:00:00Z").getUTCDay() + 6) % 7];
 const oraNorm = s => { const m = /^(\d{1,2})[:.](\d{2})$/.exec(String(s || "").trim()); return m ? pad(+m[1]) + ":" + m[2] : ""; };
 
@@ -729,7 +730,8 @@ function serieIcs(testo){
     const giorni = by ? by.split(",").map(x => BYDAY[x.replace(/^[+-]?\d+/, "").toUpperCase()]).filter(Boolean) : [giornoDi(s.d)];
     const fine = /UNTIL=(\d{8})/i.exec(e.RRULE.v);
     const titolo = icsTesto(e.SUMMARY ? e.SUMMARY.v : "");
-    return { uid: e.UID ? e.UID.v : "", titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "",
+    const fe = icsData(e.DTEND), fineOra = s.o && fe && fe.o && fe.d === s.d && fe.o > s.o ? fe.o : "";
+    return { uid: e.UID ? e.UID.v : "", titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "", fine: fineOra,
       intervallo: +((/INTERVAL=(\d+)/i.exec(e.RRULE.v) || [])[1] || 1), finita: !!(fine && fine[1] < oggiRoma().replace(/-/g, "")) };
   }
   return null;
@@ -742,7 +744,7 @@ function romaAUtc(d, o){
   return new Date(t).toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
 }
 // cambia giorni/ora/modo della serie lasciando com'è tutto il resto (promemoria, note, eccezioni)
-export function cambiaSerie(testo, giorni, ora, modo){
+export function cambiaSerie(testo, giorni, ora, modo, fineVoluta){
   const righe = String(testo).replace(/\r?\n[ \t]/g, "").split(/\r?\n/).filter((r, i, a) => r || i < a.length - 1);
   const out = []; let blocco = null, livello = 0;
   const lavora = b => {
@@ -763,6 +765,7 @@ export function cambiaSerie(testo, giorni, ora, modo){
     if(iE !== undefined){
       const mE = /^DTEND((?:;[^:]*)?):(.*)$/i.exec(b[iE]); const fe = mE && icsData({ p: mE[1], v: mE[2] });
       if(fe) durata = Date.parse(fe.d + "T" + (fe.o || "00:00") + ":00Z") - Date.parse(vecchio.d + "T" + (vecchio.o || "00:00") + ":00Z");
+      if(fe && !tutto && fineVoluta && oNuova && fineVoluta > oNuova) durata = Date.parse("2000-01-01T" + fineVoluta + ":00Z") - Date.parse("2000-01-01T" + oNuova + ":00Z");
       if(fe && durata != null){
         const fine = new Date(Date.parse(d + "T" + (oNuova || "00:00") + ":00Z") + durata).toISOString();
         b[iE] = "DTEND" + mE[1] + ":" + fmt(fine.slice(0, 10), tutto ? "" : fine.slice(11, 16), mE[1], /Z$/.test(mE[2]));
@@ -800,17 +803,25 @@ function chiaveClienteGiro(c, uid){
   if(giro[0].ev === uid) giorni = giorni.concat([...go].filter(g => !delGiro.has(g)));      // giorni nuovi della scheda → al primo evento
   const eventi = new Set(giro.map(e => e.ev));
   const ora = eventi.size === 1 && oraNorm(c.orarioOrdine) ? oraNorm(c.orarioOrdine) : voci[0].ora || "";
-  return giorni.length ? chiaveGiro(giorni, ora, voci[0].modo) : "";
+  // l'ora di fine: quella della scheda; se è cambiato solo l'inizio (la fine è ancora quella di prima) si tiene la stessa durata
+  const minuti = o => { const [hh, mm] = o.split(":").map(Number); return hh * 60 + mm; }, hm = n => pad(Math.floor(n / 60) % 24) + ":" + pad(n % 60);
+  let fine = voci[0].fine || "";
+  if(eventi.size === 1 && oraNorm(c.orarioOrdine)){
+    const ff = oraNorm(c.orarioOrdineFine) || "";
+    if(ff && voci[0].ora && voci[0].fine && ora !== voci[0].ora && ff === voci[0].fine) fine = hm(minuti(ora) + minuti(voci[0].fine) - minuti(voci[0].ora));
+    else if(ff || !voci[0].fine || ora !== voci[0].ora) fine = ff || (voci[0].ora && voci[0].fine && ora !== voci[0].ora ? hm(minuti(ora) + minuti(voci[0].fine) - minuti(voci[0].ora)) : "");
+  }
+  return giorni.length ? chiaveGiro(giorni, ora, voci[0].modo, fine) : "";
 }
 // porta nella scheda i giorni/ora/modo di un evento
 function giroSuCliente(c, uid, s){
   const giro = Array.isArray(c.giro) ? c.giro : [];
   const prima = giro.filter(e => e.ev === uid).map(e => e.g), altri = giro.filter(e => e.ev !== uid), altriG = new Set(altri.map(e => e.g));
   // le voci dell'evento restano al loro posto: il primo evento abbinato resta il primo (lì vanno i giorni aggiunti nell'app)
-  const nuove = ordinaG(s.giorni).map(g => ({ g, ora: s.ora || "", modo: s.modo || "", ev: uid })), pos = giro.findIndex(e => e.ev === uid);
+  const nuove = ordinaG(s.giorni).map(g => ({ g, ora: s.ora || "", fine: s.ora && s.fine && s.fine > s.ora ? s.fine : "", modo: s.modo || "", ev: uid })), pos = giro.findIndex(e => e.ev === uid);
   c.giro = pos < 0 ? [...altri, ...nuove] : [...giro.slice(0, pos).filter(e => e.ev !== uid), ...nuove, ...giro.slice(pos).filter(e => e.ev !== uid)];
   c.giorniOrdine = ordinaG([...(c.giorniOrdine || []).filter(g => !prima.includes(g) || altriG.has(g)), ...s.giorni]);
-  if(new Set(c.giro.map(e => e.ev)).size === 1 && s.ora && (!String(c.orarioOrdine || "").trim() || oraNorm(c.orarioOrdine))) c.orarioOrdine = s.ora;
+  if(new Set(c.giro.map(e => e.ev)).size === 1 && s.ora && (!String(c.orarioOrdine || "").trim() || oraNorm(c.orarioOrdine))){ c.orarioOrdine = s.ora; c.orarioOrdineFine = s.fine && s.fine > s.ora ? s.fine : ""; }
   c._giro = true;
 }
 function giroViaDaCliente(c, uid, ancheGiorni){
@@ -937,7 +948,7 @@ async function eventoICloud(env, uid, S, x){
   }
   let nuovo;
   if(x.giorni && x.serie){                                                                 // giro, tutte le settimane, cambio di giorno
-    nuovo = cambiaSerie(t, x.giorni, x.tutto ? "" : x.inizio, x.modo || "");
+    nuovo = cambiaSerie(t, x.giorni, x.tutto ? "" : x.inizio, x.modo || "", x.fine);
     nuovo = modificaIcs(nuovo, { titolo: x.titolo, serie: true });
   } else nuovo = modificaIcs(t, x);
   if(nuovo === null) await ic.togli(href);
@@ -1014,7 +1025,8 @@ function serieGoogle(e){
   const by = (/BYDAY=([^;]+)/i.exec(rr) || [])[1];
   const giorni = by ? by.split(",").map(x => BYDAY[x.replace(/^[+-]?\d+/, "").toUpperCase()]).filter(Boolean) : [giornoDi(s.d)];
   const fine = /UNTIL=(\d{8})/i.exec(rr), titolo = String(e.summary || "");
-  return { id: e.id, titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "",
+  const fe = e.end && e.end.dateTime ? romaDi(e.end.dateTime) : null, fineOra = s.o && fe && fe.d === s.d && fe.o > s.o ? fe.o : "";
+  return { id: e.id, titolo, nome: senzaIcone(titolo), modo: modoDi(titolo), giorni: ordinaG(giorni), ora: s.o || "", fine: fineOra,
     intervallo: +((/INTERVAL=(\d+)/i.exec(rr) || [])[1] || 1), finita: !!(fine && fine[1] < oggiRoma().replace(/-/g, "")) };
 }
 async function serieGoogleCal(g, calId){
@@ -1091,7 +1103,7 @@ export async function sincronizzaGiroGoogle(env, uid, opz = {}){
       }
       const s = serieGoogle(m);
       if(s){
-        const ke = chiaveGiro(s.giorni, s.ora, s.modo);
+        const ke = chiaveGiro(s.giorni, s.ora, s.modo, s.fine);
         if(ke !== L.k){
           if(kc === L.k){ giroSuCliente(c, ev, s); c.storico = [...(c.storico || []), { d: oggi, t: "Giro cambiato da Google Calendar: «" + s.nome + "» " + scrittaGiro(s) }]; stat.daGoogle++; }
           L.k = ke; L.nome = s.nome;
@@ -1105,14 +1117,14 @@ export async function sincronizzaGiroGoogle(env, uid, opz = {}){
     scritte++;
     try { if(!m) m = await g.chiama("GET", cal(L.cal) + "/events/" + encodeURIComponent(id)); }
     catch(e){ if(e.google === 404 || e.google === 410){ giroViaDaCliente(c, ev, false); delete ggiro[id]; continue; } throw e; }
-    const [gs, ora, modo] = kc2.split("|"), nuovo = { giorni: gs.split(",").filter(Boolean), ora, modo };
-    await g.chiama("PATCH", cal(L.cal) + "/events/" + encodeURIComponent(id), patchSerieGoogle(m, nuovo.giorni, nuovo.ora, nuovo.modo));
-    giroSuCliente(c, ev, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo); stat.cambiati++;
+    const [gs, ora, modo, fine] = kc2.split("|"), nuovo = { giorni: gs.split(",").filter(Boolean), ora, modo, fine: fine || "" };
+    await g.chiama("PATCH", cal(L.cal) + "/events/" + encodeURIComponent(id), patchSerieGoogle(m, nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine));
+    giroSuCliente(c, ev, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine); stat.cambiati++;
   }
   if(opz.leggero && !clienti.some(c => c._giro) && JSON.stringify(ggiro) === JSON.stringify(S.ggiro) && JSON.stringify(tok) === JSON.stringify(S.ggiroTok || {})) return { collegato: true, ...stat };
   const scritture = clienti.filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
-    campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
-    dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+    campi: ["giro", "giorniOrdine", "orarioOrdine", "orarioOrdineFine", "storico", "aggiornato"],
+    dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", orarioOrdineFine: c.orarioOrdineFine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
   scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["ggiro", "ggiroTok"], dati: { ggiro, ggiroTok: tok } });
   scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["giro"], dati: { giro: statoGiroGoogle(ggiro) } });
   await scrivi(env, scritture);
@@ -1236,7 +1248,7 @@ export async function sincronizzaICloud(env, uid, opz = {}){
           }
           const s = serieIcs(testo);
           if(s){
-            const ke = chiaveGiro(s.giorni, s.ora, s.modo);
+            const ke = chiaveGiro(s.giorni, s.ora, s.modo, s.fine);
             if(ke !== L.k){
               if(kc === L.k){ giroSuCliente(c, u, s); c.storico = [...(c.storico || []), { d: oggi, t: "Giro cambiato da iCloud: «" + s.nome + "» " + scrittaGiro(s) }]; stat.daICloud++; }
               L.k = ke; L.nome = s.nome;
@@ -1250,10 +1262,11 @@ export async function sincronizzaICloud(env, uid, opz = {}){
         if(!tocca()) continue;
         if(testo == null){ const d = await ic.multiget(L.cal, [L.href]); testo = d.get(L.href) || null; }
         if(testo == null){ delete giro[u]; giroViaDaCliente(c, u, false); continue; }
-        const [gs, ora, modo] = kc2.split("|");
+        const [gs, ora, modo, fine] = kc2.split("|");
         const nuovo = { giorni: gs.split(",").filter(Boolean), ora, modo };
-        if(await ic.aggiorna(L.href, cambiaSerie(testo, nuovo.giorni, nuovo.ora, nuovo.modo), ic.etag && ic.etag.get(L.href))){
-          giroSuCliente(c, u, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo); stat.cambiati++;
+        nuovo.fine = fine || "";
+        if(await ic.aggiorna(L.href, cambiaSerie(testo, nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine), ic.etag && ic.etag.get(L.href))){
+          giroSuCliente(c, u, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine); stat.cambiati++;
         }
       }
     }
@@ -1270,10 +1283,10 @@ export async function sincronizzaICloud(env, uid, opz = {}){
 
     const scritture = [];
     for(const c of clienti) if(c._cambiato || c._giro){
-      const campi = [...(c._cambiato ? ["ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine"] : []), ...(c._giro ? ["giro", "giorniOrdine", "orarioOrdine"] : []), "storico", "aggiornato"];
+      const campi = [...(c._cambiato ? ["ricontattare", "ricontattareOra", "ricontattareModo", "ricontattareFine"] : []), ...(c._giro ? ["giro", "giorniOrdine", "orarioOrdine", "orarioOrdineFine"] : []), "storico", "aggiornato"];
       const dati = { storico: c.storico || [], aggiornato: new Date().toISOString() };
       if(c._cambiato){ dati.ricontattare = c.ricontattare; dati.ricontattareOra = c.ricontattareOra; dati.ricontattareModo = c.ricontattareModo || ""; dati.ricontattareFine = c.ricontattareFine || ""; }
-      if(c._giro){ dati.giro = c.giro || []; dati.giorniOrdine = c.giorniOrdine || []; dati.orarioOrdine = c.orarioOrdine || ""; }
+      if(c._giro){ dati.giro = c.giro || []; dati.giorniOrdine = c.giorniOrdine || []; dati.orarioOrdine = c.orarioOrdine || ""; dati.orarioOrdineFine = c.orarioOrdineFine || ""; }
       scritture.push({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true, campi, dati });
     }
     scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["icloud"], dati: { icloud: { ...I, home: ic.home, calendari, mostra, mappa, syncToken, ctag: nuoviCtag, ev: evPer, evHash, pulizia, giro, giroTok } } });
@@ -1467,14 +1480,14 @@ export default {
               if(ggiro[v.id] && ggiro[v.id].cliente !== v.cliente){ const vecchio = perId.get(ggiro[v.id].cliente); if(vecchio) giroViaDaCliente(vecchio, "g:" + v.id, false); }
               giroSuCliente(c, "g:" + v.id, s);
               c.storico = [...(c.storico || []), { d: oggiRoma(), t: "Giro collegato a Google Calendar: «" + s.nome + "» " + scrittaGiro(s) }];
-              ggiro[v.id] = { cal: v.cal, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo), nome: s.nome };
+              ggiro[v.id] = { cal: v.cal, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo, s.fine), nome: s.nome };
               fatti++;
             }
             // primo elenco delle modifiche dei calendari del giro: serve il "segnalino" per i giri successivi
             for(const c of [...new Set(Object.values(ggiro).map(L => L.cal))]) if(!tok[c]){ const rr = await modificheGoogle(g, c, null); if(rr.token) tok[c] = rr.token; }
             const scritture = [...perId.values()].filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
-              campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
-              dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+              campi: ["giro", "giorniOrdine", "orarioOrdine", "orarioOrdineFine", "storico", "aggiornato"],
+              dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", orarioOrdineFine: c.orarioOrdineFine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
             scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["ggiro", "ggiroTok", "evHash"], dati: { ggiro, ggiroTok: tok, evHash: "" } });
             scritture.push({ percorso: "utenti/" + uid + "/impostazioni/gcal", campi: ["giro"], dati: { giro: statoGiroGoogle(ggiro) } });
             await scrivi(env, scritture);
@@ -1590,13 +1603,13 @@ export default {
               if(giro[v.uid] && giro[v.uid].cliente !== v.cliente){ const vecchio = perId.get(giro[v.uid].cliente); if(vecchio) giroViaDaCliente(vecchio, v.uid, false); }
               giroSuCliente(c, v.uid, s);
               c.storico = [...(c.storico || []), { d: oggiRoma(), t: "Giro collegato al calendario iCloud: «" + s.nome + "» " + scrittaGiro(s) }];
-              giro[v.uid] = { cal, href: v.href, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo), nome: s.nome };
+              giro[v.uid] = { cal, href: v.href, cliente: v.cliente, k: chiaveGiro(s.giorni, s.ora, s.modo, s.fine), nome: s.nome };
               fatti++;
             }
           }
           const scritture = [...perId.values()].filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
-            campi: ["giro", "giorniOrdine", "orarioOrdine", "storico", "aggiornato"],
-            dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
+            campi: ["giro", "giorniOrdine", "orarioOrdine", "orarioOrdineFine", "storico", "aggiornato"],
+            dati: { giro: c.giro || [], giorniOrdine: c.giorniOrdine || [], orarioOrdine: c.orarioOrdine || "", orarioOrdineFine: c.orarioOrdineFine || "", storico: c.storico || [], aggiornato: new Date().toISOString() } }));
           scritture.push({ percorso: "calendario_segreti/" + uid, campi: ["icloud"], dati: { icloud: { ...I, giro, evHash: "" } } });
           scritture.push({ percorso: "utenti/" + uid + "/impostazioni/icloud", campi: ["giro"], dati: { giro: Object.fromEntries(Object.entries(giro).map(([u, L]) => [u, { cliente: L.cliente, nome: L.nome || "", href: L.href, cal: L.cal }])) } });
           await scrivi(env, scritture);
