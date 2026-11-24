@@ -913,7 +913,12 @@ async function eventoICloud(env, uid, S, x){
   if(!ic.home) await ic.scopri();
   if(!(I.calendari || []).some(c => c.id === x.cal && c.scrivibile)) throw new Errore(400, "calendario non modificabile");
   const href = percorso(x.href, x.cal);
-  const t = (await ic.multiget(x.cal, [href])).get(href);
+  // iCloud può scrivere il nome del file codificato in modo diverso (es. %40 / @): si confronta decodificato
+  const mg = await ic.multiget(x.cal, [href]);
+  const dec = s => { try { return decodeURIComponent(s); } catch(e){ return s; } };
+  const chiaveF = [...mg.keys()].find(k => k === href || dec(k) === dec(href));
+  const t = chiaveF ? mg.get(chiaveF) : null;
+  if(chiaveF && ic.etag) ic.etag.set(href, ic.etag.get(chiaveF));
   if(!t) throw new Errore(404, "evento non più presente su iCloud");
   // un evento del giro: la data della ripetizione si ricava dalla serie
   if(!x.ri && x.occorrenza){
