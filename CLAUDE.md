@@ -300,6 +300,7 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.12** = v6.11 + finestra **Appuntamento** nel Calendario (sezione "Finestra Appuntamento (v6.12)"): toccando un impegno di iCloud/Google, un appuntamento o un ordine del giro si cambiano nome, giorno, orario o si elimina, con le spunte 📞 telefono / 💼 di persona; per gli eventi che si ripetono "solo questa volta" o "tutte le settimane". Tag Git `v6.12`.
 - **v6.11** = v6.10 + **giro dal calendario iCloud** (sezione "Giro dal calendario iCloud (v6.11)"): gli eventi ricorrenti di Manuel (📞 ordine al telefono, 💼 di persona) si abbinano ai clienti e giorni/ora/modo passano nei due sensi; niente doppioni nel Calendario; icona e ora del giorno nel Giro e nel Calendario. Tag Git `v6.11`.
 - **v6.10** = v6.9 + **ricarica automatica alle 00:01** (blocco dopo `localISO`: `giornoAvvio`, `ricaricaSeNuovoGiorno`): un timer per le 00:01 del giorno dopo; se c'è una finestra (`dialog[open]`) o l'editor del preventivo aperti, o la pagina è in secondo piano, riprova ogni minuto; su iPhone/iPad (timer fermi quando l'app è in pausa) ricarica a `visibilitychange`/`pageshow` se il giorno è cambiato. Nello stesso commit la lettura più tollerante dei calendari iCloud nel Worker (`ICloud.calendari`: conta come calendario anche un elemento con VEVENT senza `resourcetype` calendar; scarta cartella principale, inbox/outbox/notification e i soli VTODO; rapporto `diag` più completo). Tag Git `v6.10`.
 - **v6.9** = v6.8 + **rapporto tecnico** quando iCloud non mostra calendari (Worker: `ICloud.calendari` prepara `diag` con solo i nomi dei tag della risposta, l'errore "iCloud non mostra calendari. Dettagli per Claude: …" va nello stato `impostazioni/icloud.errore`; app: l'errore iCloud si vede sempre nel riquadro). Caso reale: con le credenziali di Rosario l'accesso riusciva ma il calendario "Lavoro" non compariva. Tag Git `v6.9`.
@@ -585,6 +586,34 @@ e 💼 quando passa di persona. Scelta di Manuel: abbinarli ai clienti e tenerli
 - Prove: finto iCloud con serie (19 casi nuovi, 90 in tutto con Google/iCloud: lettura serie e modo, UTC, serie finite escluse, abbinamento con giorni già
   presenti, nessun doppione tra gli impegni, serie spostata/cambiata d'icona/cancellata su iPhone, giorni e orario cambiati nell'app con durata tenuta e resto
   dell'evento intatto, nessun rimbalzo, scollegamenti); app con finto Firebase (proposte dei clienti, nome non valido, salvataggio).
+
+## Finestra Appuntamento (v6.12)
+
+Richiesta di Manuel: nel Calendario, toccando un impegno (es. "Tre Sapori" dal calendario iCloud) aprire una finestra per cambiare nome, data/ora o
+eliminarlo, e lo stesso per gli ordini del giro e gli appuntamenti; due spunte **📞 Ordine al telefono** / **💼 Ci passo di persona** che mettono l'icona
+all'inizio del nome; le spunte si accendono da sole se il nome ha già l'icona.
+- **Nell'app** (`#dlgEv`, `evRiempi`, `evApriEsterno`, `evApriApp`, `evApriGiro`): nel giorno scelto le righe non aprono più la scheda ma la finestra
+  (`data-evx` = indice in `calGiornoEv` per gli impegni, `data-app` per gli appuntamenti, `data-gir` per gli ordini del giro; dentro c'è "Scheda cliente").
+  Campi: nome (fisso per appuntamenti e giro non collegati: è il nome del cliente), spunte telefono/visita (si escludono), "Solo questa volta / Tutte le
+  settimane" per gli eventi che si ripetono (con "tutte le settimane" il giorno non si cambia, tranne per il giro collegato), giorno, dalle/alle, tutto il giorno,
+  Elimina (con `confermaElimina`), "Apri in Google". Calendari di sola lettura: niente Salva/Elimina.
+  - **Appuntamenti dei clienti**: nuovo campo `ricontattareModo` ("telefono" | "visita" | ""): icona nel titolo dell'evento ("📞 Richiamare: …"), nella chiave
+    di sincronizzazione (`chiaveCliente` = "data|ora|modo", e `chiaveEvento`/iCloud leggono il modo dall'icona del titolo), quindi cambiare l'icona nel
+    calendario cambia la scheda e viceversa. Righe con l'icona nel Calendario (`oraFlag`).
+  - **Ordini del giro collegati a iCloud**: tutte le settimane → giorni (il giorno toccato diventa quello nuovo), orario, modo e nome della serie
+    (`cambiaSerie` + `modificaIcs`), e la scheda si allinea alla sincronizzazione; solo questa volta → eccezione su iCloud (la scheda non cambia).
+    **Non collegati**: cambia `giorniOrdine` e una voce di `giro` senza `ev` (`{g, ora, modo, ev: ""}`) per icona e orario di quel giorno; elimina = toglie il giorno.
+- **Servizio**: `POST /icloud/evento` e `POST /google/evento` `{azione?: "elimina", cal, href|id, ri|r, occorrenza?, serie, titolo, data, dataFine?, inizio, fine,
+  tutto, giorni?, modo?}` (`datiEvento` controlla i dati). iCloud: `modificaIcs` (evento singolo: SUMMARY/DTSTART/DTEND nello stesso formato di prima, UTC o
+  TZID o data; serie: nome e orario; solo questa volta: blocco VEVENT con RECURRENCE-ID, riconosciuto anche se scritto in UTC o con TZID — `istante`;
+  elimina solo questa volta: EXDATE e via l'eccezione; elimina un evento o tutta la serie: DELETE del file), salvataggio con If-Match. Per il giro la
+  RECURRENCE-ID si calcola dalla serie (`occorrenza`). Google: PATCH dell'istanza o della serie (`recurringEventId`, salvato come `r` negli impegni),
+  DELETE. Dopo ogni modifica `sincronizzaTutto`. Negli impegni salvati per l'app: `r` (Google), `h` (file) e `ri` (RECURRENCE-ID) per iCloud; nello
+  stato `impostazioni/icloud.giro` anche `href` e `cal` di ogni serie collegata.
+- Prove: 18 casi nuovi (108 in tutto) con finto iCloud e finto Google (nome/data/ore, tutto il giorno, eccezione e sua sostituzione in UTC, EXDATE, serie,
+  eliminazioni, calendari di sola lettura, giro collegato tutte le settimane e solo questa volta, Google PATCH/DELETE, icona degli appuntamenti nei due
+  sensi senza rimbalzi); app con finto Firebase (impegni iCloud/Google, serie, conferma eliminazione, appuntamento con telefono, giro non collegato con
+  visita e orario, telefono 375 px).
 
 ## Impostazioni e stile Livrea Marchi (v6.6)
 

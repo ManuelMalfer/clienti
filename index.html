@@ -1042,6 +1042,15 @@ main.view{padding-top:14px}
 .gc-st.err{color:var(--danger);font-weight:600}
 .gc-az{display:flex;gap:8px;flex-wrap:wrap}
 .gi-box{border-top:1px dashed var(--line);margin:4px 0 12px;padding-top:10px}
+#dlgEv .ev-modo,#dlgEv .ev-rip{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
+#dlgEv .ev-chk{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm,10px);font-size:15px;cursor:pointer;background:var(--surface)}
+#dlgEv .ev-chk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+#dlgEv .ev-quando{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:8px}
+#dlgEv .ev-nota{margin:-6px 0 10px}
+#dlgEv .dlg-foot{flex-wrap:wrap}
+#dlgEv .dlg-foot #evDel{margin-right:auto}
+@media (max-width:480px){ #dlgEv .ev-quando{grid-template-columns:1fr 1fr} #dlgEv .ev-quando .field:first-child{grid-column:1/-1} }
+.gc-list button.gc-row{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .gi-box .gc-st{margin-top:0}
 #dlgGiro .gi-row{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1.1fr);gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 #dlgGiro .gi-ico{font-size:20px;text-align:center}
@@ -1805,6 +1814,31 @@ dialog.rc-dlg{max-width:720px}
     <div class="dlg-foot"><button class="btn" type="button" id="pvmAlt"></button><button class="btn btn-primary" type="button" id="pvmInvia"></button></div>
   </div>
 </dialog>
+<dialog id="dlgEv" aria-labelledby="evT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="evT">Appuntamento<span class="sub" id="evSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <label class="field"><span>Nome</span><input class="input" id="evTitolo" autocomplete="off"></label>
+      <p class="pv-hint ev-nota hidden" id="evTitNota"></p>
+      <div class="ev-modo" role="group" aria-label="Come">
+        <label class="ev-chk"><input type="checkbox" id="evTel"><span>📞 Ordine al telefono</span></label>
+        <label class="ev-chk"><input type="checkbox" id="evVis"><span>💼 Ci passo di persona</span></label>
+      </div>
+      <div class="ev-rip hidden" id="evRip" role="radiogroup" aria-label="Quali ripetizioni">
+        <label class="ev-chk"><input type="radio" name="evRip" value="solo" id="evSolo"><span>Solo questa volta</span></label>
+        <label class="ev-chk"><input type="radio" name="evRip" value="tutte" id="evTutte"><span>Tutte le settimane</span></label>
+      </div>
+      <div class="ev-quando">
+        <label class="field"><span>Giorno</span><input class="input" type="date" id="evData"></label>
+        <label class="field ev-ora"><span>Dalle</span><input class="input" type="time" id="evInizio"></label>
+        <label class="field ev-ora" id="evFineBox"><span>Alle</span><input class="input" type="time" id="evFine"></label>
+      </div>
+      <label class="chk ev-chk"><input type="checkbox" id="evTutto"><span>Tutto il giorno</span></label>
+      <p class="pv-hint" id="evInfo"></p>
+    </div>
+    <div class="dlg-foot"><button class="btn btn-danger" type="button" id="evDel">Elimina</button><button class="btn hidden" type="button" id="evScheda">Scheda cliente</button><a class="btn hidden" id="evApri" target="_blank" rel="noopener">Apri in Google</a><button class="btn btn-primary" type="button" id="evSalva">Salva</button></div>
+  </div>
+</dialog>
 <dialog id="dlgGiro" aria-labelledby="giT">
   <div class="dlg">
     <div class="dlg-head"><h2 id="giT">Collega il tuo giro<span class="sub">Gli eventi che si ripetono ogni settimana nel tuo calendario iCloud: scegli a quale cliente corrisponde ognuno.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
@@ -2162,7 +2196,7 @@ function subscribe(){
     // un richiamo cambiato da QUESTO dispositivo (scrittura non ancora confermata): avvisa il servizio di Google Calendar
     if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
       const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
-      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || p.nome !== n.nome ||
+      return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || (p.ricontattareModo || "") !== (n.ricontattareModo || "") || p.nome !== n.nome ||
         (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || ""))); })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
@@ -4524,7 +4558,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.11 (v6.11)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.12 (v6.12)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4702,23 +4736,25 @@ function renderCalendario(all, t){
   // giorno scelto
   const sel = ui.calSel, ds = calD(sel), rs = perData[sel] || [];
   const ord = calOrdini(sel).sort((a, b) => (a.luogo || "").localeCompare(b.luogo || "", "it") || (a.nome || "").localeCompare(b.nome || "", "it"));
-  const oraFlag = c => `<span class="flag">${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) : "in giornata"}</span>`;
+  const oraFlag = c => `<span class="flag">${GIRO_ICONA[c.ricontattareModo] ? GIRO_ICONA[c.ricontattareModo] + " " : ""}${c.ricontattareOra ? "ore " + esc(c.ricontattareOra) : "in giornata"}</span>`;
   const scadFlag = c => `<span class="flag late">${fmtDate(c.ricontattare).slice(0, 5)}${c.ricontattareOra ? "<br>ore " + esc(c.ricontattareOra) : ""}</span>`;
   const ordFlag = c => `<span class="flag${ordineFatto(c, sel) ? " cal-fatto" : ""}">${ordineFatto(c, sel) ? "✓ raccolto" : esc(giroOra(c, CAL_GIORNI[ds.getDay()]))}</span>`;
-  const lista = (arr, f) => `<ul class="list">${arr.map(c => "<li>" + rowHTML(c, f(c)) + "</li>").join("")}</ul>`;
+  // le righe del giorno aprono la finestra "Appuntamento" (data-app / data-gir) invece della scheda
+  const lista = (arr, f, tipo) => `<ul class="list">${arr.map(c => "<li>" + rowHTML(c, f(c)).replace('data-open="', 'data-' + tipo + '="') + "</li>").join("")}</ul>`;
+  calGiornoEv = gPer[sel] || [];
   const titolo = `${CAL_GIORNI[ds.getDay()]} ${ds.getDate()} ${CAL_MESI[ds.getMonth()].toLowerCase()}${sel === t ? " · oggi" : ""}`;
   const giorno = `<section class="cal-day" aria-live="polite">
     <h2 class="cal-day-t">${titolo}</h2>
-    ${sel === t && scad.length ? `<h2 class="sec">Appuntamenti scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag)}` : ""}
+    ${sel === t && scad.length ? `<h2 class="sec">Appuntamenti scaduti <small>${scad.length}</small></h2>${lista(scad, scadFlag, "app")}` : ""}
     ${(() => { const gs = gPer[sel] || []; if(!gs.length) return "";
-      return `<h2 class="sec">Dai tuoi calendari <small>${gs.length}</small></h2><ul class="list gc-list">${gs.map(e => { const c = { ...e._c, nome: [e._c.nome, e._p].filter(Boolean).join(" · ") };
+      return `<h2 class="sec">Dai tuoi calendari <small>${gs.length}</small></h2><ul class="list gc-list">${gs.map((e, i) => { const c = { ...e._c, nome: [e._c.nome, e._p].filter(Boolean).join(" · ") };
         const ora = e.g ? "tutto il giorno" : (e.s.slice(0, 10) === sel ? e.s.slice(11) : "…") + (e.e.slice(0, 10) === sel ? "–" + e.e.slice(11) : "");
-        return `<li><${e.u ? `a href="${esc(e.u)}" target="_blank" rel="noopener"` : "div"} class="row gc-row"><i class="cal-gdot" style="background:${esc(c.colore || "#4285F4")}"></i>
-          <span class="row-main"><span class="row-name">${esc(e.t)}</span><span class="row-sub">${esc([c.nome, e.l].filter(Boolean).join(" · "))}</span></span><span class="row-side"><span class="flag gc-ora">${esc(ora)}</span></span></${e.u ? "a" : "div"}></li>`; }).join("")}</ul>`; })()}
+        return `<li><button type="button" data-evx="${i}" class="row gc-row"><i class="cal-gdot" style="background:${esc(c.colore || "#4285F4")}"></i>
+          <span class="row-main"><span class="row-name">${esc(e.t)}</span><span class="row-sub">${esc([c.nome, e.l].filter(Boolean).join(" · "))}</span></span><span class="row-side"><span class="flag gc-ora">${esc(ora)}</span></span></button></li>`; }).join("")}</ul>`; })()}
     <h2 class="sec">Appuntamenti <small>${rs.length}</small></h2>
-    ${rs.length ? lista(rs, oraFlag) : `<p class="empty cal-vuoto">Nessun appuntamento. Tocca <b>Nuovo</b> per fissarne uno, oppure dalla scheda del cliente con “Appuntamento il”.</p>`}
+    ${rs.length ? lista(rs, oraFlag, "app") : `<p class="empty cal-vuoto">Nessun appuntamento. Tocca <b>Nuovo</b> per fissarne uno, oppure dalla scheda del cliente con “Appuntamento il”.</p>`}
     ${ds.getDay() === 0 ? "" : `<h2 class="sec">Ordini del giro <small>${ord.length}</small></h2>
-    ${ord.length ? lista(ord, ordFlag) : `<p class="empty cal-vuoto">Nessun ordine da raccogliere.</p>`}`}
+    ${ord.length ? lista(ord, ordFlag, "gir") : `<p class="empty cal-vuoto">Nessun ordine da raccogliere.</p>`}`}
   </section>`;
 
   $("#richBody").innerHTML = `<div class="cal-wrap">
@@ -4737,6 +4773,8 @@ $("#calNext").addEventListener("click", () => calSposta(1));
 $("#calOggi").addEventListener("click", () => { const t = localISO(); calVai(t.slice(0, 7), t); });
 $("#calScad").addEventListener("click", () => { const t = localISO(); calVai(t.slice(0, 7), t); setTimeout(() => { const s = $("#richBody .cal-day"); if(s) s.scrollIntoView({ behavior: "smooth", block: "start" }); }, 50); });
 $("#richBody").addEventListener("click", e => {
+  const x = e.target.closest("[data-evx],[data-app],[data-gir]");
+  if(x){ e.preventDefault(); e.stopPropagation(); if(x.dataset.evx != null) evApriEsterno(calGiornoEv[+x.dataset.evx]); else if(x.dataset.app) evApriApp(byId(x.dataset.app)); else evApriGiro(byId(x.dataset.gir), ui.calSel); return; }
   const b = e.target.closest("[data-cal]"); if(!b) return;
   const iso = b.dataset.cal; ui.calSel = iso;
   if(iso.slice(0, 7) !== ui.calMese) ui.calMese = iso.slice(0, 7);
@@ -6222,6 +6260,130 @@ function giroControlla(){
   $$("#giList [data-gi]").forEach(inp => inp.classList.toggle("gi-err", !!inp.value.trim() && !giroPerEtichetta.has(inp.value.trim())));
 }
 $("#giList").addEventListener("input", giroControlla);
+
+/* ----- Finestra "Appuntamento" (v6.12): modificare/eliminare impegni di iCloud o Google, ordini del giro e appuntamenti dei clienti ----- */
+let calGiornoEv = [], evEd = null;
+const senzaIcone = t => String(t || "").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\uFE0F\u200D]/gu, "").replace(/^[\s\-–—:·|]+|[\s\-–—:·|]+$/g, "").replace(/\s{2,}/g, " ").trim();
+const modoDaTitolo = t => /📞|☎|📱/u.test(t || "") ? "telefono" : /💼|🧳/u.test(t || "") ? "visita" : "";
+const piuMin = (o, n) => { const [hh, mm] = o.split(":").map(Number), t = (hh * 60 + mm + n) % 1440; return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); };
+function evModo(){ return $("#evTel").checked ? "telefono" : $("#evVis").checked ? "visita" : ""; }
+function evRiempi(o){
+  evEd = o;
+  $("#evSub").textContent = o.sub || "";
+  $("#evTitolo").value = o.titolo || ""; $("#evTitolo").disabled = !!o.titoloFisso;
+  $("#evTitNota").textContent = o.titoloFisso || ""; $("#evTitNota").classList.toggle("hidden", !o.titoloFisso);
+  $("#evTel").checked = o.modo === "telefono"; $("#evVis").checked = o.modo === "visita";
+  $("#evRip").classList.toggle("hidden", !o.ripete); $("#evSolo").checked = o.ripete && !o.tutteDiBase; $("#evTutte").checked = !!(o.ripete && o.tutteDiBase);
+  $("#evData").value = o.data || ""; $("#evInizio").value = o.inizio || ""; $("#evFine").value = o.fine || "";
+  $("#evFineBox").classList.toggle("hidden", !!o.senzaFine);
+  $("#evTutto").checked = !!o.tutto; $("#evTutto").closest("label").classList.toggle("hidden", !!o.senzaTutto);
+  $("#evInfo").textContent = o.info || "";
+  $("#evScheda").classList.toggle("hidden", !o.cliente);
+  $("#evApri").classList.toggle("hidden", !o.link); if(o.link) $("#evApri").href = o.link;
+  $("#evSalva").disabled = !!o.solaLettura; $("#evDel").disabled = !!o.solaLettura;
+  evAggiorna();
+  $("#dlgEv").showModal();
+}
+function evAggiorna(){
+  const tutte = evEd && evEd.ripete && $("#evTutte").checked;
+  $("#evData").disabled = !!(tutte && evEd.dataFissaInSerie);
+  const tutto = $("#evTutto").checked;
+  $("#evInizio").disabled = tutto; $("#evFine").disabled = tutto;
+}
+$("#evTel").addEventListener("change", () => { if($("#evTel").checked) $("#evVis").checked = false; });
+$("#evVis").addEventListener("change", () => { if($("#evVis").checked) $("#evTel").checked = false; });
+["#evTutto", "#evSolo", "#evTutte"].forEach(s => $(s).addEventListener("change", evAggiorna));
+$("#evInizio").addEventListener("change", () => { const i = $("#evInizio").value, f = $("#evFine").value; if(i && (!f || f <= i)) $("#evFine").value = piuMin(i, 30); });
+$("#evScheda").addEventListener("click", () => { if(!evEd || !evEd.cliente) return; $("#dlgEv").close(); openDetail(evEd.cliente); });
+
+// impegno di Google o iCloud
+function evApriEsterno(e){
+  if(!e) return;
+  const google = e._p === "Google", calObj = e._c || {}, ripete = google ? !!e.r : !!e.ri;
+  const modo = modoDaTitolo(e.t);
+  evRiempi({ tipo: google ? "google" : "icloud", e, ripete, dataFissaInSerie: true, titolo: senzaIcone(e.t), modo,
+    sub: [calObj.nome, e._p].filter(Boolean).join(" · "), data: e.s.slice(0, 10), inizio: e.g ? "" : e.s.slice(11, 16), fine: e.g ? "" : e.e.slice(11, 16), tutto: !!e.g,
+    link: google ? e.u : "", solaLettura: calObj.scrivibile === false,
+    info: calObj.scrivibile === false ? "Questo calendario si può solo guardare: non si modifica dall'app." : ripete ? "È un evento che si ripete: scegli se cambiare solo questa volta o tutte le settimane (per tutte le settimane si cambiano nome e orario, non il giorno)." : "" });
+}
+// appuntamento di un cliente (campo "Appuntamento il" della scheda)
+function evApriApp(c){
+  if(!c) return;
+  evRiempi({ tipo: "app", c, cliente: c.id, titolo: c.nome, titoloFisso: "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: c.ricontattareModo || "",
+    sub: [c.luogo, c.codice && "cod. " + c.codice].filter(Boolean).join(" · "), data: c.ricontattare, inizio: c.ricontattareOra || "", tutto: !c.ricontattareOra, senzaFine: true,
+    info: (gcal.calId || ical.calId) ? "Le modifiche vanno anche nel tuo calendario " + (ical.calId ? "iCloud" : "Google") + "." : "" });
+}
+// ordine del giro di un cliente in un certo giorno
+function evApriGiro(c, iso){
+  if(!c) return;
+  const G = CAL_GIORNI[calD(iso).getDay()], v = (c.giro || []).find(x => x.g === G), L = v && v.ev && ical.giro && ical.giro[v.ev];
+  const inizio = (v && v.ora) || (/^\d{1,2}[:.]\d{2}$/.test((c.orarioOrdine || "").trim()) ? c.orarioOrdine.trim().replace(".", ":").padStart(5, "0") : "");
+  evRiempi({ tipo: "giro", c, G, v, L, iso, cliente: c.id, ripete: !!L, tutteDiBase: true, titolo: L ? L.nome : c.nome,
+    titoloFisso: L ? "" : "Il nome è quello del cliente: per cambiarlo modifica la scheda.", modo: (v && v.modo) || "",
+    sub: "Ordine del giro · " + G.toLowerCase(), data: iso, inizio, fine: inizio ? piuMin(inizio, 15) : "", senzaTutto: true, senzaFine: !L,
+    info: L ? "Collegato al tuo giro su iCloud. Tutte le settimane: cambiano giorno, orario e modo del giro (anche nella scheda). Solo questa volta: si sposta solo questa data sul calendario."
+      : "Vale per tutte le settimane: cambia il giorno o l'orario dell'ordine nella scheda del cliente." });
+}
+$("#evSalva").addEventListener("click", async () => {
+  const o = evEd; if(!o) return;
+  const modo = evModo(), icona = { telefono: "📞 ", visita: "💼 " }[modo] || "";
+  const tit = $("#evTitolo").value.trim(), data = $("#evData").value, tutto = $("#evTutto").checked;
+  const inizio = tutto ? "" : $("#evInizio").value, fine = tutto ? "" : $("#evFine").value;
+  const tutte = o.ripete && $("#evTutte").checked;
+  if(!data){ toast("Scegli il giorno"); return; }
+  $("#evSalva").disabled = true;
+  try {
+    if(o.tipo === "google" || o.tipo === "icloud"){
+      if(!tit){ toast("Scrivi il nome"); return; }
+      const calObj = o.e._c || {}, base = { titolo: icona + tit, serie: tutte, data: tutte ? undefined : data, inizio, fine, tutto, cal: calObj.id };
+      if(o.tipo === "google") await gcChiama("evento", { ...base, id: o.e.id, r: o.e.r || "" }, "google");
+      else await gcChiama("evento", { ...base, href: o.e.h, ri: o.e.ri || "" }, "icloud");
+      toast("Appuntamento aggiornato");
+    } else if(o.tipo === "app"){
+      const dati = { ricontattare: data, ricontattareOra: inizio, ricontattareModo: modo };
+      if(data !== o.c.ricontattare || inizio !== (o.c.ricontattareOra || "")) dati.storico = [...(o.c.storico || []), { d: localISO(), t: "Appuntamento spostato al " + fmtDate(data) + (inizio ? " ore " + inizio : "") }];
+      await update(o.c.id, dati); toast("Appuntamento aggiornato");
+    } else if(o.tipo === "giro"){
+      const nuovoG = CAL_GIORNI[calD(data).getDay()];
+      if(o.L){
+        if(tutte){
+          const giorni = [...new Set((o.c.giro || []).filter(x => x.ev === o.v.ev).map(x => x.g === o.G ? nuovoG : x.g))];
+          await gcChiama("evento", { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: true, giorni, titolo: icona + tit, inizio, fine, modo }, "icloud");
+        } else await gcChiama("evento", { cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: false, titolo: icona + tit, data, inizio, fine: fine || inizio }, "icloud");
+        toast(tutte ? "Giro aggiornato (anche su iCloud)" : "Spostato solo per questa volta su iCloud");
+      } else {
+        if(nuovoG === "Domenica"){ toast("Il giro va dal lunedì al sabato"); return; }
+        const giorni = [...new Set((o.c.giorniOrdine || []).map(g => g === o.G ? nuovoG : g))];
+        const giro = (o.c.giro || []).filter(x => !(x.g === o.G && !x.ev));
+        if(modo || inizio) giro.push({ g: nuovoG, ora: inizio, modo, ev: "" });
+        await update(o.c.id, { giorniOrdine: giorni, giro, storico: [...(o.c.storico || []), { d: localISO(), t: "Giro del " + (nuovoG === o.G ? o.G.toLowerCase() + ":" : o.G.toLowerCase() + " spostato al " + nuovoG.toLowerCase()) + (inizio ? " ore " + inizio : "") + (modo ? (modo === "telefono" ? " (al telefono)" : " (di persona)") : "") }] });
+        toast("Giro aggiornato");
+      }
+    }
+    $("#dlgEv").close();
+  } catch(err){ toast("Non riuscito: " + err.message); }
+  finally { $("#evSalva").disabled = !!(evEd && evEd.solaLettura); }
+});
+$("#evDel").addEventListener("click", async () => {
+  const o = evEd; if(!o) return;
+  const tutte = o.ripete && $("#evTutte").checked;
+  const nome = o.tipo === "app" || (o.tipo === "giro" && !o.L) ? o.c.nome : $("#evTitolo").value.trim() || "questo appuntamento";
+  const cosa = o.tipo === "giro" ? (tutte || !o.L ? "il giro del " + o.G.toLowerCase() + " di «" + nome + "»" : "il giro di «" + nome + "» solo per il " + fmtDate(o.iso))
+    : o.ripete ? (tutte ? "«" + nome + "» per tutte le settimane" : "«" + nome + "» solo per questa volta") : "«" + nome + "»";
+  const dett = o.tipo === "app" ? "L'appuntamento si toglie dalla scheda del cliente (e dal calendario collegato)."
+    : o.tipo === "giro" && !o.L ? "Il " + o.G.toLowerCase() + " si toglie dai giorni dell'ordine del cliente."
+    : "Si toglie anche dal tuo calendario " + (o.tipo === "google" ? "Google" : "iCloud") + ".";
+  if(!(await confermaElimina(cosa, dett))) return;
+  try {
+    if(o.tipo === "google") await gcChiama("evento", { azione: "elimina", cal: o.e._c.id, id: o.e.id, r: o.e.r || "", serie: tutte }, "google");
+    else if(o.tipo === "icloud") await gcChiama("evento", { azione: "elimina", cal: o.e._c.id, href: o.e.h, ri: o.e.ri || "", serie: tutte }, "icloud");
+    else if(o.tipo === "app") await update(o.c.id, { ricontattare: "", ricontattareOra: "", ricontattareModo: "", storico: [...(o.c.storico || []), { d: localISO(), t: "Appuntamento tolto" }] });
+    else if(o.L) await gcChiama("evento", { azione: "elimina", cal: o.L.cal, href: o.L.href, occorrenza: o.iso, serie: tutte }, "icloud");
+    else await update(o.c.id, { giorniOrdine: (o.c.giorniOrdine || []).filter(g => g !== o.G), giro: (o.c.giro || []).filter(x => x.g !== o.G),
+      storico: [...(o.c.storico || []), { d: localISO(), t: "Giro: tolto il " + o.G.toLowerCase() }] });
+    $("#dlgEv").close(); toast("Eliminato");
+  } catch(err){ toast("Non riuscito: " + err.message); }
+});
 $("#icGiro").addEventListener("click", giroApri);
 $("#giOk").addEventListener("click", async () => {
   const s = giroScelte();
