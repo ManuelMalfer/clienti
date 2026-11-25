@@ -1171,6 +1171,9 @@ dialog.rc-dlg{max-width:720px}
 .set-mod{display:flex;gap:8px;flex-wrap:wrap}
 .set-mod button{flex:1;min-height:42px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-weight:600;cursor:pointer}
 .set-mod button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.riposo-gg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;flex-basis:100%;min-width:0}
+.riposo-gg .chip-btn{min-width:0;padding-left:0;padding-right:0;justify-content:center;text-align:center}
+.riposo-gg .chip-btn[aria-pressed="true"]{background:var(--danger);border-color:var(--danger);color:#fff}
 .app-quando{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .app-scelto{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;margin-bottom:8px;border-radius:var(--r-md);background:var(--surface-2)}
 .app-scelto b{display:block}
@@ -2030,6 +2033,11 @@ const firebaseConfig = {
 const DAYS = ["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];
 const DAY_SHORT = ["Lun","Mar","Mer","Gio","Ven","Sab"];
 const DAY_KEY = ["lun","mar","mer","gio","ven","sab"];
+// giorni di chiusura settimanale del locale (campo giorniChiusura, v6.21): anche la domenica
+const RIPOSO_GG = [["Lunedì","Lun"],["Martedì","Mar"],["Mercoledì","Mer"],["Giovedì","Gio"],["Venerdì","Ven"],["Sabato","Sab"],["Domenica","Dom"]];
+const RIPOSO_JS = ["Domenica","Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato"];   // indice = getDay()
+const riposoIl = (c, iso) => !!(c && iso && (c.giorniChiusura || []).includes(RIPOSO_JS[new Date(iso + "T12:00:00").getDay()]));
+const riposoTesto = c => { const g = RIPOSO_GG.filter(([n]) => (c.giorniChiusura || []).includes(n)).map(([n]) => n.toLowerCase()); return g.length ? "Chiuso " + (g.length === 1 ? "il " + g[0] : g.slice(0, -1).join(", ") + " e " + g[g.length - 1]) : ""; };
 const STATI = [["DA CONTATTARE","Da contattare"],["CONTATTATO","Contattato"],["CLIENTE","Cliente"],["CLIENTE PERSO","Cliente perso"],["NON SERVIBILE","Non servibile"]];
 const ATTIVI = ["CLIENTE"];
 // Vecchie categorie convertite in "Non servibile" con una nota
@@ -4170,6 +4178,17 @@ $("#uniOk").addEventListener("click", async () => {
   finally{ $("#uniOk").disabled = false; $("#uniOk").textContent = "Unisci in una scheda"; }
 });
 $("#dBody").addEventListener("click", e => { if(e.target.closest("[data-uni-start]")) uniApri("scegli", ui.openId); });
+// giorni di chiusura settimanale: un tocco aggiunge o toglie il giorno (si salva subito, nell'ordine Lun–Dom)
+$("#dBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-riposo]"); if(!b) return;
+  const c = byId(ui.openId); if(!c) return;
+  const g = new Set(c.giorniChiusura || []), n = b.dataset.riposo;
+  if(g.has(n)) g.delete(n); else g.add(n);
+  const nuovi = RIPOSO_GG.map(([x]) => x).filter(x => g.has(x));
+  b.setAttribute("aria-pressed", g.has(n));
+  update(c.id, { giorniChiusura: nuovi });
+  toast(nuovi.length ? riposoTesto({ giorniChiusura: nuovi }) : "Nessun giorno di chiusura");
+});
 
 // Annulla unione: una scheda unita (con codice di destinazione) torna a essere due schede: la destinazione (questa, col nome del locale e codice 120…)
 // e la fatturazione (nuova, con ragione sociale, P.IVA, pagamento e codice 100…). Dei dati di prima si ricorda solo quello che l'unione ha lasciato.
@@ -4616,7 +4635,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.20 (v6.20)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.21 (v6.21)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4937,7 +4956,7 @@ function appRender(){
   $("#appScelto").classList.toggle("hidden", !c);
   $("#appQ").classList.toggle("hidden", !!c); $("#appList").classList.toggle("hidden", !!c);
   $("#appOk").disabled = !c || !$("#appData").value;
-  const avv = c && c.ricontattare ? `${c.nome} ha già un appuntamento il ${fmtDate(c.ricontattare)}${c.ricontattareOra ? " alle " + c.ricontattareOra : ""}: salvando viene spostato a questo.` : "";
+  const avv = [c && riposoIl(c, $("#appData").value) ? `Attenzione: ${c.nome} è chiuso il ${RIPOSO_JS[new Date($("#appData").value + "T12:00:00").getDay()].toLowerCase()}.` : "", c && c.ricontattare ? `${c.nome} ha già un appuntamento il ${fmtDate(c.ricontattare)}${c.ricontattareOra ? " alle " + c.ricontattareOra : ""}: salvando viene spostato a questo.` : ""].filter(Boolean).join(" ");
   $("#appAvv").textContent = avv; $("#appAvv").classList.toggle("hidden", !avv);
   if(c){ $("#appScelto").innerHTML = `<div><b>${esc(c.nome)}</b><small>${esc([c.luogo, c.codice ? "cod. " + c.codice : "", statoLabel(c.stato)].filter(Boolean).join(" · "))}</small></div><button class="link" type="button" id="appCambia">Cambia</button>`; return; }
   const parole = app.q.split(/\s+/).map(norm).filter(Boolean);
@@ -4948,7 +4967,7 @@ function appRender(){
     : `<li class="empty">Nessun cliente trovato.</li>`;
 }
 $("#appQ").addEventListener("input", e => { app.q = e.target.value; appRender(); });
-$("#appData").addEventListener("input", () => { $("#appOk").disabled = !app.id || !$("#appData").value; });
+$("#appData").addEventListener("input", () => { appRender(); });
 $("#dlgApp").addEventListener("click", e => {
   const b = e.target.closest("[data-appcli]"); if(b){ app.id = b.dataset.appcli; appRender(); return; }
   if(e.target.closest("#appCambia")){ app.id = null; appRender(); $("#appQ").focus(); }
@@ -5359,6 +5378,7 @@ function renderDetail(){
     ["Cod. univoco", esc(c.codiceUnivoco)],
     ["Fornitori", esc((c.fornitori||[]).join(", "))],
     ["Ordine", esc([(c.giorniOrdine||[]).join(", "), c.orarioOrdine ? c.orarioOrdine + (c.orarioOrdineFine ? "–" + c.orarioOrdineFine : "") : ""].filter(Boolean).join(" · "))],
+    ["Riposo", esc(riposoTesto(c))],
     ["Consegna", esc([(c.giorniConsegna||[]).join(", "), c.orarioConsegna].filter(Boolean).join(" · "))],
     ["Chiusura", esc(chiusuraTesto(c))],
     ["Note", esc(c.note)]
@@ -5395,6 +5415,11 @@ function renderDetail(){
       <input class="input" type="date" id="dChAl" value="${c.chiusoAl || ""}" aria-label="Chiuso fino al">
       ${c.chiusoDal || c.chiusoAl ? `<button class="chip-btn" type="button" id="dChTogli">Rimuovi</button>` : ""}
       <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Dal – fino al. In questi giorni il cliente non compare nel Giro.</span>
+    </div>
+    <div class="richiamo">
+      <label>Giorni di chiusura</label>
+      <div class="riposo-gg" role="group" aria-label="Giorni di chiusura del locale">${RIPOSO_GG.map(([n, b]) => `<button type="button" class="chip-btn" data-riposo="${n}" aria-pressed="${(c.giorniChiusura || []).includes(n)}" aria-label="${n}">${b}</button>`).join("")}</div>
+      <span style="flex-basis:100%;font-size:13px;color:var(--muted)">Tocca i giorni in cui il locale è chiuso ogni settimana (riposo settimanale).</span>
     </div>
     <div class="richiamo">
       <label>Fatturazione</label>
@@ -5889,7 +5914,7 @@ function exportExcel(){
     "LUOGO": c.luogo, "INDIRIZZO": c.indirizzo, "CAP": c.cap, "PROV": c.prov, "TIPOLOGIA ATTIVITA'": c.tipologia,
     "P.IVA": c.piva, "CODICE FISCALE": c.codiceFiscale, "CODICE UNIVOCO": c.codiceUnivoco, "PAGAMENTO": c.pagamento, "FORNITORI ATTUALI": (c.fornitori||[]).join(", "),
     "GIORNO ORDINE": (c.giorniOrdine||[]).join(" "), "ORARIO ORDINE": c.orarioOrdine,
-    "GIORNO DI CONSEGNA": (c.giorniConsegna||[]).join(" "), "ORARIO CONSEGNA": c.orarioConsegna,
+    "GIORNO DI CONSEGNA": (c.giorniConsegna||[]).join(" "), "GIORNI DI CHIUSURA": (c.giorniChiusura||[]).join(" "), "ORARIO CONSEGNA": c.orarioConsegna,
     "STATO CLIENTE": c.stato, "DA RICONTATTARE": [fmtDate(c.ricontattare), c.ricontattareOra].filter(Boolean).join(" "), "NOTE": c.note,
     "STORICO": (c.storico||[]).map(s => `${fmtDate(s.d)}: ${s.t}`).join(" | ")
   }));
