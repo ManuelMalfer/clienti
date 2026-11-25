@@ -326,6 +326,10 @@ html,body,button,a,input,select,textarea,label,[contenteditable]{touch-action:ma
 .ct-n{margin-left:auto;font-family:var(--font);font-size:13px;font-weight:600;color:var(--muted);background:var(--surface-2);border-radius:99px;padding:1px 10px}
 .ct-list{list-style:none;margin:0;padding:0}
 .ct-item{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+.ct-chk{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);color:transparent;font-weight:700;font-size:16px}
+.ct-item.scelto .ct-chk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ct-item.scelto{border-color:var(--accent)}
+#v-cataloghi.ct-selmode main.view{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
 .ct-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 2px;min-height:64px;color:inherit;text-decoration:none}
 .ct-main:hover{background:var(--surface-2)}
 .ct-ico{flex:0 0 42px;height:42px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
@@ -1418,7 +1422,7 @@ dialog.rc-dlg{max-width:720px}
 
   <section id="v-cataloghi" class="view-wrap hidden">
     <header class="top"><div class="wrap">
-      <div class="top-row"><h1>Cataloghi</h1><span class="ct-head"><span class="count" id="ctLbl"></span><button class="link hidden" id="ctAdd" type="button">+ Aggiungi</button></span></div>
+      <div class="top-row"><h1>Cataloghi</h1><span class="ct-head"><span class="count" id="ctLbl"></span><button class="link hidden" id="ctAdd" type="button">+ Aggiungi</button><button class="link" id="ctSelBtn" type="button">Seleziona</button></span></div>
       <div class="search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <input class="input" id="ctQ" type="search" placeholder="Cerca catalogo, fornitore, categoria…" autocomplete="off" aria-label="Cerca nei cataloghi">
@@ -1426,6 +1430,12 @@ dialog.rc-dlg{max-width:720px}
       <div class="ct-chips" id="ctChips"></div>
     </div></header>
     <main class="wrap view" id="ctBody"></main>
+    <div class="ar-cart hidden" id="ctCart" role="region" aria-label="Cataloghi scelti">
+      <span class="ar-cart-txt" id="ctCartTxt"></span>
+      <button class="btn ar-cart-x" type="button" id="ctCartSvuota" aria-label="Togli tutte le scelte" title="Togli tutte le scelte">✕</button>
+      <button class="btn btn-primary" type="button" id="ctCartInvia">Invia</button>
+    </div>
+    <div class="pv-busy hidden" id="ctReady"><div class="pv-ready"><strong id="ctReadyT">Cataloghi pronti</strong><span id="ctReadyTxt"></span><button class="btn btn-primary" type="button" id="ctReadyShare">Invia</button><button class="link" type="button" id="ctReadyClose">Chiudi</button></div></div>
   </section>
 
   <!-- ALTRO -->
@@ -2314,6 +2324,7 @@ function go(view){
   if(view !== "mappa") stopPick();
   renderAll();
   if(view === "cataloghi"){ catLoad(); catPing(); }
+  catCartRender();
   if(view === "budget") bdgCarica();
   if(view === "articoli"){ artCarica(); artCartRender(); }
 }
@@ -2532,7 +2543,7 @@ let catPuoCaricare = false, catPingFatto = false;
 const catEliminati = new Set();                          // eliminati da qui: si nascondono finché il sito non si aggiorna
 const catMosse = new Map();                              // file -> { categoria, t }: spostamenti fatti da qui, finché il sito non si aggiorna
 const catPend = [];                                     // cataloghi caricati in questa sessione e non ancora online per gli altri
-const cat = { q: "", cat: "", tutti: false, chiusi: new Set() };
+const cat = { q: "", cat: "", tutti: false, chiusi: new Set(), selMode: false, sel: [] };   // sel = file dei cataloghi scelti (v6.22)
 
 async function catLoad(){
   if(catStato === "carico") return;
@@ -2743,6 +2754,7 @@ function renderCataloghi(){
     const voci = !aperto ? "" : `<ul class="ct-list">${lista.map(x => {
       const dentro = x.fornitore && norm(x.titolo).includes(norm(x.fornitore));
       const meta = [dentro ? "" : x.fornitore, x.desc, x.anno, x._nuovo ? "In pubblicazione…" : ""].filter(Boolean).join(" · ");
+      if(cat.selMode){ const on = cat.sel.includes(x.file); return `<li class="ct-item${on ? " scelto" : ""}"><a class="ct-main" data-csel="${catalogo.indexOf(x)}" href="#" role="checkbox" aria-checked="${on}"><span class="ct-chk" aria-hidden="true">✓</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a></li>`; }
       return `<li class="ct-item"><a class="ct-main" data-i="${catalogo.indexOf(x)}" href="${catCifrato(x) ? "#" : esc(catUrl(x))}"${catCifrato(x) ? "" : ` target="_blank" rel="noopener"`}><span class="ct-ico">${catIcona}</span><span class="ct-txt"><b>${esc(x.titolo)}</b>${meta ? `<small>${esc(meta)}</small>` : ""}</span></a><button class="icon-btn" type="button" data-share="${catalogo.indexOf(x)}" aria-label="Condividi ${esc(x.titolo)}">${catShareIco}</button>${catPuoCaricare && !x._nuovo && /^cataloghi\/[a-z0-9-]+\.pdf\.enc$/.test(x.file) ? `<button class="icon-btn ct-mv" type="button" data-mv="${catalogo.indexOf(x)}" aria-label="Sposta o elimina ${esc(x.titolo)}">${catMvIco}</button>` : ""}</li>`;
     }).join("")}</ul>`;
     if(cat.cat && !cat.q.trim()){      // dentro una categoria: titolo grande invece dell'intestazione a comparsa
@@ -2768,6 +2780,8 @@ $("#ctBody").addEventListener("click", e => {
     if(v === "__tutti"){ cat.cat = ""; cat.tutti = true; } else { cat.cat = v; cat.tutti = false; }
     renderCataloghi(); window.scrollTo(0, 0); return;
   }
+  const cs = e.target.closest("[data-csel]");
+  if(cs){ e.preventDefault(); const x = catalogo[+cs.dataset.csel]; if(!x) return; const k = cat.sel.indexOf(x.file); if(k >= 0) cat.sel.splice(k, 1); else cat.sel.push(x.file); renderCataloghi(); catCartRender(); return; }
   // tocco su un catalogo del sito: si apre nel lettore dell'app (con Ctrl/Cmd o tasto centrale si apre in una scheda)
   const a = e.target.closest(".ct-main");
   if(a){
@@ -2812,6 +2826,73 @@ async function catShare(x){
     toast(err && err.message === "decifratura" ? "Non riesco a decifrare il catalogo" : "Non riesco a preparare il catalogo");
   }
 }
+
+/* ---------- Più cataloghi insieme (v6.22) ----------
+   "Seleziona" in testa: le righe diventano spunte (anche passando da una categoria all'altra o cercando); in basso la barra
+   "N cataloghi scelti · ✕ · Invia". Invia prepara i PDF (decifrati nel telefono, come la condivisione di uno solo), poi il riquadro
+   "Cataloghi pronti" con il tasto Invia apre il menu Condividi con tutti i file insieme (il tocco serve a iPhone dopo l'attesa).
+   Sul PC, dove il menu Condividi con i file non c'è, si scaricano uno dopo l'altro. I cataloghi con link esterno vanno nel testo. */
+let catPronti = null;   // { files: [File], link: [testo] }
+function catSelModo(on){
+  cat.selMode = on; if(!on) cat.sel = [];
+  $("#ctSelBtn").textContent = on ? "Fine" : "Seleziona";
+  $("#v-cataloghi").classList.toggle("ct-selmode", on);
+  renderCataloghi(); catCartRender();
+  if(on) toast("Tocca i cataloghi da inviare");
+}
+function catCartRender(){
+  const scelti = catalogo.filter(x => cat.sel.includes(x.file));
+  $("#ctCart").classList.toggle("hidden", !cat.selMode || ui.view !== "cataloghi");
+  const n = scelti.length;
+  $("#ctCartTxt").innerHTML = n ? `<b>${n} ${n === 1 ? "catalogo scelto" : "cataloghi scelti"}</b><small>${esc(scelti.map(x => x.titolo).join(", "))}</small>` : `<b>Nessun catalogo scelto</b><small>Tocca i cataloghi da inviare</small>`;
+  $("#ctCartInvia").disabled = !n;
+  $("#ctCartSvuota").disabled = !n;
+}
+$("#ctSelBtn").addEventListener("click", () => catSelModo(!cat.selMode));
+$("#ctCartSvuota").addEventListener("click", () => { cat.sel = []; renderCataloghi(); catCartRender(); });
+const catMB = n => (n / 1048576).toLocaleString("it-IT", { maximumFractionDigits: n < 10485760 ? 1 : 0 }) + " MB";
+$("#ctCartInvia").addEventListener("click", async () => {
+  const scelti = catalogo.filter(x => cat.sel.includes(x.file)); if(!scelti.length) return;
+  const btn = $("#ctCartInvia"); btn.disabled = true;
+  try{
+    if(scelti.some(catCifrato) && !catKey && !(await catEnsureKey())) return;
+    const files = [], link = [];
+    for(let i = 0; i < scelti.length; i++){
+      const x = scelti[i];
+      if(!catCifrato(x)){ link.push(x.titolo + ": " + new URL(catUrl(x), location.href).href); continue; }
+      $("#ctCartInvia").textContent = `Preparo ${i + 1} di ${scelti.length}…`;
+      const blob = await catBlob(x, p => { $("#ctCartInvia").textContent = `Preparo ${i + 1} di ${scelti.length} · ${p}%`; });
+      files.push(new File([blob], catNomeFile(x), { type: "application/pdf" }));
+    }
+    catPronti = { files, link };
+    const tot = files.reduce((t, f) => t + f.size, 0);
+    const puo = files.length && navigator.canShare && (() => { try { return navigator.canShare({ files }); } catch(e){ return false; } })();
+    $("#ctReadyT").textContent = scelti.length === 1 ? "Catalogo pronto" : `${scelti.length} cataloghi pronti`;
+    $("#ctReadyTxt").innerHTML = esc(files.length ? `${files.length} PDF, in tutto ${catMB(tot)}.` : "") + (link.length ? " " + esc(link.length === 1 ? "1 catalogo è un link: va nel testo." : link.length + " cataloghi sono link: vanno nel testo.") : "")
+      + (tot > 20 * 1048576 ? "<br><small>Più di 20 MB: per email potrebbero essere troppi (meglio WhatsApp, o in due invii).</small>" : "");
+    $("#ctReadyShare").textContent = puo || !files.length ? "Invia" : "Scarica i PDF";
+    $("#ctReady").classList.remove("hidden");
+  }catch(err){
+    if(!(err && (err.name === "AbortError" || err.message === "annullato"))) toast(err && err.message === "decifratura" ? "Non riesco a decifrare un catalogo" : "Non riesco a preparare i cataloghi. Controlla la connessione e riprova.");
+  }finally{ btn.textContent = "Invia"; btn.disabled = !cat.sel.length; }
+});
+$("#ctReadyShare").addEventListener("click", async () => {
+  if(!catPronti) return;
+  const { files, link } = catPronti, testo = link.join("\n");
+  const puo = files.length && navigator.canShare && (() => { try { return navigator.canShare({ files }); } catch(e){ return false; } })();
+  try{
+    if(puo){ await navigator.share({ files, title: files.length === 1 ? files[0].name.replace(/\.pdf$/, "") : "Cataloghi", ...(testo ? { text: testo } : {}) }); }
+    else if(!files.length){ if(navigator.share) await navigator.share({ title: "Cataloghi", text: testo }); else { await navigator.clipboard.writeText(testo); toast("Link copiati"); } }
+    else {
+      // PC: un file alla volta (il browser può chiedere il permesso per più download)
+      for(const f of files){ pvDownload(f); await new Promise(r => setTimeout(r, 700)); }
+      if(testo && navigator.clipboard) navigator.clipboard.writeText(testo).catch(() => {});
+      toast(files.length === 1 ? "Catalogo scaricato" : files.length + " cataloghi scaricati");
+    }
+    $("#ctReady").classList.add("hidden"); catPronti = null; catSelModo(false);
+  }catch(err){ if(!(err && err.name === "AbortError")) toast("Invio non riuscito: riprova"); }
+});
+$("#ctReadyClose").addEventListener("click", () => { $("#ctReady").classList.add("hidden"); catPronti = null; });
 
 /* ---------- Aggiungere un catalogo dall'app ---------- */
 // Il PDF si cifra qui, nel telefono, con la stessa chiave degli altri; poi parte verso il servizio Cloudflare
@@ -4635,7 +4716,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.21 (v6.21)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.22 (v6.22)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
