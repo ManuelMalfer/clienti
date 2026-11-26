@@ -1275,7 +1275,11 @@ export async function sincronizzaICloud(env, uid, opz = {}){
     const mostra = (Array.isArray(I.mostra) ? I.mostra : []).filter(id => calendari.some(c => c.id === id)).slice(0, 4);
     // si rileggono anche gli impegni salvati da versioni vecchie, senza il file (h) che serve per modificarli dall'app
     for(const id of mostra) if(!opz.leggero || nuoviCtag[id] !== ctag[id] || !Array.isArray(evPer[id]) || evPer[id].some(e => e.h === undefined))
-      evPer[id] = (await ic.eventi(id, piuGiorni(oggi, -14), piuGiorni(oggi, 120))).slice(0, 300);
+      // prima si tolgono le ripetizioni del giro collegato e si mettono in ordine di data, POI si taglia: iCloud restituisce gli eventi
+      // nell'ordine dei file, e con il giro (una serie a settimana per cliente = decine di ripetizioni ciascuna) il taglio a 300 faceva
+      // sparire gli impegni singoli creati da poco (caso Sas Gris, 26/11/2026)
+      evPer[id] = (await ic.eventi(id, piuGiorni(oggi, -14), piuGiorni(oggi, 120))).filter(e => !giro[String(e.id).split("|")[0]])
+        .sort((a, b) => a.s.localeCompare(b.s)).slice(0, 300);
     for(const id of Object.keys(evPer)) if(!mostra.includes(id)) delete evPer[id];
     const ev = mostra.flatMap(id => (evPer[id] || []).filter(e => !giro[String(e.id).split("|")[0]]).map(e => ({ ...e, c: calendari.findIndex(c => c.id === id) })))     // gli eventi del giro abbinati non si ripetono
       .sort((a, b) => a.s.localeCompare(b.s)).slice(0, 600);

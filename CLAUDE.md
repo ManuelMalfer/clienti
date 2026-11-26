@@ -571,6 +571,11 @@ l'email del suo account Apple e una **password per app** (creata da lui su accou
   sync-token non valido, password revocata con Google che continua, scollega iCloud con Google che resta); prove solo-Google (40) e link .ics (18) ancora tutte ok;
   app con finto Firebase (collega con password e con Rosario, scelta calendario, impegni dei due servizi nel giorno, legenda, sincronizzazione dopo un cambio).
 - **Dopo la pubblicazione**: il codice del Worker `calendario` va incollato di nuovo su Cloudflare (nessun segreto nuovo: la password Apple la scrive Manuel nell'app).
+- **Correzione 26/11/2026 (caso Sas Gris)**: un impegno singolo creato sull'iPhone non compariva nel Calendario dell'app. Causa: per ogni calendario da vedere
+  il Worker teneva i primi 300 eventi nell'ordine in cui li dà iCloud (ordine dei file), e con il giro nello stesso calendario (una serie a settimana per
+  cliente = decine di ripetizioni ciascuna nella finestra −14/+120 giorni) gli eventi creati per ultimi venivano tagliati. Ora in `b2` (c) prima si tolgono le
+  ripetizioni del giro collegato, poi si ordina per data e solo dopo si taglia a 300. Prova aggiunta (320 eventi + Sas Gris creato per ultimo): 130 su 130;
+  con il codice vecchio la prova falliva. Il Worker va incollato di nuovo su Cloudflare; i dati si sistemano al primo giro completo (ogni ora) o con "Sincronizza ora".
 
 ## Giro dal calendario iCloud (v6.11)
 
