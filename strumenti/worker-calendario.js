@@ -833,6 +833,59 @@ function giroViaDaCliente(c, uid, ancheGiorni){
   if(ancheGiorni){ const resta = new Set(c.giro.map(e => e.g)); c.giorniOrdine = (c.giorniOrdine || []).filter(g => !prima.includes(g) || resta.has(g)); }
   c._giro = true;
 }
+/* ---------- PERIODO DI CHIUSURA DEL CLIENTE NEL GIRO COLLEGATO (v6.24) ----------
+   Se la scheda ha chiusoDal/chiusoAl, le ripetizioni della serie in quel periodo (da oggi in poi) si tolgono dal calendario con EXDATE
+   (iCloud: nel file .ics; Google: nella "recurrence" della serie, una sola PATCH). Nel collegamento si ricordano L.ch (chiusura + giorni/ora
+   per cui sono state messe) e L.ex (le date tolte dal servizio): se la chiusura cambia o si toglie, le date future non più chiuse tornano;
+   le altre EXDATE (messe a mano sull'iPhone) non si toccano. Senza data di fine si tolgono al massimo 12 mesi. */
+const chiaveChiusura = (c, k) => c.chiusoDal || c.chiusoAl ? (c.chiusoDal || "") + ">" + (c.chiusoAl || "") + "#" + k : "";
+function giorniChiusi(c, giorni, oggi){
+  if(!c.chiusoDal && !c.chiusoAl) return [];
+  const fine = c.chiusoAl || piuGiorni(oggi, 365), out = [];
+  for(let d = c.chiusoDal && c.chiusoDal > oggi ? c.chiusoDal : oggi, n = 0; d <= fine && n < 400; d = piuGiorni(d, 1), n++) if(giorni.includes(giornoDi(d))) out.push(d);
+  return out;
+}
+// data (di Roma) di un valore EXDATE / RECURRENCE-ID
+const dataIcs = (p, v) => { const s = icsData({ p, v }); return s ? s.d : ""; };
+// toglie dal file .ics le EXDATE dei giorni "togli" e "metti", poi mette quelle di "metti" all'ora della serie (e via le eccezioni di quei giorni)
+export function chiusuraIcs(testo, togli, metti){
+  const parti = blocchiIcs(testo);
+  const master = parti.find(p => p.ev && trovaProp(p.ev, "RECURRENCE-ID") === undefined && trovaProp(p.ev, "RRULE") !== undefined);
+  if(!master) return null;
+  const s = valoreIcs(master.ev[trovaProp(master.ev, "DTSTART")]), sd = s && icsData(s); if(!sd) return null;
+  const via = new Set([...togli, ...metti]), mt = new Set(metti), top = new Set(topRighe(master.ev));
+  master.ev = master.ev.flatMap((r, i) => {
+    const v = top.has(i) && valoreIcs(r); if(!v || v.k !== "EXDATE") return [r];
+    const resta = v.v.split(",").filter(x => !via.has(dataIcs(v.p, x.trim())));
+    return resta.length ? ["EXDATE" + v.p + ":" + resta.join(",")] : [];
+  });
+  const p = (s.p || "").replace(/;?VALUE=DATE-TIME/i, "");
+  const val = d => sd.o ? (/Z$/.test(s.v) ? romaAUtc(d, sd.o) : d.replace(/-/g, "") + "T" + sd.o.replace(":", "") + "00") : d.replace(/-/g, "");
+  master.ev.splice(master.ev.length - 1, 0, ...metti.map(d => "EXDATE" + p + ":" + val(d)));
+  return rimettiIcs(parti.filter(x => { if(!x.ev || x === master) return true; const i = trovaProp(x.ev, "RECURRENCE-ID"); const v = i !== undefined && valoreIcs(x.ev[i]); return !(v && mt.has(dataIcs(v.p, v.v))); }));
+}
+// lo stesso per una serie di Google: la nuova "recurrence"
+function chiusuraGoogle(m, togli, metti){
+  const via = new Set([...togli, ...metti]), out = [];
+  for(const r of m.recurrence || []){
+    const v = valoreIcs(r); if(!v || v.k !== "EXDATE"){ out.push(r); continue; }
+    const resta = v.v.split(",").filter(x => !via.has(dataIcs(v.p, x.trim())));
+    if(resta.length) out.push("EXDATE" + v.p + ":" + resta.join(","));
+  }
+  const o = m.start.date ? "" : romaDi(m.start.dateTime).o;
+  for(const d of metti) out.push(o ? "EXDATE;TZID=Europe/Rome:" + d.replace(/-/g, "") + "T" + o.replace(":", "") + "00" : "EXDATE;VALUE=DATE:" + d.replace(/-/g, ""));
+  return out;
+}
+// cosa fare per un collegamento del giro: null = niente; altrimenti { kch, togli, metti }
+function chiusuraDaFare(c, L, oggi){
+  const kch = chiaveChiusura(c, L.k);
+  if(kch === (L.ch || "")) return null;
+  const metti = kch ? giorniChiusi(c, (L.k || "").split("|")[0].split(",").filter(Boolean), oggi) : [];
+  const togli = (L.ex || []).filter(d => d >= oggi && !metti.includes(d));
+  return { kch, togli, metti };
+}
+const chiusuraFatta = (L, x) => { if(x.kch) { L.ch = x.kch; L.ex = x.metti; } else { delete L.ch; delete L.ex; } };
+
 const scrittaGiro = s => ordinaG(s.giorni).join(", ") + (s.ora ? " ore " + s.ora : "") + (s.modo ? " (" + (s.modo === "telefono" ? "al telefono" : "di persona") + ")" : "");
 
 /* ---------- MODIFICARE O ELIMINARE UN EVENTO DAL CALENDARIO DELL'APP (v6.12) ----------
@@ -1123,6 +1176,20 @@ export async function sincronizzaGiroGoogle(env, uid, opz = {}){
     await g.chiama("PATCH", cal(L.cal) + "/events/" + encodeURIComponent(id), patchSerieGoogle(m, nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine));
     giroSuCliente(c, ev, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine); stat.cambiati++;
   }
+  // periodo di chiusura del cliente (come per iCloud): EXDATE nella serie
+  for(const id of Object.keys(ggiro)){
+    const L = ggiro[id], c = perId.get(L.cliente); if(!c) continue;
+    const x = chiusuraDaFare(c, L, oggi); if(!x) continue;
+    if(!x.togli.length && !x.metti.length){ chiusuraFatta(L, x); continue; }
+    if(scritte >= MAX_SCRITTURE){ stat.rimandati++; continue; }
+    scritte++;
+    let m;
+    try { m = await g.chiama("GET", cal(L.cal) + "/events/" + encodeURIComponent(id)); }
+    catch(e){ if(e.google === 404 || e.google === 410) continue; throw e; }
+    if(!m || !Array.isArray(m.recurrence)) { chiusuraFatta(L, x); continue; }
+    await g.chiama("PATCH", cal(L.cal) + "/events/" + encodeURIComponent(id), { recurrence: chiusuraGoogle(m, x.togli, x.metti) });
+    chiusuraFatta(L, x); stat.cambiati++;
+  }
   if(opz.leggero && !clienti.some(c => c._giro) && JSON.stringify(ggiro) === JSON.stringify(S.ggiro) && JSON.stringify(tok) === JSON.stringify(S.ggiroTok || {})) return { collegato: true, ...stat };
   const scritture = clienti.filter(c => c._giro).map(c => ({ percorso: "utenti/" + uid + "/clienti/" + c.id, esiste: true,
     campi: ["giro", "giorniOrdine", "orarioOrdine", "orarioOrdineFine", "storico", "aggiornato"],
@@ -1270,6 +1337,17 @@ export async function sincronizzaICloud(env, uid, opz = {}){
         if(await ic.aggiorna(L.href, cambiaSerie(testo, nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine), ic.etag && ic.etag.get(L.href))){
           giroSuCliente(c, u, nuovo); L.k = chiaveGiro(nuovo.giorni, nuovo.ora, nuovo.modo, nuovo.fine); stat.cambiati++;
         }
+      }
+      // periodo di chiusura del cliente: via le ripetizioni di quei giorni dal calendario (e indietro se la chiusura cambia)
+      for(const u of Object.keys(giro)){
+        const L = giro[u], c = perTutti.get(L.cliente); if(!c) continue;
+        const x = chiusuraDaFare(c, L, oggi); if(!x) continue;
+        if(!x.togli.length && !x.metti.length){ chiusuraFatta(L, x); continue; }
+        if(!tocca()) continue;
+        const testo = (await ic.multiget(L.cal, [L.href])).get(L.href); if(testo == null) continue;
+        const nuovo = chiusuraIcs(testo, x.togli, x.metti);
+        if(nuovo === null){ chiusuraFatta(L, x); continue; }
+        if(await ic.aggiorna(L.href, nuovo, ic.etag && ic.etag.get(L.href))){ chiusuraFatta(L, x); stat.cambiati++; }
       }
     }
 

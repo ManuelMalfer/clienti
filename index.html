@@ -2272,7 +2272,8 @@ function subscribe(){
     if(clienti.length && snap.metadata.hasPendingWrites && snap.docChanges().some(ch => (ch.type === "removed" || (() => {
       const p = clienti.find(c => c.id === ch.doc.id), n = ch.doc.data();
       return !p || p.ricontattare !== n.ricontattare || (p.ricontattareOra || "") !== (n.ricontattareOra || "") || (p.ricontattareModo || "") !== (n.ricontattareModo || "") || (p.ricontattareFine || "") !== (n.ricontattareFine || "") || p.nome !== n.nome ||
-        (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || "") || (p.orarioOrdineFine || "") !== (n.orarioOrdineFine || ""))); })()))) gcPresto();
+        (giroCollegato() && (String(p.giorniOrdine || "") !== String(n.giorniOrdine || "") || (p.orarioOrdine || "") !== (n.orarioOrdine || "") || (p.orarioOrdineFine || "") !== (n.orarioOrdineFine || "") ||
+          (p.chiusoDal || "") !== (n.chiusoDal || "") || (p.chiusoAl || "") !== (n.chiusoAl || ""))); })()))) gcPresto();
     clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     migraExClienti();
     renderAll();
@@ -4716,7 +4717,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.23 (v6.23)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.24 (v6.24)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
