@@ -6270,12 +6270,12 @@ function buildICS(list){
       const end = new Date(2000, 0, 1, h, m + 30);
       const pad = n => String(n).padStart(2, "0");
       L.push(`DTSTART:${d}T${pad(h)}${pad(m)}00`, `DTEND:${d}T${pad(end.getHours())}${pad(end.getMinutes())}00`);
-      L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:" + icsEsc("Richiamare " + c.nome),"TRIGGER:-PT15M","END:VALARM");
+      L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:" + icsEsc(c.nome),"TRIGGER:-PT15M","END:VALARM");
     } else {
       const next = new Date(c.ricontattare + "T12:00:00"); next.setDate(next.getDate() + 1);
       L.push(`DTSTART;VALUE=DATE:${d}`, `DTEND;VALUE=DATE:${localISO(next).replace(/-/g, "")}`);
     }
-    L.push("SUMMARY:" + icsEsc("Richiamare: " + c.nome));
+    L.push("SUMMARY:" + icsEsc(c.nome));
     const loc = [c.indirizzo, c.luogo].filter(Boolean).join(", ");
     if(loc) L.push("LOCATION:" + icsEsc(loc));
     L.push("DESCRIPTION:" + icsEsc(desc), "END:VEVENT");

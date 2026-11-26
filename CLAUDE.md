@@ -571,6 +571,10 @@ l'email del suo account Apple e una **password per app** (creata da lui su accou
   sync-token non valido, password revocata con Google che continua, scollega iCloud con Google che resta); prove solo-Google (40) e link .ics (18) ancora tutte ok;
   app con finto Firebase (collega con password e con Rosario, scelta calendario, impegni dei due servizi nel giorno, legenda, sincronizzazione dopo un cambio).
 - **Dopo la pubblicazione**: il codice del Worker `calendario` va incollato di nuovo su Cloudflare (nessun segreto nuovo: la password Apple la scrive Manuel nell'app).
+- **Titolo degli eventi (26/11/2026)**: su richiesta di Manuel gli appuntamenti dei clienti nel calendario (Google, iCloud, link .ics e "Scarica .ics" dell'app)
+  hanno come titolo **solo il nome del cliente** (con 📞/💼 se scelto), non più "Richiamare: <nome>" (`titoloApp`; anche l'avviso 15 minuti prima). Nella mappa
+  cliente→evento c'è il campo `t` (titolo scritto): se manca o è diverso da `titoloApp(c)` l'evento si riscrive (25 per giro, al giro completo ogni ora), così
+  si sistemano da soli gli eventi vecchi e anche quelli di un cliente rinominato. Prove: 132 su 132 (2 nuove sulla riscrittura degli eventi vecchi).
 - **Correzione 26/11/2026 (caso Sas Gris)**: un impegno singolo creato sull'iPhone non compariva nel Calendario dell'app. Causa: per ogni calendario da vedere
   il Worker teneva i primi 300 eventi nell'ordine in cui li dà iCloud (ordine dei file), e con il giro nello stesso calendario (una serie a settimana per
   cliente = decine di ripetizioni ciascuna nella finestra −14/+120 giorni) gli eventi creati per ultimi venivano tagliati. Ora in `b2` (c) prima si tolgono le
@@ -659,8 +663,8 @@ Il tasto rotondo **in basso a sinistra** è ora un **ingranaggio** (`#setBtn`, c
   altrimenti oggi), ora facoltativa, cliente con ricerca, nota facoltativa che va nello storico ("Appuntamento fissato per il …: nota"). Scrive
   `ricontattare`/`ricontattareOra` del cliente come "Appuntamento il" della scheda (un solo appuntamento per cliente: se ce n'è già uno l'app avvisa che
   viene spostato). Testi: "Richiami" → **Appuntamenti** nel Calendario (sezione del giorno, scaduti, legenda), "Richiama il" → **Appuntamento il** nella
-  scheda, chip delle righe "Appuntamento gg/mm"; gli eventi di Google si chiamano "Dal tuo Google Calendar". I nomi dei campi e il titolo degli eventi in
-  Google ("Richiamare: …", Worker calendario) non cambiano.
+  scheda, chip delle righe "Appuntamento gg/mm"; gli eventi di Google si chiamano "Dal tuo Google Calendar". I nomi dei campi non cambiano; dal 26/11/2026 il titolo degli eventi in
+  Google/iCloud è solo il nome del cliente (vedi "iCloud nei due sensi").
 - Reclami: "Inviato" ora è una cornice, "Da inviare" pieno (classe `rc-st inviato`).
 
 ## Tema chiaro/scuro e preferenze (v5.1)

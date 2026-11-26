@@ -5,7 +5,7 @@
 //  1) LINK .ics (sola lettura, per iPhone/iCloud o altri calendari): https://<worker>/cal/<uid>/<token>.ics
 //     token = codice casuale salvato dall'app in utenti/{uid}/impostazioni/calendario (campo "token").
 //  2) GOOGLE CALENDAR NEI DUE SENSI (v6.3): l'utente autorizza l'app sul suo account Google; da lì
-//     - ogni richiamo di un cliente diventa un evento nel calendario Google scelto ("Richiamare: <nome>");
+//     - ogni appuntamento di un cliente diventa un evento nel calendario Google scelto (titolo = nome del cliente, con 📞/💼 se c'è; fino al 26/11/2026 "Richiamare: <nome>");
 //     - se in Google l'evento viene spostato o cancellato, il richiamo del cliente si sposta o si toglie (riga nello storico);
 //     - gli appuntamenti dei calendari Google scelti si copiano (sola lettura) in utenti/{uid}/impostazioni/gcal_eventi
 //       e l'app li mostra nel Calendario.
@@ -204,7 +204,7 @@ export function creaCalendario(clienti, opz = {}){
       const h = +m[1], mi = +m[2], fine = h * 60 + mi + 30;
       L.push("DTSTART;TZID=Europe/Rome:" + d + "T" + pad(h) + pad(mi) + "00",
         fine < 24 * 60 ? "DTEND;TZID=Europe/Rome:" + d + "T" + pad(Math.floor(fine / 60)) + pad(fine % 60) + "00" : "DURATION:PT30M");
-      L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc("Richiamare " + (c.nome || "")), "TRIGGER:-PT15M", "END:VALARM");
+      L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc(c.nome || "Appuntamento"), "TRIGGER:-PT15M", "END:VALARM");
     } else L.push(...tuttoGiorno(c.ricontattare));
     L.push("SUMMARY:" + esc(titoloApp(c)));
     const luogo = [c.indirizzo, c.luogo].filter(Boolean).join(", ");
@@ -307,7 +307,9 @@ const chiaveCliente = c => c && c.ricontattare && /^\d{4}-\d{2}-\d{2}$/.test(c.r
   ? chiaveDa(c.ricontattare, /^\d{1,2}:\d{2}$/.test(c.ricontattareOra || "") ? c.ricontattareOra.padStart(5, "0") : "", c.ricontattareModo, oraNorm(c.ricontattareFine)) : "";
 // l'ora di fine scelta nell'app (se è dopo l'inizio), altrimenti mezz'ora
 const fineCliente = (c, o) => { const f = oraNorm(c.ricontattareFine); return f && f > o ? f : piuMezzora(o); };
-const titoloApp = c => ({ telefono: "📞 ", visita: "💼 " }[c.ricontattareModo] || "") + "Richiamare: " + (c.nome || "cliente");
+// titolo dell'evento: solo il nome del cliente (con l'icona del modo). Fino al 26/11/2026 era "Richiamare: <nome>": gli eventi già creati
+// si riscrivono da soli (campo t della mappa, sotto), 25 per giro, come quando cambia il nome del cliente.
+const titoloApp = c => ({ telefono: "📞 ", visita: "💼 " }[c.ricontattareModo] || "") + (c.nome || "cliente");
 function chiaveEvento(ev){
   if(!ev || !ev.start) return "";
   const m = modoDi(ev.summary || "");
@@ -424,13 +426,13 @@ export async function sincronizza(env, uid, opz = {}){
         if(k && k.slice(0, 10) < dal && !m) continue;            // richiami vecchi: non si creano
         if(k && !m){
           if(!tocca()) continue;
-          mappa[c.id] = { ev: await creaEvento(g, S.calId, c), k }; stat.creati++;
-        } else if(k && m && k !== m.k){
+          mappa[c.id] = { ev: await creaEvento(g, S.calId, c), k, t: titoloApp(c) }; stat.creati++;
+        } else if(k && m && (k !== m.k || m.t !== titoloApp(c))){       // cambiato giorno/ora, o il titolo (nome del cliente)
           if(!tocca()) continue;
-          try { await g.chiama("PUT", cal(S.calId) + "/events/" + encodeURIComponent(m.ev), corpoEvento(c)); m.k = k; stat.cambiati++; }
+          try { await g.chiama("PUT", cal(S.calId) + "/events/" + encodeURIComponent(m.ev), corpoEvento(c)); m.k = k; m.t = titoloApp(c); stat.cambiati++; }
           catch(e){
             if(e.google !== 404 && e.google !== 410) throw e;
-            mappa[c.id] = { ev: await creaEvento(g, S.calId, c), k }; stat.creati++;
+            mappa[c.id] = { ev: await creaEvento(g, S.calId, c), k, t: titoloApp(c) }; stat.creati++;
           }
         } else if(!k && m){
           if(!tocca()) continue;
@@ -698,7 +700,7 @@ function icsCliente(c){
   const luogo = [c.indirizzo, c.luogo].filter(Boolean).join(", ");
   if(luogo) L.push("LOCATION:" + esc(luogo));
   L.push("DESCRIPTION:" + esc(descrizione(c)));
-  if(o) L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc("Richiamare " + (c.nome || "")), "TRIGGER:-PT15M", "END:VALARM");
+  if(o) L.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + esc(c.nome || "Appuntamento"), "TRIGGER:-PT15M", "END:VALARM");
   L.push("END:VEVENT", "END:VCALENDAR");
   return L.map(piega).join("\r\n") + "\r\n";
 }
@@ -1198,9 +1200,9 @@ export async function sincronizzaICloud(env, uid, opz = {}){
       for(const c of clienti){
         const k = chiaveCliente(c), m = mappa[c.id];
         if(k && k.slice(0, 10) < dal && !m) continue;
-        if(k && (!m || k !== m.k)){
+        if(k && (!m || k !== m.k || m.t !== titoloApp(c))){            // nuovo, cambiato giorno/ora, o il titolo (nome del cliente)
           if(!tocca()) continue;
-          mappa[c.id] = { ev: await ic.metti(I.calId, c), k };
+          mappa[c.id] = { ev: await ic.metti(I.calId, c), k, t: titoloApp(c) };
           if(m) stat.cambiati++; else stat.creati++;
         } else if(!k && m){
           if(!tocca()) continue;
