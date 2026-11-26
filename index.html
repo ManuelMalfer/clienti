@@ -4716,7 +4716,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.22 (v6.22)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.23 (v6.23)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4765,7 +4765,9 @@ function renderGiro(){
   const giornoCons = DAYS[(ui.giro + 1) % DAYS.length];     // gli ordini raccolti oggi si consegnano il giorno dopo (sabato -> lunedì)
   const isoCons = giroData(ui.giro + (ui.giro === 5 ? 2 : 1));   // data della consegna (dopo il sabato: il lunedì)
   const cons = clienti.filter(c => (c.giorniConsegna||[]).includes(giornoCons) && !chiusoIl(c, isoCons));
-  const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day) && !chiusoIl(c, iso)).sort(byPlace);
+  // ordini in ordine di orario (ora della voce del giro per quel giorno, altrimenti orarioOrdine; senza orario preciso in fondo), poi per località e nome (v6.23)
+  const oraOrd = c => { const e = (c.giro || []).find(x => x.g === day); return ooOra((e && e.ora) || c.orarioOrdine) || "99:99"; };
+  const ord = clienti.filter(c => (c.giorniOrdine||[]).includes(day) && !chiusoIl(c, iso)).sort((a, b) => oraOrd(a).localeCompare(oraOrd(b)) || byPlace(a, b));
   $("#giroLbl").textContent = day;
 
   // mappa: verde dove quel giorno si consegna, giallo dove no (segue il giorno scelto, di base oggi)
@@ -4809,7 +4811,8 @@ function renderGiro(){
 function giroRichiamiHTML(iso, day){
   const oggi = localISO(), scad = iso === giroData(todayIdx);   // gli scaduti compaiono nel giorno corrente (la domenica: lunedì)
   const lista = clienti.filter(c => c.ricontattare && (c.ricontattare === iso || (scad && c.ricontattare < oggi)))
-    .sort((a, b) => (a.ricontattare + (a.ricontattareOra || "99")).localeCompare(b.ricontattare + (b.ricontattareOra || "99")));
+    // prima gli scaduti (per data), poi per orario (in giornata senza ora in fondo), a parità di orario per nome (v6.23)
+    .sort((a, b) => a.ricontattare.localeCompare(b.ricontattare) || (ooOra(a.ricontattareOra) || "99:99").localeCompare(ooOra(b.ricontattareOra) || "99:99") || (a.nome || "").localeCompare(b.nome || "", "it"));
   const side = c => `<span class="flag ${c.ricontattare < oggi ? "late" : ""}">${c.ricontattare < oggi ? fmtDate(c.ricontattare).slice(0, 5) : ""}${c.ricontattareOra ? (c.ricontattare < oggi ? "<br>" : "") + "ore " + c.ricontattareOra : ""}</span>`;
   const vuoto = `Nessun appuntamento il ${esc(day.toLowerCase())}${scad ? " (né scaduti)" : ""}.`;
   return `<h2 class="sec giro-rich-t">Appuntamenti <small>${lista.length}</small></h2>
