@@ -940,6 +940,12 @@ body.pv-open .tema-btn{display:none}
 .giro-tip{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
 .cn-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 0 8px;font-size:13px;color:var(--muted)}
 .cn-list{margin-bottom:18px}
+.cn-testa{margin-top:22px}
+.cn-tog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cn-tog small{margin-left:4px}
+.cn-tog-t{margin-left:auto;font-size:13px;font-weight:600;color:var(--accent)}
+.cn-frecc{flex:none;transition:transform .15s}
+.cn-tog[aria-expanded="false"] .cn-frecc{transform:rotate(-90deg)}
 .cn-st{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .cn-st.ok{background:color-mix(in srgb,var(--st-cliente) 16%,transparent);color:var(--st-cliente)}
 .cn-st.ko{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
@@ -4767,7 +4773,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.30 (v6.30)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.31 (v6.31)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4852,10 +4858,10 @@ function renderGiro(){
     </li>`;
   };
   $("#giroBody").innerHTML = `<div class="giro-grid">${mappa}<section class="giro-ord">
-    ${cnHTML(iso)}
     <h2 class="sec">Ordini da raccogliere <small>${ord.length ? fatti + " di " + ord.length : "0"}</small></h2>
     ${ord.length ? `<p class="giro-tip">Tocca il cerchio del cliente per segnare l'ordine come raccolto.</p>` : ""}
     <ul class="list">${ord.map(ordRow).join("") || `<li class="empty">Nessun ordine da raccogliere il ${day.toLowerCase()}.</li>`}</ul>
+    ${cnHTML(iso)}
     ${giroRichiamiHTML(iso, day)}
   </section></div>`;
 }
@@ -4897,10 +4903,11 @@ function cnCliente(r){
   for(const c of clienti){ const p = cnPunti(r, c); if(p > bp){ bp = p; best = c; } }
   return bp >= 60 ? best : null;
 }
+const cnTesta = conta => `<h2 class="sec cn-testa"><button type="button" class="cn-tog" data-cntog aria-expanded="${!pref.cnChiusa}" title="${pref.cnChiusa ? "Mostra" : "Nascondi"} le consegne"><svg class="cn-frecc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>In consegna${conta ? ` <small>${conta}</small>` : ""}<span class="cn-tog-t">${pref.cnChiusa ? "Mostra" : "Nascondi"}</span></button></h2>`;
 function cnHTML(iso){
   const oggi = localISO();
   // la sezione c'è in tutti i giorni del Giro; LAC però mostra solo le consegne del giorno stesso
-  if(!cons.collegato) return `<h2 class="sec">In consegna</h2><div class="cn-vuoto"><p>Collega il tuo accesso LAC (InTime) per vedere qui, per ogni cliente, se la merce è già stata consegnata e dov’è il camion.</p><button class="btn btn-primary" type="button" data-cnset>Collega l’accesso LAC</button></div>`;
+  if(!cons.collegato) return cnTesta("") + (pref.cnChiusa ? "" : `<div class="cn-vuoto"><p>Collega il tuo accesso LAC (InTime) per vedere qui, per ogni cliente, se la merce è già stata consegnata e dov’è il camion.</p><button class="btn btn-primary" type="button" data-cnset>Collega l’accesso LAC</button></div>`);
   const righe = (cons.righe || []).filter(r => r.giorno === iso)
     .sort((a, b) => (a.da || "99:99").localeCompare(b.da || "99:99") || (a.cliente || "").localeCompare(b.cliente || "", "it"));
   const gg = (CAL_GIORNI[new Date(iso + "T12:00:00").getDay()] || "").toLowerCase();
@@ -4924,7 +4931,8 @@ function cnHTML(iso){
       : `<button class="icon-btn${c ? "" : " cn-nuovo"}" type="button" data-cnlink="${i}" aria-label="${c ? "Cambia il cliente collegato" : "Collega a un cliente"}" title="${c ? "Cambia il cliente collegato" : "Collega a un cliente"}">${anello}</button>`;
     return `<li class="giro-li cn-li cn-${st}"><div class="giro-main">${main}</div>${btn}</li>`;
   };
-  return `<h2 class="sec">In consegna <small>${righe.length ? fatte + " di " + righe.length + " consegnate" : "0"}</small></h2>
+  if(pref.cnChiusa) return cnTesta(righe.length ? fatte + " di " + righe.length + " consegnate" : "0");
+  return cnTesta(righe.length ? fatte + " di " + righe.length + " consegnate" : "0") + `
     <div class="cn-bar"><span>${cons.agg ? "Da LAC, aggiornato " + esc(gcQuando(cons.agg)) : "Non ancora letto da LAC"}</span><button class="chip-btn" type="button" data-cnsync>Sincronizza</button></div>
     ${cons.errore ? `<p class="gc-st err">LAC: ${esc(cons.errore)}${/password|accesso/i.test(cons.errore) ? ` <button class="chip-btn" type="button" data-cnset>Accesso LAC</button>` : ""}</p>` : ""}
     <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">${vuoto}${cons.diag && iso === oggi ? `<small class="cn-diag">Dettagli per Claude: ${esc(cons.diag)}</small>` : ""}</li>`}</ul>`;
@@ -4966,6 +4974,11 @@ function cnMappa(r){
   setTimeout(() => { cnMapObj.invalidateSize(); if(pts.length > 1) cnMapObj.fitBounds(pts, { padding: [36, 36], maxZoom: 14 }); else cnMapObj.setView(r.pos, 13); }, 80);
 }
 $("#giroBody").addEventListener("click", e => {
+  if(e.target.closest("[data-cntog]")){
+    pref.cnChiusa = !pref.cnChiusa;
+    if(uid) setDoc(prefRef(), { cnChiusa: pref.cnChiusa }, { mergeFields: ["cnChiusa"] }).catch(fail);
+    renderGiro(); return;
+  }
   if(e.target.closest("[data-cnset]")){ cnApri(); return; }
   const s = e.target.closest("[data-cnsync]"); if(s){ cnSync(s); return; }
   const p = e.target.closest("[data-cnpos]"); if(p){ cnMappa(cnVis[+p.dataset.cnpos]); return; }
