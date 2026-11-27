@@ -2091,7 +2091,7 @@ dialog.rc-dlg{max-width:720px}
   <div class="dlg">
     <div class="dlg-head"><h2 id="nvAppT">Approva il prodotto<span class="sub" id="nvAppSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
-      <p class="pv-hint">Il prodotto passa negli <b>Articoli</b> per tutti gli account, come gli altri: nome, codice, foto e scheda tecnica (senza prezzo, provvigione e descrizione), ed esce dalle Novità.</p>
+      <p class="pv-hint">Approvando confermi di aver letto la novità: il prodotto esce dalle tue Novità e passa nei tuoi <b>Articoli</b>, come gli altri (nome, codice, foto e scheda tecnica; senza prezzo, provvigione e descrizione). Gli altri account lo vedranno negli Articoli quando lo approvano loro.</p>
       <label class="field"><span>Nome</span><input class="input" id="nvAppNome" autocomplete="off"></label>
       <label class="field"><span>Categoria</span><select class="input" id="nvAppTop"></select></label>
       <label class="field"><span>Sottocategoria</span><select class="input" id="nvAppSubcat"></select></label>
@@ -4819,12 +4819,12 @@ temaApplica("");
    La notifica la riceve sw.js (service worker, solo notifiche: niente cache). */
 const VAPID_PUB = "BDc_OTuqO0ZOCMYP2bhhQAL6livBICRdV4tl5jcKPMiiREKuql3Rql77JBrI5lLxNmd2TVvegclzo0Xxv0B8fFo";
 let novita = [], unsubNov = null, novPrima = true, prefPronto = false;
-let unsubExtra = null, nvPuoApprovare = false;
+let unsubExtra = null;
+const nvPuoApprovare = true;                           // ogni account approva (= ha letto) le sue novità
 function subscribeNovita(){
   if(unsubNov || !uid) return;
   novPrima = true;
-  getDoc(doc(db, "utenti", uid, "impostazioni", "novita")).then(s => { nvPuoApprovare = s.exists() && !!s.data().token; if(ui.view === "articoli") renderArticoli(); }).catch(() => {});
-  unsubExtra = onSnapshot(collection(db, "utenti", uid, "articoli_extra"), s => { art.extra = s.docs.map(d => d.data()); artUnisci(); if(ui.view === "articoli") renderArticoli(); }, () => {});
+  unsubExtra = onSnapshot(collection(db, "utenti", uid, "articoli_extra"), s => { art.extra = s.docs.map(d => d.data()); artUnisci(); nvBadge(); if(ui.view === "articoli") renderArticoli(); }, () => {});
   unsubNov = onSnapshot(collection(db, "utenti", uid, "novita"), s => {
     novita = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.ricevuto || b.creato || "").localeCompare(a.ricevuto || a.creato || "") || (+b.spId || 0) - (+a.spId || 0));
     if(novPrima && !s.metadata.fromCache){ novPrima = false; if(!novita.length) gcChiama("allinea", {}, "push").catch(() => {}); }
@@ -4836,8 +4836,8 @@ function nvInit(){
   if(!prefPronto || pref.novitaViste !== undefined || !novita.length) return;
   prefSalva({ novitaViste: novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "") });
 }
-function unsubscribeNovita(){ if(unsubExtra){ unsubExtra(); unsubExtra = null; } art.extra = []; nvPuoApprovare = false; if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; nvFotoCache.clear(); prefPronto = false; novImp = null; nvBadge(); }
-const nvAttive = () => novita.filter(n => !n.approvato);                       // quelle approvate sono già negli Articoli
+function unsubscribeNovita(){ if(unsubExtra){ unsubExtra(); unsubExtra = null; } art.extra = []; if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; nvFotoCache.clear(); prefPronto = false; novImp = null; nvBadge(); }
+const nvAttive = () => { const fatte = new Set((art.extra || []).map(e => String(e.spId))); return novita.filter(n => !fatte.has(String(n.spId))); };   // approvate da questo account: già nei suoi Articoli
 const nvNuove = () => nvAttive().filter(n => (n.ricevuto || "") > (pref.novitaViste || "")).length;
 function nvBadge(){ const b = $("#nvNum"); if(!b) return; const n = nvNuove(); b.textContent = n; b.classList.toggle("hidden", !n); }
 const nvStella = n => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
@@ -4907,8 +4907,10 @@ $("#nvAppOk").addEventListener("click", async () => {
   if(t === ""){ toast("Scegli la categoria"); return; }
   b.disabled = true; b.textContent = "Approvo…";
   try {
-    await gcChiama("approva", { spId: nvAppId, top: D.top[+t], sub: s === "" ? "" : D.sub[+s].n, nome: $("#nvAppNome").value.trim() }, "push");
-    $("#dlgNvApp").close(); toast("Approvato: ora è negli Articoli, in " + tgtTit(D.top[+t]), 4000);
+    const n = novita.find(x => x.spId === nvAppId) || {};
+    await setDoc(doc(db, "utenti", uid, "articoli_extra", "sp" + nvAppId), { spId: String(nvAppId), c: n.codice || "", n: $("#nvAppNome").value.trim() || n.desc || "", top: D.top[+t],
+      sub: s === "" ? "" : D.sub[+s].n, foto: !!n.foto, scheda: !!n.scheda, agg: nowISO(), approvato: nowISO() });
+    $("#dlgNvApp").close(); toast("Letta e approvata: ora è nei tuoi Articoli, in " + tgtTit(D.top[+t]), 4000);
   } catch(err){ toast("Approvazione non riuscita: " + err.message, 8000); }
   finally { b.disabled = false; b.textContent = "Approva"; }
 });
@@ -5034,7 +5036,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.34 (v6.34)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.35 (v6.35)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
