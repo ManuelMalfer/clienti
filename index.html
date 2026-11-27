@@ -957,6 +957,8 @@ body.pv-open .tema-btn{display:none}
 .nv-info{margin:7px 0 0;font-size:13px;color:var(--muted);white-space:pre-line}
 .nv-az{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .nv-az .chip-btn{text-decoration:none}
+.nv-gia{color:inherit;background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:10px;padding:10px 12px}
+.nv-txt .nv-gia-tag{color:var(--accent);font-weight:600}
 .nv-az .nv-ok{color:var(--st-cliente);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--st-cliente) 55%,transparent);font-weight:700}
 .nov-url{display:flex;gap:8px;margin:6px 0 4px}
 .nov-url .input{flex:1;min-width:0;font-size:12.5px}
@@ -2092,9 +2094,12 @@ dialog.rc-dlg{max-width:720px}
     <div class="dlg-head"><h2 id="nvAppT">Approva il prodotto<span class="sub" id="nvAppSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body">
       <p class="pv-hint">Approvando confermi di aver letto la novità: il prodotto esce dalle tue Novità e passa nei tuoi <b>Articoli</b>, come gli altri (nome, codice, foto e scheda tecnica; senza prezzo, provvigione e descrizione). Gli altri account lo vedranno negli Articoli quando lo approvano loro.</p>
+      <p class="gc-st nv-gia hidden" id="nvAppGia"></p>
+      <div id="nvAppCampi">
       <label class="field"><span>Nome</span><input class="input" id="nvAppNome" autocomplete="off"></label>
       <label class="field"><span>Categoria</span><select class="input" id="nvAppTop"></select></label>
       <label class="field"><span>Sottocategoria</span><select class="input" id="nvAppSubcat"></select></label>
+      </div>
       <p class="pv-hint" id="nvAppPerche"></p>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="button" id="nvAppOk">Approva</button></div>
@@ -4492,25 +4497,39 @@ async function artCarica(){
 function artUnisci(){
   const D = art.dati; if(!D || !Array.isArray(D.a)) return;
   D.a = D.a.filter(x => !x.ex);
+  D.a.forEach(x => { delete x.exFoto; delete x.exScheda; });
   (art.extra || []).forEach(e => {
+    if(e.ignorato) return;                                   // stesso codice di un articolo che c'era già: solo letta
     let t = D.top.findIndex(n => norm(n) === norm(e.top)); if(t < 0) return;
     const s = D.sub.findIndex(o => o.t === t && norm(o.n) === norm(e.sub));
-    D.a.push({ i: -(+e.spId || 0), c: e.c || "", n: e.n || "", t, s, b: "", d: "", m: "", f: e.foto ? 1 : 0, ex: String(e.spId), sch: !!e.scheda });
+    D.a.push({ i: -(+e.spId || 0), c: e.c || "", n: e.n || "", t, s, b: "", d: "", m: "", f: e.foto ? 1 : 0, ex: String(e.spId), sch: !!e.scheda,
+      fotoSp: String(e.fotoSp || e.spId), schedaSp: String(e.schedaSp || e.spId) });
+  });
+  // foto e scheda prese da una novità "letta" per un articolo del catalogo Marchi che non le aveva (v6.36)
+  (art.extra || []).forEach(e => {
+    if(!e.ignorato || !(e.fotoSp || e.schedaSp)) return;
+    const k = String(e.c || "").trim(); if(!k) return;
+    const x = D.a.find(y => !y.ex && (String(y.c || "").trim() === k || String(y.c || "").trim().replace(/^0+/, "") === k.replace(/^0+/, "")));
+    if(!x) return;
+    if(e.fotoSp && x.f === 0) x.exFoto = String(e.fotoSp);
+    if(e.schedaSp) x.exScheda = String(e.schedaSp);
   });
   art.idx = D.a.map(x => " " + artNorm([x.c, String(x.c || "").replace(/^0+/, ""), x.n, x.b, x.d, x.m, D.top[x.t], x.s >= 0 ? D.sub[x.s].n : ""].join(" ")) + " ");
   art.perCodice = new Map();
   D.a.forEach(x => { const k = String(x.c || "").trim(); if(!k) return; if(!art.perCodice.has(k)) art.perCodice.set(k, x); const k2 = "~" + k.replace(/^0+/, ""); if(!art.perCodice.has(k2)) art.perCodice.set(k2, x); });
 }
-const artHaScheda = x => x.ex ? !!x.sch : !!(art.schede && x.c && art.schede.has(String(x.c).trim()));
+const artHaSchedaR2 = x => !!(art.schede && x.c && art.schede.has(String(x.c).trim()));
+const artHaScheda = x => x.ex ? !!x.sch : (artHaSchedaR2(x) || !!x.exScheda);
 function artScheda(x){
   if(!artHaScheda(x)) return;
-  if(x.ex){ if($("#dlgArt").open) $("#dlgArt").close(); nvApriScheda(x.ex, x.n, x.c ? "Cod. " + x.c : ""); return; }
+  if(x.ex || !artHaSchedaR2(x)){ if($("#dlgArt").open) $("#dlgArt").close(); nvApriScheda(x.ex ? x.schedaSp || x.ex : x.exScheda, x.n, x.c ? "Cod. " + x.c : ""); return; }
   if($("#dlgArt").open) $("#dlgArt").close();
   catApri({ file: art.schedeBase + "/" + encodeURIComponent(String(x.c).trim()) + ".pdf.enc", titolo: "Scheda tecnica · " + x.n, fornitore: "Cod. " + x.c });
 }
 const artFoto = x => x.f === 0 ? "" : `articoli/img/${x.i}.jpg`;
 const NV_PIX = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-const artImg = (x, cls) => x.ex && x.f ? `<img class="${cls}" data-nvfoto="sp${esc(x.ex)}" src="${NV_PIX}" alt="">` : x.f === 0
+const artImg = (x, cls) => x.ex && x.f ? `<img class="${cls}" data-nvfoto="sp${esc(x.fotoSp || x.ex)}" src="${NV_PIX}" alt="">`
+  : x.f === 0 && x.exFoto ? `<img class="${cls}" data-nvfoto="sp${esc(x.exFoto)}" src="${NV_PIX}" alt="">` : x.f === 0
   ? `<span class="${cls} ar-nofoto" aria-hidden="true">${catIcona}</span>`
   : `<img class="${cls}" src="${artFoto(x)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} ar-nofoto'}))">`;
 function artFiltrati(){ return artTrova(art.q, art.top, art.sub); }
@@ -4576,7 +4595,7 @@ function artApri(id){
   const D = art.dati, x = D && D.a.find(y => y.i === id); if(!x) return;
   const percorso = [artCat(D.top[x.t]), x.s >= 0 ? artCat(D.sub[x.s].n) : ""].filter(Boolean).join(" › ");
   $("#artT").textContent = x.n;
-  $("#artBody").innerHTML = `${x.f === 0 ? `<div class="ar-big ar-nofoto">${catIcona}</div>` : x.ex ? `<img class="ar-big" data-nvfoto="sp${esc(x.ex)}" src="${NV_PIX}" alt="${esc(x.n)}">` : `<img class="ar-big" src="${artFoto(x)}" alt="${esc(x.n)}">`}
+  $("#artBody").innerHTML = `${x.f === 0 && x.exFoto ? `<img class="ar-big" data-nvfoto="sp${esc(x.exFoto)}" src="${NV_PIX}" alt="${esc(x.n)}">` : x.f === 0 ? `<div class="ar-big ar-nofoto">${catIcona}</div>` : x.ex ? `<img class="ar-big" data-nvfoto="sp${esc(x.fotoSp || x.ex)}" src="${NV_PIX}" alt="${esc(x.n)}">` : `<img class="ar-big" src="${artFoto(x)}" alt="${esc(x.n)}">`}
     <dl class="info">
       ${x.c ? `<dt>Codice</dt><dd><b style="font-size:17px">${esc(x.c)}</b> <button type="button" class="chip-btn" data-arcopia="${esc(x.c)}">Copia</button></dd>` : ""}
       <dt>Categoria</dt><dd>${esc(percorso)}</dd>
@@ -4889,6 +4908,13 @@ function nvAppSubs(t, s){
   const D = art.dati;
   $("#nvAppSubcat").innerHTML = `<option value="">(nessuna)</option>` + D.sub.map((o, k) => o.t === t ? `<option value="${k}"${k === s ? " selected" : ""}>${esc(artCat(o.n))}</option>` : "").join("");
 }
+// articolo con lo stesso codice già negli Articoli (v6.36): anche senza zeri iniziali; null se non c'è
+function nvGiaPresente(codice){
+  const k = String(codice || "").trim(); if(!k || !art.perCodice) return null;
+  return art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")) || null;
+}
+let nvAppGia = null, nvAppPorta = { foto: false, scheda: false };
+const nvManca = (x, n) => ({ foto: !!n.foto && (x.ex ? !x.f : x.f === 0 && !x.exFoto), scheda: !!n.scheda && !artHaScheda(x) });
 async function nvApprovaApri(spId){
   if(!art.dati){ await artCarica(); if(!art.dati){ toast("Catalogo non disponibile: riprova"); return; } }
   const n = novita.find(x => x.spId === spId); if(!n) return;
@@ -4899,11 +4925,41 @@ async function nvApprovaApri(spId){
   $("#nvAppTop").innerHTML = (g.t < 0 ? `<option value="">Scegli la categoria…</option>` : "") + D.top.map((x, t) => `<option value="${t}"${t === g.t ? " selected" : ""}>${esc(tgtTit(x))}</option>`).join("");
   nvAppSubs(g.t, g.s);
   $("#nvAppPerche").textContent = g.perche;
+  nvAppGia = nvGiaPresente(n.codice);
+  const dove = nvAppGia ? [tgtTit(D.top[nvAppGia.t]), nvAppGia.s >= 0 ? artCat(D.sub[nvAppGia.s].n) : ""].filter(Boolean).join(" › ") : "";
+  nvAppPorta = nvAppGia ? nvManca(nvAppGia, n) : { foto: false, scheda: false };
+  const porta = [nvAppPorta.foto && "la foto", nvAppPorta.scheda && "la scheda tecnica"].filter(Boolean).join(" e ");
+  $("#nvAppGia").innerHTML = nvAppGia ? `Il codice <b>${esc(n.codice)}</b> c’è già negli Articoli: <b>${esc(nvAppGia.n)}</b> (${esc(dove)}). Si tiene quello che c’era: la novità viene segnata come letta${porta ? ` e all’articolo si aggiunge <b>${porta}</b>, che non aveva.` : "."}` : "";
+  $("#nvAppGia").classList.toggle("hidden", !nvAppGia);
+  $("#nvAppCampi").classList.toggle("hidden", !!nvAppGia); $("#nvAppPerche").classList.toggle("hidden", !!nvAppGia);
+  $("#nvAppOk").textContent = nvAppGia ? "Segna come letta" : "Approva";
   $("#dlgNvApp").showModal();
 }
 $("#nvAppTop").addEventListener("change", e => nvAppSubs(+e.target.value, -1));
 $("#nvAppOk").addEventListener("click", async () => {
-  const D = art.dati, t = $("#nvAppTop").value, s = $("#nvAppSubcat").value, b = $("#nvAppOk");
+  const D = art.dati, t = $("#nvAppTop").value, s = $("#nvAppSubcat").value, b = $("#nvAppOk"), testo = b.textContent;
+  if(nvAppGia){
+    b.disabled = true; b.textContent = "Salvo…";
+    try {
+      const n = novita.find(x => x.spId === nvAppId) || {};
+      // segnata come letta, senza nuovo articolo (ignorato): l'articolo che c'era resta, ma prende foto/scheda che gli mancano
+      const segno = { spId: String(nvAppId), c: n.codice || "", n: n.desc || "", ignorato: true, gia: nvAppGia.n || "", agg: nowISO(), approvato: nowISO() };
+      if(nvAppGia.ex){
+        const piu = {};
+        if(nvAppPorta.foto){ piu.foto = true; piu.fotoSp = String(nvAppId); }
+        if(nvAppPorta.scheda){ piu.scheda = true; piu.schedaSp = String(nvAppId); }
+        if(Object.keys(piu).length) await setDoc(doc(db, "utenti", uid, "articoli_extra", "sp" + nvAppGia.ex), { ...piu, agg: nowISO() }, { merge: true });
+      } else {
+        if(nvAppPorta.foto) segno.fotoSp = String(nvAppId);
+        if(nvAppPorta.scheda) segno.schedaSp = String(nvAppId);
+      }
+      await setDoc(doc(db, "utenti", uid, "articoli_extra", "sp" + nvAppId), segno);
+      const porta = [nvAppPorta.foto && "la foto", nvAppPorta.scheda && "la scheda tecnica"].filter(Boolean).join(" e ");
+      $("#dlgNvApp").close(); toast(porta ? "Novità letta: a " + nvAppGia.n + " si aggiunge " + porta : "Novità letta: negli Articoli resta " + nvAppGia.n, 4500);
+    } catch(err){ toast("Non riuscito: " + err.message, 8000); }
+    finally { b.disabled = false; b.textContent = testo; }
+    return;
+  }
   if(t === ""){ toast("Scegli la categoria"); return; }
   b.disabled = true; b.textContent = "Approvo…";
   try {
@@ -4912,7 +4968,7 @@ $("#nvAppOk").addEventListener("click", async () => {
       sub: s === "" ? "" : D.sub[+s].n, foto: !!n.foto, scheda: !!n.scheda, agg: nowISO(), approvato: nowISO() });
     $("#dlgNvApp").close(); toast("Letta e approvata: ora è nei tuoi Articoli, in " + tgtTit(D.top[+t]), 4000);
   } catch(err){ toast("Approvazione non riuscita: " + err.message, 8000); }
-  finally { b.disabled = false; b.textContent = "Approva"; }
+  finally { b.disabled = false; b.textContent = testo; }
 });
 const nvEuro = x => Number(x).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
 function nvTile(){
@@ -4935,6 +4991,7 @@ function nvHTML(){
     return `<article class="nv-card${nuova ? " nuova" : ""}">${n.foto ? `<img class="nv-foto" data-nvfoto="${esc(n.id)}" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7">` : x && x.f !== 0 ? `<img class="nv-foto" src="${artFoto(x)}" alt="" loading="lazy">` : `<span class="nv-foto nv-nofoto">${catIcona}</span>`}
       <div class="nv-txt"><b>${nuova ? '<span class="nv-nuovo">Nuovo</span> ' : ""}${esc(n.desc || "")}</b>
         <small>${[k && "Cod. " + esc(k), n.cat && esc(n.cat), n.sett && "Settimana " + esc(n.sett)].filter(Boolean).join(" · ")}</small>
+        ${x ? (() => { const m = nvManca(x, n), p = [m.foto && "la foto", m.scheda && "la scheda tecnica"].filter(Boolean).join(" e "); return `<small class="nv-gia-tag">Codice già negli Articoli: approvando si tiene quello${p ? " e gli si aggiunge " + p : ""}</small>`; })() : ""}
         <div class="nv-pill">${n.arrivo ? `<span>Arriva il ${fmtDate(n.arrivo)}</span>` : ""}${n.prezzo != null ? `<span>${nvEuro(n.prezzo)}</span>` : ""}${n.provv != null ? `<span>Provv. ${String(Math.round(n.provv * 1000) / 10).replace(".", ",")}%</span>` : ""}</div>
         ${n.info ? `<p class="nv-info">${esc(n.info)}</p>` : ""}
         <div class="nv-az">${n.scheda ? `<button class="chip-btn" type="button" data-nvscheda="${esc(n.spId)}">Scheda tecnica</button>` : ""}${x ? `<button class="chip-btn" type="button" data-art="${x.i}">Scheda articolo</button>` : ""}${nvPuoApprovare ? `<button class="chip-btn nv-ok" type="button" data-nvapprova="${esc(n.spId)}">✓ Approva</button>` : ""}</div></div></article>`; }).join("")}</div>`;
@@ -5036,7 +5093,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.35 (v6.35)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.36 (v6.36)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
