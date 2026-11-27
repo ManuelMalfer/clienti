@@ -2451,7 +2451,7 @@ function filtered(){
 
 function richiamoTag(c){
   if(!c.ricontattare) return "";
-  const late = c.ricontattare < localISO();
+  const late = false;                                    // dalla v6.29 un appuntamento passato non è più "scaduto"
   return `<span class="flag riga-richiamo ${late ? "late" : ""}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Appuntamento ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
 }
 const inizialiDi = n => {
@@ -4766,7 +4766,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.28 (v6.28)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.29 (v6.29)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4858,9 +4858,9 @@ function renderGiro(){
     ${giroRichiamiHTML(iso, day)}
   </section></div>`;
 }
-// appuntamenti (richiami) del giorno scelto, di clienti con qualsiasi stato; nel giorno corrente anche quelli scaduti
+// appuntamenti (richiami) del giorno scelto, di clienti con qualsiasi stato
 function giroRichiamiHTML(iso, day){
-  const oggi = localISO(), scad = iso === giroData(todayIdx);   // gli scaduti compaiono nel giorno corrente (la domenica: lunedì)
+  const oggi = localISO(), scad = false;   // dalla v6.29 gli appuntamenti passati restano nel loro giorno (prima: nel giorno corrente come scaduti)
   const lista = clienti.filter(c => c.ricontattare && (c.ricontattare === iso || (scad && c.ricontattare < oggi)))
     // prima gli scaduti (per data), poi per orario (in giornata senza ora in fondo), a parità di orario per nome (v6.23)
     .sort((a, b) => a.ricontattare.localeCompare(b.ricontattare) || (ooOra(a.ricontattareOra) || "99:99").localeCompare(ooOra(b.ricontattareOra) || "99:99") || (a.nome || "").localeCompare(b.nome || "", "it"));
@@ -5038,7 +5038,7 @@ $("#daysStrip").addEventListener("click", e => { const b = e.target.closest("[da
 function renderRichiami(){
   const t = localISO();
   const all = clienti.filter(c => c.ricontattare).sort((a,b) => (a.ricontattare + (a.ricontattareOra || "99")).localeCompare(b.ricontattare + (b.ricontattareOra || "99")));
-  const due = all.filter(c => c.ricontattare <= t).length;
+  const due = all.filter(c => c.ricontattare === t).length;      // numero sul Calendario: appuntamenti di oggi (dalla v6.29 non più i passati)
   const num = $("#richNum"); num.textContent = due; num.classList.toggle("hidden", !due);
   if(ui.view !== "richiami") return;
   renderCalendario(all, t);
@@ -5057,7 +5057,7 @@ function renderCalendario(all, t){
   if(!ui.calMese) ui.calMese = t.slice(0, 7);
   const [Y, M] = ui.calMese.split("-").map(Number);
   $("#calMese").textContent = CAL_MESI[M - 1] + " " + Y;
-  const scad = all.filter(c => c.ricontattare < t);
+  const scad = [];                                    // dalla v6.29 niente "scaduti"
   $("#calScad").textContent = scad.length + (scad.length === 1 ? " scaduto" : " scaduti");
   $("#calScad").classList.toggle("hidden", !scad.length);
   const prossimi = all.filter(c => c.ricontattare >= t).length;
