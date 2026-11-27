@@ -4473,6 +4473,8 @@ $("#uniLega").addEventListener("click", async () => {
 const art = { dati: null, stato: "idle", q: "", top: -1, sub: -1, mostra: 60, idx: [], vista: "box" };   // vista: "box" (riquadri) | "elenco"
 const artCat = s => { const t = String(s || "").toLowerCase().trim(); return t.charAt(0).toUpperCase() + t.slice(1); };   // "OLI E CONDIMENTI" -> "Oli e condimenti"
 const artNorm = s => deaccent(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const ART_CAT_EXTRA = ["DOLCI STAGIONALI"];        // v6.37: categorie in più negli Articoli (scelte da Manuel)
+const ART_STAGIONALI = /\b(pandor|panetton|colomb|torron|pandorin|uov[ao] di pasqua|stagional|natal|pasqu)/i;
 async function artCarica(){
   if(art.stato === "carico" || art.stato === "ok") return;
   art.stato = "carico"; renderArticoli();
@@ -4482,6 +4484,7 @@ async function artCarica(){
     const r = await fetch("articoli.json", { cache: "no-cache" });
     if(!r.ok) throw new Error("HTTP " + r.status);
     art.dati = await r.json();
+    ART_CAT_EXTRA.forEach(n => { if(!art.dati.top.some(x => norm(x) === norm(n))) art.dati.top.push(n); });
     const D = art.dati;
     // testo di ricerca di ogni articolo (anche il codice senza zeri iniziali: "1205" trova "01205")
     art.idx = D.a.map(x => " " + artNorm([x.c, String(x.c || "").replace(/^0+/, ""), x.n, x.b, x.d, x.m, D.top[x.t], x.s >= 0 ? D.sub[x.s].n : ""].join(" ")) + " ");
@@ -4570,7 +4573,7 @@ function renderArticoliBase(){
     $("#arLbl").textContent = `${bdgEuro(D.a.length)} articoli`;
     const conta = D.top.map((_, t) => D.a.filter(x => x.t === t).length);
     body.innerHTML = `<p class="hint" style="margin:6px 0 10px">Catalogo di Marchi S.p.A. aggiornato al ${fmtDate(D.agg)}. Cerca per nome, codice o marca, oppure scegli una categoria.</p>
-      <div class="ct-grid">${nvTile()}${D.top.map((n, t) => conta[t] ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${bdgEuro(conta[t])} articoli</small></button>`; })() : "").join("")}</div>`;
+      <div class="ct-grid">${nvTile()}${D.top.map((n, t) => conta[t] || ART_CAT_EXTRA.includes(n) ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${conta[t] === 1 ? "1 articolo" : bdgEuro(conta[t]) + " articoli"}</small></button>`; })() : "").join("")}</div>`;
     return;
   }
   const lista = artFiltrati();
@@ -4583,7 +4586,7 @@ function renderArticoliBase(){
       ${subs.length ? `<div class="ct-chips ar-subs"><button type="button" aria-pressed="${art.sub < 0}" data-arsub="-1">Tutte</button>${subs.map(o => `<button type="button" aria-pressed="${art.sub === o.k}" data-arsub="${o.k}">${esc(artCat(o.x.n))}<small>${o.n}</small></button>`).join("")}</div>` : ""}`;
   }
   if(cerca && art.top >= 0) testa += `<p class="hint" style="margin:6px 0">Cerco solo in ${esc(artCat(D.top[art.top]))}. <button type="button" class="link" data-artop="-1" data-artieni>Cerca in tutto il catalogo</button></p>`;
-  if(!lista.length){ body.innerHTML = testa + `<div class="ct-empty">Nessun articolo trovato.</div>`; return; }
+  if(!lista.length){ body.innerHTML = testa + `<div class="ct-empty">${art.top >= 0 && !cerca && ART_CAT_EXTRA.includes(D.top[art.top]) ? "Ancora nessun articolo: approva una novità Marchi in questa categoria (Articoli › Novità Marchi › ✓ Approva)." : "Nessun articolo trovato."}</div>`; return; }
   const vis = lista.slice(0, art.mostra);
   const sottotitolo = x => [x.c ? "Cod. " + esc(x.c) : "", artHaScheda(x) ? `<span class="ar-sch">scheda tecnica</span>` : "", x.m ? esc(x.m) : "", art.vista === "elenco" && x.s >= 0 ? esc(artCat(D.sub[x.s].n)) : ""].filter(Boolean).join(" · ");
   body.innerHTML = testa + (art.vista === "elenco"
@@ -4891,8 +4894,10 @@ function nvApriScheda(spId, titolo, sotto){
 }
 // approvazione: categoria proposta guardando gli articoli del catalogo con le parole più simili
 let nvAppId = null;
-function nvIndovina(desc, catSp){
+function nvIndovina(desc, catSp, info){
   const D = art.dati; if(!D) return { t: -1, s: -1, perche: "" };
+  const st = D.top.findIndex(n => norm(n) === norm("DOLCI STAGIONALI"));
+  if(st >= 0 && ART_STAGIONALI.test(desc + " " + (info || ""))) return { t: st, s: -1, perche: "Proposta: è un dolce di stagione. Controlla e cambia se serve." };
   const parole = artNorm(desc).split(" ").filter(w => w.length > 3 && !/\d/.test(w));
   const voti = new Map(), votiS = new Map();
   D.a.forEach((x, i) => { if(x.ex) return; const ok = parole.filter(w => art.idx[i].includes(" " + w)).length; if(ok < 1) return;
@@ -4919,7 +4924,7 @@ async function nvApprovaApri(spId){
   if(!art.dati){ await artCarica(); if(!art.dati){ toast("Catalogo non disponibile: riprova"); return; } }
   const n = novita.find(x => x.spId === spId); if(!n) return;
   nvAppId = spId;
-  const D = art.dati, g = nvIndovina(n.desc, n.cat);
+  const D = art.dati, g = nvIndovina(n.desc, n.cat, n.info);
   $("#nvAppSub").textContent = [n.codice && "Cod. " + n.codice, n.cat].filter(Boolean).join(" · ");
   $("#nvAppNome").value = n.desc || "";
   $("#nvAppTop").innerHTML = (g.t < 0 ? `<option value="">Scegli la categoria…</option>` : "") + D.top.map((x, t) => `<option value="${t}"${t === g.t ? " selected" : ""}>${esc(tgtTit(x))}</option>`).join("");
@@ -5093,7 +5098,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.36 (v6.36)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.37 (v6.37)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
