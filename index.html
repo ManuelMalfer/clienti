@@ -954,6 +954,7 @@ body.pv-open .tema-btn{display:none}
 @media (max-width:420px){.cn-az{padding-left:12px}}
 .cn-nolink{cursor:default}
 .cn-pos{color:var(--accent)}
+.cn-diag{display:block;margin-top:6px;font-size:11.5px;color:var(--muted);word-break:break-word;user-select:all}
 .cn-vuoto{border:1px dashed var(--line);border-radius:var(--r-md,14px);padding:14px;margin-bottom:18px;font-size:14px;color:var(--muted)}
 .cn-vuoto p{margin:0 0 10px}
 .cn-map{height:min(52vh,360px);border-radius:var(--r-md,14px);overflow:hidden;background:var(--line)}
@@ -4765,7 +4766,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.25 (v6.25)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.26 (v6.26)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4921,7 +4922,7 @@ function cnHTML(iso){
   return `<h2 class="sec">In consegna <small>${righe.length ? fatte + " di " + righe.length + " consegnate" : "0"}</small></h2>
     <div class="cn-bar"><span>${cons.agg ? "Da LAC, aggiornato " + esc(gcQuando(cons.agg)) : "Non ancora letto da LAC"}</span><button class="chip-btn" type="button" data-cnsync>Sincronizza</button></div>
     ${cons.errore ? `<p class="gc-st err">LAC: ${esc(cons.errore)}${/password|accesso/i.test(cons.errore) ? ` <button class="chip-btn" type="button" data-cnset>Accesso LAC</button>` : ""}</p>` : ""}
-    <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">Nessuna consegna su LAC per oggi.</li>`}</ul>`;
+    <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">Nessuna consegna su LAC per oggi.${cons.diag && iso === oggi ? `<small class="cn-diag">Dettagli per Claude: ${esc(cons.diag)}</small>` : ""}</li>`}</ul>`;
 }
 async function cnSync(btn){
   if(btn){ btn.disabled = true; btn.textContent = "Sincronizzo…"; }

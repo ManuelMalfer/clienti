@@ -1471,9 +1471,22 @@ export class InTime {
     if(r.status >= 500) throw new Errore(502, "InTime non risponde (" + r.status + ")");
     if(/error/i.test(loc) || /\/login/.test(loc) || !(r.status === 302 || r.status === 303 || r.status === 200)) throw new Errore(401, "Nome utente o password di LAC non corretti");
   }
+  // come una persona: pagina principale, voce "Track & Trace" del menu (è lì che InTime carica le consegne del giorno), poi la tabella
   async pagina(){
-    let r = await this.req("/trackAndTrace");
-    if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); await this.entra(); r = await this.req("/trackAndTrace"); }
+    let r = await this.req("/home");
+    if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); await this.entra(); r = await this.req("/home"); }
+    if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); throw new Errore(401, "Accesso a LAC non riuscito"); }
+    if(!r.ok) throw new Errore(502, "InTime non risponde (" + r.status + ")");
+    const home = await r.text();
+    const vs = (/name="javax\.faces\.ViewState"[^>]*value="([^"]+)"/.exec(home) || [])[1];
+    const voce = (/<a id="(mnuForm:[^"]+)"[^>]*>(?:(?!<\/a>)[\s\S])*?Track/.exec(home) || [])[1];
+    this.diag = "menu " + (voce ? "sì" : "no") + (/privacy/i.test(home) ? ", privacy" : "");
+    if(vs && voce){
+      const x = await this.req("/home", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "faces-request": "partial/ajax", "x-requested-with": "XMLHttpRequest" },
+        body: new URLSearchParams({ "javax.faces.partial.ajax": "true", "javax.faces.source": voce, "javax.faces.partial.execute": "@all", [voce]: voce, mnuForm: "mnuForm", "javax.faces.ViewState": vs }).toString() });
+      await x.arrayBuffer();
+    }
+    r = await this.req("/trackAndTrace");
     if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); throw new Errore(401, "Accesso a LAC non riuscito"); }
     if(!r.ok) throw new Errore(502, "InTime non risponde (" + r.status + ")");
     return r.text();
@@ -1488,6 +1501,10 @@ export class InTime {
     if(!html.includes(IT_T)) throw new Errore(502, "La pagina Track & Trace di LAC è cambiata: avvisa Claude");
     const titoli = titoliInTime(html), vs = (/name="javax\.faces\.ViewState"[^>]*value="([^"]+)"/.exec(html) || [])[1] || "";
     const righe = righeInTime(html, titoli);
+    // se non c'è nessuna consegna: dettagli tecnici (niente dati dei clienti) da mostrare a Claude
+    this.diag = righe.length ? "" : [this.diag, "titoli " + titoli.filter(Boolean).join("/"), "tr " + (html.match(/data-ri="/g) || []).length,
+      "vuota " + (/ui-datatable-empty-message/.test(html) ? "sì" : "no"), "rowCount " + ((/rowCount:(\d+)/.exec(html) || [])[1] || "?"),
+      "pagina " + ((/<title>([^<]*)/.exec(html) || [])[1] || "?").trim(), html.length + " car."].join("; ");
     const pg = /paginator:\{[^}]*rows:(\d+),rowCount:(\d+)/.exec(html), passo = pg ? +pg[1] : 20, tot = pg ? +pg[2] : righe.length;
     for(let primo = passo; primo < Math.min(tot, 400) && vs; primo += passo){
       const x = await this.ajax(vs, { "javax.faces.source": IT_T, "javax.faces.partial.execute": IT_T, "javax.faces.partial.render": IT_T, [IT_T]: IT_T,
@@ -1522,7 +1539,7 @@ export async function sincronizzaConsegne(env, uid, opz = {}){
   try {
     const righe = await it.consegne();
     await scrivi(env, [
-      { percorso: app, campi: ["collegato", "user", "agg", "errore", "righe"], dati: { collegato: true, user: S.user, agg: ora, errore: null, righe } },
+      { percorso: app, campi: ["collegato", "user", "agg", "errore", "righe", "diag"], dati: { collegato: true, user: S.user, agg: ora, errore: null, righe, diag: it.diag || "" } },
       ...(it.cookie !== S.cookie || S.bloccato ? [{ percorso: "consegne_segreti/" + uid, campi: ["cookie", "bloccato"], dati: { cookie: it.cookie, bloccato: false } }] : [])
     ]);
     return { consegne: righe.length };
