@@ -9,6 +9,8 @@
 //     - se in Google l'evento viene spostato o cancellato, il richiamo del cliente si sposta o si toglie (riga nello storico);
 //     - gli appuntamenti dei calendari Google scelti si copiano (sola lettura) in utenti/{uid}/impostazioni/gcal_eventi
 //       e l'app li mostra nel Calendario.
+//  4) CONSEGNE DA LAC InTime (v6.25): ogni utente collega il suo accesso al Track & Trace di LAC (sezione 4 qui sotto);
+//     il servizio legge le consegne del giorno ogni 10 minuti (5–21) o quando l'app chiede "Sincronizza".
 //  3) iCLOUD NEI DUE SENSI (v6.8): come Google, ma con CalDAV ed email Apple + password per app (sezione 3 qui sotto).
 //     Gli appuntamenti vanno in UN solo servizio (Google o iCloud); dagli altri calendari si vedono solo gli eventi.
 //     Si sincronizza quando l'app lo chiede (subito dopo una modifica) e con il "Cron Trigger" ogni minuto: giro leggero (legge da
@@ -38,6 +40,7 @@
 //   POST /google/scollega              (login app) toglie il permesso e i dati del collegamento
 //   POST /icloud/collega               (login app) { user, pass } oppure { rosario: true } (usa l'iCloud già dato a Rosario)
 //   POST /icloud/scegli | /icloud/scollega | /icloud/sincronizza   come per Google
+//   POST /intime/collega { user, pass } | /intime/sincronizza | /intime/scollega   (login app) consegne LAC InTime
 //   utenti/{uid}/impostazioni/icloud e icloud_eventi: stato e appuntamenti iCloud per l'app (come gcal e gcal_eventi)
 
 const GIORNI = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
@@ -1414,6 +1417,137 @@ async function sincronizzaTutto(env, uid, opz = {}){
   return out;
 }
 
+/* =====================================================================================
+   4) CONSEGNE DA LAC InTime (v6.25)
+   Il sito https://intime.lac-consulting.eu/webClient (Java/PrimeFaces) non ha un servizio dati: si entra come nel browser
+   (login "j_security_check") e si legge la tabella del Track & Trace (solo le consegne del giorno).
+   Credenziali di ogni utente in consegne_segreti/{uid} = { user, pass, cookie, bloccato, creato } (solo il servizio lo legge:
+   nessuna regola di Firestore per l'app). Per l'app: utenti/{uid}/impostazioni/consegne =
+   { collegato, user, agg, errore, righe: [ { rif, cliente, ind, giorno, da, a, stato, pos: [lat, lng] | null } ] }.
+   Con nome utente o password sbagliati il servizio si ferma (bloccato) finché l'utente non ricollega: niente tentativi a raffica.
+   ===================================================================================== */
+const IT_URL = env => env.INTIME_URL || "https://intime.lac-consulting.eu/webClient";
+const IT_T = "trackAndTrace-form:itemTable";
+const itTesto = s => String(s || "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, " ")
+  .replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ")
+  .replace(/&#(\d+);/g, (m, n) => String.fromCharCode(+n)).replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+// righe <tr data-ri> della tabella; le colonne si riconoscono dal titolo (se LAC le sposta, si trovano lo stesso)
+export function righeInTime(html, titoli){
+  const col = k => titoli.findIndex(t => t.toLowerCase().startsWith(k));
+  const ix = { rif: col("riferimento"), cliente: col("cliente"), ind: col("indirizzo"), giorno: col("giorno"), orario: col("orario"), stato: col("stato") };
+  const out = [];
+  for(const m of String(html).matchAll(/<tr[^>]*data-ri="(\d+)"[^>]*>([\s\S]*?)<\/tr>/g)){
+    const celle = [...m[2].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => x[1]);
+    if(celle.length < 6) continue;
+    const t = i => i >= 0 && i < celle.length ? itTesto(celle[i]) : "";
+    const g = /(\d{2})\/(\d{2})\/(\d{4})/.exec(t(ix.giorno)), o = (t(ix.orario).match(/\d{1,2}:\d{2}/g) || []).map(x => x.padStart(5, "0"));
+    const bp = /<button[^>]*id="([^"]+)"[^>]*title="Posizione"/.exec(m[2]);
+    out.push({ ri: +m[1], rif: t(ix.rif), cliente: t(ix.cliente), ind: t(ix.ind), giorno: g ? g[3] + "-" + g[2] + "-" + g[1] : "",
+      da: o[0] || "", a: o[1] || "", stato: t(ix.stato), btnPos: bp && !/disabled/.test(bp[0]) ? bp[1] : "" });
+  }
+  return out;
+}
+export function titoliInTime(html){
+  const th = /<thead[\s\S]*?<\/thead>/.exec(String(html));
+  return th ? [...th[0].matchAll(/<th(?:\s[^>]*)?>([\s\S]*?)<\/th>/g)].map(x => itTesto((/ui-column-title">([\s\S]*?)<\/span>/.exec(x[1]) || [, x[1]])[1])) : [];
+}
+const itConsegnato = s => /consegnat/i.test(s) && !/non\s+consegnat|parzial/i.test(s);
+
+export class InTime {
+  constructor(env, user, pass, cookie){ this.b = IT_URL(env); this.user = user; this.pass = pass; this.cookie = cookie || ""; }
+  async req(percorso, opz = {}){
+    const r = await fetch(this.b + percorso, { ...opz, redirect: "manual", headers: { "user-agent": "Mozilla/5.0 (app Clienti; consegne)", "accept-language": "it",
+      ...(opz.headers || {}), ...(this.cookie ? { cookie: this.cookie } : {}) } });
+    const sc = r.headers.get("set-cookie") || "", m = /JSESSIONID=([^;,\s]+)/.exec(sc);
+    if(m) this.cookie = "JSESSIONID=" + m[1];
+    return r;
+  }
+  async entra(){
+    this.cookie = "";
+    let r = await this.req("/trackAndTrace"); await r.arrayBuffer();               // sessione nuova + pagina da aprire dopo il login
+    r = await this.req("/j_security_check", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username: this.user, password: this.pass }).toString() });
+    const loc = r.headers.get("location") || ""; await r.arrayBuffer();
+    if(r.status >= 500) throw new Errore(502, "InTime non risponde (" + r.status + ")");
+    if(/error/i.test(loc) || /\/login/.test(loc) || !(r.status === 302 || r.status === 303 || r.status === 200)) throw new Errore(401, "Nome utente o password di LAC non corretti");
+  }
+  async pagina(){
+    let r = await this.req("/trackAndTrace");
+    if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); await this.entra(); r = await this.req("/trackAndTrace"); }
+    if(r.status === 302 || r.status === 303){ await r.arrayBuffer(); throw new Errore(401, "Accesso a LAC non riuscito"); }
+    if(!r.ok) throw new Errore(502, "InTime non risponde (" + r.status + ")");
+    return r.text();
+  }
+  ajax(vs, campi){
+    return this.req("/trackAndTrace", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded; charset=UTF-8", "faces-request": "partial/ajax", "x-requested-with": "XMLHttpRequest" },
+      body: new URLSearchParams({ "javax.faces.partial.ajax": "true", ...campi, "trackAndTrace-form": "trackAndTrace-form", "javax.faces.ViewState": vs }).toString() }).then(r => r.text());
+  }
+  // tutte le consegne (20 per pagina) e, per quelle non ancora consegnate, la posizione del camion (al massimo 12)
+  async consegne(){
+    const html = await this.pagina();
+    if(!html.includes(IT_T)) throw new Errore(502, "La pagina Track & Trace di LAC è cambiata: avvisa Claude");
+    const titoli = titoliInTime(html), vs = (/name="javax\.faces\.ViewState"[^>]*value="([^"]+)"/.exec(html) || [])[1] || "";
+    const righe = righeInTime(html, titoli);
+    const pg = /paginator:\{[^}]*rows:(\d+),rowCount:(\d+)/.exec(html), passo = pg ? +pg[1] : 20, tot = pg ? +pg[2] : righe.length;
+    for(let primo = passo; primo < Math.min(tot, 400) && vs; primo += passo){
+      const x = await this.ajax(vs, { "javax.faces.source": IT_T, "javax.faces.partial.execute": IT_T, "javax.faces.partial.render": IT_T, [IT_T]: IT_T,
+        [IT_T + "_pagination"]: "true", [IT_T + "_first"]: String(primo), [IT_T + "_rows"]: String(passo), [IT_T + "_skipChildren"]: "true", [IT_T + "_encodeFeature"]: "true" });
+      const nuove = righeInTime(x, titoli); if(!nuove.length) break;
+      righe.push(...nuove);
+    }
+    let n = 0;
+    for(const rr of righe){
+      rr.pos = null;
+      if(!rr.btnPos || itConsegnato(rr.stato) || n >= 12 || !vs) continue;
+      n++;
+      try {
+        const x = await this.ajax(vs, { "javax.faces.source": rr.btnPos, "javax.faces.partial.execute": rr.btnPos, "javax.faces.partial.render": "trackAndTrace-form:positionDialog", [rr.btnPos]: rr.btnPos });
+        const m = /Posizione:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/.exec(x);
+        if(m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180 && (+m[1] || +m[2])) rr.pos = [+(+m[1]).toFixed(5), +(+m[2]).toFixed(5)];
+      } catch(e){}
+    }
+    const visti = new Set();
+    return righe.filter(x => { const k = x.rif + "|" + x.cliente + "|" + x.giorno; if(visti.has(k)) return false; visti.add(k); return true; })
+      .map(({ ri, btnPos, ...x }) => x).slice(0, 300);
+  }
+}
+
+// legge le consegne di un utente e le salva per l'app
+export async function sincronizzaConsegne(env, uid, opz = {}){
+  const S = opz.S !== undefined ? opz.S : await leggiDoc(env, "consegne_segreti/" + uid);
+  if(!S || !S.user) return { consegne: 0 };
+  if(S.bloccato && !opz.forza) return { consegne: 0, bloccato: true };
+  const it = new InTime(env, S.user, S.pass, S.cookie);
+  const app = "utenti/" + uid + "/impostazioni/consegne", ora = new Date().toISOString();
+  try {
+    const righe = await it.consegne();
+    await scrivi(env, [
+      { percorso: app, campi: ["collegato", "user", "agg", "errore", "righe"], dati: { collegato: true, user: S.user, agg: ora, errore: null, righe } },
+      ...(it.cookie !== S.cookie || S.bloccato ? [{ percorso: "consegne_segreti/" + uid, campi: ["cookie", "bloccato"], dati: { cookie: it.cookie, bloccato: false } }] : [])
+    ]);
+    return { consegne: righe.length };
+  } catch(e){
+    const pw = e instanceof Errore && e.stato === 401;
+    await scrivi(env, [
+      { percorso: app, campi: ["collegato", "user", "errore", "provato"], dati: { collegato: true, user: S.user, errore: e instanceof Errore ? e.message : "InTime non raggiungibile", provato: ora } },
+      ...(pw ? [{ percorso: "consegne_segreti/" + uid, campi: ["cookie", "bloccato"], dati: { cookie: "", bloccato: true } }] : [])
+    ]).catch(() => {});
+    throw e;
+  }
+}
+// il cron: ogni 10 minuti, dalle 5 alle 21 (ora italiana)
+const oraRoma = t => +new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(new Date(t));
+async function cronConsegne(env, t){
+  const d = new Date(t);
+  if(d.getUTCMinutes() % 10 !== 0) return;
+  const h = oraRoma(t); if(h < 5 || h >= 21) return;
+  const lista = await leggi(env, base(env) + "/consegne_segreti?pageSize=50");
+  for(const x of (lista && lista.documents) || []){
+    const uid = decodeURIComponent(x.name.split("/").pop());
+    try { await sincronizzaConsegne(env, uid, { S: campi(x.fields || {}) }); } catch(e){ /* errore già salvato per l'app */ }
+  }
+}
+
 /* ---------- pagine e risposte ---------- */
 const pagina = (titolo, testo, app) => new Response(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titolo}</title>
 <style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#F3F5F4;color:#1C2B2E;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
@@ -1479,7 +1613,7 @@ export default {
     }
 
     // chiamate dell'app (con il login)
-    if(p.startsWith("/google/") || p.startsWith("/icloud/")){
+    if(p.startsWith("/google/") || p.startsWith("/icloud/") || p.startsWith("/intime/")){
       const origine = req.headers.get("Origin") || "";
       const consentite = String(env.ALLOWED_ORIGINS || app).split(",").map(s => s.trim()).filter(Boolean);
       if(!consentite.includes(origine)) return json({ errore: "origine non consentita" }, 403, {});
@@ -1487,6 +1621,35 @@ export default {
       if(req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
       if(req.method !== "POST") return json({ errore: "metodo non ammesso" }, 405, cors);
       try {
+        /* ----- consegne LAC InTime (v6.25) ----- */
+        if(p.startsWith("/intime/")){
+          const uid = await utente(req, env);
+          const corpo = await req.json().catch(() => ({}));
+          if(p === "/intime/collega"){
+            const user = String(corpo.user || "").trim().slice(0, 120), pass = String(corpo.pass || "").slice(0, 200);
+            if(!user || !pass) throw new Errore(400, "Scrivi nome utente e password di LAC");
+            const it = new InTime(env, user, pass);
+            await it.entra();                                   // controlla subito nome utente e password
+            const S = { user, pass, cookie: it.cookie, bloccato: false, creato: new Date().toISOString() };
+            await scrivi(env, [{ percorso: "consegne_segreti/" + uid, dati: S },
+              { percorso: "utenti/" + uid + "/impostazioni/consegne", dati: { collegato: true, user, agg: null, errore: null, righe: [] } }]);
+            const r = await sincronizzaConsegne(env, uid, { S }).catch(e => ({ errore: e.message }));
+            return json({ ok: true, ...r }, 200, cors);
+          }
+          if(p === "/intime/scollega"){
+            await scrivi(env, [{ percorso: "consegne_segreti/" + uid, elimina: true },
+              { percorso: "utenti/" + uid + "/impostazioni/consegne", dati: { collegato: false } }]);
+            return json({ ok: true }, 200, cors);
+          }
+          if(p === "/intime/sincronizza"){
+            const S = await leggiDoc(env, "consegne_segreti/" + uid);
+            if(!S || !S.user) throw new Errore(409, "L'accesso a LAC non è collegato");
+            if(S.bloccato) throw new Errore(401, "Nome utente o password di LAC non corretti: ricollega l'accesso");
+            const r = await sincronizzaConsegne(env, uid, { S });
+            return json({ ok: true, ...r }, 200, cors);
+          }
+          return json({ errore: "percorso sconosciuto" }, 404, cors);
+        }
         const google = p.startsWith("/google/");
         if(google && p !== "/google/sincronizza" && (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET)) throw new Errore(503, "collegamento a Google non ancora configurato nel servizio");
         const uid = await utente(req, env);
@@ -1711,11 +1874,14 @@ export default {
 
   // ogni minuto un giro leggero; allo scoccare di ogni ora un controllo completo (rilegge tutti i clienti)
   async scheduled(evento, env, ctx){
-    const completo = new Date(evento && evento.scheduledTime || Date.now()).getUTCMinutes() === 0;
+    const t = evento && evento.scheduledTime || Date.now();
+    const completo = new Date(t).getUTCMinutes() === 0;
+    const consegne = cronConsegne(env, t).catch(() => {});
     const d = await leggi(env, base(env) + "/calendario_segreti?pageSize=50&mask.fieldPaths=creato");
     for(const x of (d && d.documents) || []){
       const uid = decodeURIComponent(x.name.split("/").pop());
       try { await sincronizzaTutto(env, uid, { leggero: !completo }); } catch(e){ /* l'errore è già salvato per l'app */ }
     }
+    await consegne;
   }
 };

@@ -938,6 +938,26 @@ body.pv-open .tema-btn{display:none}
 .giro-chips span{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;background:color-mix(in srgb,var(--giro-v) 16%,transparent);font-size:13.5px;font-weight:600}
 .giro-chips b{color:var(--giro-v);font-variant-numeric:tabular-nums}
 .giro-tip{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
+.cn-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 0 8px;font-size:13px;color:var(--muted)}
+.cn-list{margin-bottom:18px}
+#v-giro .cn-list{grid-template-columns:minmax(0,1fr)}
+.cn-st{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.cn-st.ok{background:color-mix(in srgb,var(--st-cliente) 16%,transparent);color:var(--st-cliente)}
+.cn-st.ko{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
+#v-giro .cn-li{flex-wrap:wrap;padding-right:0}
+#v-giro .cn-li .giro-main{flex:1 1 100%;min-width:0}
+.cn-az{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:0 12px 10px 64px;margin-top:-4px}
+.cn-or{font-size:12.5px;color:var(--muted);margin-right:auto;white-space:nowrap}
+.cn-az .chip-btn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:5px 10px}
+.cn-az .chip-btn svg{width:15px;height:15px}
+.cn-nuovo{color:var(--accent)}
+@media (max-width:420px){.cn-az{padding-left:12px}}
+.cn-nolink{cursor:default}
+.cn-pos{color:var(--accent)}
+.cn-vuoto{border:1px dashed var(--line);border-radius:var(--r-md,14px);padding:14px;margin-bottom:18px;font-size:14px;color:var(--muted)}
+.cn-vuoto p{margin:0 0 10px}
+.cn-map{height:min(52vh,360px);border-radius:var(--r-md,14px);overflow:hidden;background:var(--line)}
+.cn-truck{font-size:26px;line-height:34px;text-align:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
 .giro-rich-t{margin-top:22px}h2.sec small{font-variant-numeric:tabular-nums}
 
 /* ordini: il cerchio del cliente è una spunta */
@@ -1339,7 +1359,7 @@ dialog.rc-dlg{max-width:720px}
 
   <section id="v-giro" class="view-wrap hidden">
     <header class="top"><div class="wrap">
-      <div class="top-row"><h1>Giro</h1><span class="count" id="giroLbl"></span></div>
+      <div class="top-row"><h1>Giro</h1><span class="count" id="giroLbl"></span><button class="chip-btn" type="button" id="cnSetBtn">Accesso LAC</button></div>
       <div class="days-strip" id="daysStrip"></div>
     </div></header>
     <main class="wrap view" id="giroBody"></main>
@@ -2010,6 +2030,34 @@ dialog.rc-dlg{max-width:720px}
       <p class="pv-hint pvm-warn hidden" id="appAvv"></p>
     </div>
     <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="button" id="appOk" disabled>Salva appuntamento</button></div>
+  </div>
+</dialog>
+<dialog id="dlgCn" aria-labelledby="cnT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="cnT">Accesso LAC<span class="sub">Le consegne del Track &amp; Trace di LAC (InTime) nel Giro.</span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <div id="cnOff">
+        <p class="gc-st err hidden" id="cnErr"></p>
+        <p class="pv-hint">Scrivi il <b>tuo</b> nome utente e la password di InTime (quelli di intime.lac-consulting.eu): ogni account collega il suo accesso e vede solo le sue consegne.</p>
+        <p class="pv-hint">La password la tiene solo il servizio dell’app: non si può rileggere, nemmeno da qui.</p>
+        <label class="field"><span>Nome utente LAC</span><input class="input" id="cnUser" autocomplete="username" autocapitalize="off" spellcheck="false"></label>
+        <label class="field"><span>Password LAC</span><input class="input" id="cnPass" type="password" autocomplete="current-password"></label>
+        <div class="gc-az"><button class="btn btn-primary" type="button" id="cnCollega">Collega</button></div>
+      </div>
+      <div id="cnOn" class="hidden">
+        <p class="gc-acc" id="cnAcc"></p>
+        <p class="gc-st" id="cnSt"></p>
+        <p class="pv-hint">Le consegne si aggiornano da sole ogni 10 minuti, dalle 5 alle 21. Con <b>Sincronizza</b> le rileggi subito da LAC.</p>
+        <div class="gc-az"><button class="btn btn-primary" type="button" id="cnSyncDlg">Sincronizza</button><button class="btn" type="button" id="cnCambia">Cambia nome utente o password</button><button class="btn btn-danger" type="button" id="cnStacca">Scollega</button></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+<dialog id="dlgCnMap" aria-labelledby="cnMapT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="cnMapT">Dov’è il camion<span class="sub" id="cnMapSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body"><div id="cnMap" class="cn-map"></div><p class="pv-hint" id="cnMapNota"></p></div>
+    <div class="dlg-foot"><a class="btn" id="cnMapG" target="_blank" rel="noopener">Apri in Google Maps</a><button class="btn btn-primary" type="button" data-close>Chiudi</button></div>
   </div>
 </dialog>
 <dialog id="dlgSet" aria-labelledby="setT">
@@ -4717,7 +4765,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.24 (v6.24)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.25 (v6.25)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4802,6 +4850,7 @@ function renderGiro(){
     </li>`;
   };
   $("#giroBody").innerHTML = `<div class="giro-grid">${mappa}<section class="giro-ord">
+    ${cnHTML(iso)}
     <h2 class="sec">Ordini da raccogliere <small>${ord.length ? fatti + " di " + ord.length : "0"}</small></h2>
     ${ord.length ? `<p class="giro-tip">Tocca il cerchio del cliente per segnare l'ordine come raccolto.</p>` : ""}
     <ul class="list">${ord.map(ordRow).join("") || `<li class="empty">Nessun ordine da raccogliere il ${day.toLowerCase()}.</li>`}</ul>
@@ -4819,6 +4868,143 @@ function giroRichiamiHTML(iso, day){
   return `<h2 class="sec giro-rich-t">Appuntamenti <small>${lista.length}</small></h2>
     <ul class="list">${lista.map(c => "<li>" + rowHTML(c, side(c)) + "</li>").join("") || `<li class="empty">${vuoto}</li>`}</ul>`;
 }
+/* ----- Consegne da LAC InTime (v6.25): il servizio (worker-calendario.js, sezione 4) legge il Track & Trace di ogni account
+   ogni 10 minuti e lo salva in utenti/{uid}/impostazioni/consegne; qui la sezione "In consegna" del Giro ----- */
+let cons = {}, cnVis = [], cnLinkK = null, cnAuto = 0;
+const cnChiama = (percorso, corpo = {}) => gcChiama(percorso, corpo, "intime");
+const cnChiave = r => norm(r.cliente) + "|" + norm(r.ind);
+const cnStato = s => /non\s+consegnat|fallit|rifiutat|respint|annullat/i.test(s) ? "ko" : /consegnat/i.test(s) && !/parzial/i.test(s) ? "ok" : "via";
+const cnTitolo = s => titleCase(s).replace(/\(([a-z]{2})\)/g, (m, p) => "(" + p.toUpperCase() + ")");
+const cnVia = s => deaccent(String(s || "")).toLowerCase().replace(/\b(via|viale|v\.le|piazza|p\.za|p\.zza|piazzale|corso|largo|vicolo|strada|str|localita|loc|frazione|fraz)\b\.?/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+// quanto una consegna di LAC somiglia a un cliente: nome (come per il giro) + stessa via e civico + stessa località
+function cnPunti(r, c){
+  let p = giroPunti(r.cliente, c);
+  const ind = String(r.ind || ""), via = cnVia(ind.split(",")[0]), cv = cnVia(c.indirizzo);
+  if(via && cv){
+    const civ = (/\d+/.exec(via) || [])[0], cciv = (/\d+/.exec(cv) || [])[0], parole = via.split(" ").filter(w => w.length > 3 && !/^\d/.test(w));
+    if(via === cv || (civ && civ === cciv && parole.length && parole.every(w => cv.includes(w)))) p += 35;
+    else if(parole.length && parole.every(w => cv.includes(w))) p += 12;
+  }
+  if(c.luogo && norm(ind).includes(norm(c.luogo))) p += 10;
+  return p;
+}
+function cnCliente(r){
+  const m = (pref.consegneLink || {})[cnChiave(r)];
+  if(m !== undefined) return m ? byId(m) || null : null;          // collegato a mano ("" = nessun cliente)
+  let best = null, bp = 0;
+  for(const c of clienti){ const p = cnPunti(r, c); if(p > bp){ bp = p; best = c; } }
+  return bp >= 60 ? best : null;
+}
+function cnHTML(iso){
+  const oggi = localISO();
+  if(!cons.collegato) return iso === oggi ? `<h2 class="sec">In consegna</h2><div class="cn-vuoto"><p>Collega il tuo accesso LAC (InTime) per vedere qui, per ogni cliente, se la merce è già stata consegnata e dov’è il camion.</p><button class="btn btn-primary" type="button" data-cnset>Collega l’accesso LAC</button></div>` : "";
+  const righe = (cons.righe || []).filter(r => r.giorno === iso)
+    .sort((a, b) => (a.da || "99:99").localeCompare(b.da || "99:99") || (a.cliente || "").localeCompare(b.cliente || "", "it"));
+  if(!righe.length && iso !== oggi) return "";
+  // dati vecchi (più di 15 minuti) aprendo il Giro di oggi: si chiede al servizio di rileggerli (al massimo ogni 5 minuti)
+  if(iso === oggi && !cons.errore && Date.now() - Date.parse(cons.agg || 0) > 15 * 60000 && Date.now() - cnAuto > 5 * 60000){ cnAuto = Date.now(); cnChiama("sincronizza").catch(() => {}); }
+  cnVis = righe;
+  const fatte = righe.filter(r => cnStato(r.stato) === "ok").length;
+  const truck = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h12v10H2zM14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>`;
+  const anello = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>`;
+  const riga = (r, i) => {
+    const c = cnCliente(r), st = cnStato(r.stato);
+    const side = `<span class="cn-st ${st}">${esc(r.stato || "–")}</span>`;
+    const main = c ? rowHTML(c, side)
+      : `<div class="row cn-nolink"><span class="av" aria-hidden="true">${esc(inizialiDi(r.cliente))}</span><span class="row-main"><span class="row-name">${esc(cnTitolo(r.cliente))}</span><span class="row-sub">${esc(cnTitolo(r.ind))}</span></span><span class="row-side">${side}</span></div>`;
+    return `<li class="giro-li cn-li cn-${st}"><div class="giro-main">${main}</div>
+      <div class="cn-az"><span class="cn-or">${r.da ? "Ore " + esc(r.da + (r.a ? "–" + r.a : "")) : "Senza orario"}</span>
+        ${r.pos ? `<button class="chip-btn cn-pos" type="button" data-cnpos="${i}">${truck}Dov’è il camion</button>` : ""}
+        ${c ? `<button class="chip-btn cn-link" type="button" data-cnlink="${i}" title="Cambia il cliente collegato" aria-label="Cambia il cliente collegato">${anello}</button>` : `<button class="chip-btn cn-link cn-nuovo" type="button" data-cnlink="${i}">${anello}Collega a un cliente</button>`}</div>
+    </li>`;
+  };
+  return `<h2 class="sec">In consegna <small>${righe.length ? fatte + " di " + righe.length + " consegnate" : "0"}</small></h2>
+    <div class="cn-bar"><span>${cons.agg ? "Da LAC, aggiornato " + esc(gcQuando(cons.agg)) : "Non ancora letto da LAC"}</span><button class="chip-btn" type="button" data-cnsync>Sincronizza</button></div>
+    ${cons.errore ? `<p class="gc-st err">LAC: ${esc(cons.errore)}${/password|accesso/i.test(cons.errore) ? ` <button class="chip-btn" type="button" data-cnset>Accesso LAC</button>` : ""}</p>` : ""}
+    <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">Nessuna consegna su LAC per oggi.</li>`}</ul>`;
+}
+async function cnSync(btn){
+  if(btn){ btn.disabled = true; btn.textContent = "Sincronizzo…"; }
+  try { const j = await cnChiama("sincronizza"); cnAuto = Date.now(); toast(j.consegne === 1 ? "Letta 1 consegna da LAC" : "Lette " + (j.consegne || 0) + " consegne da LAC"); }
+  catch(err){ toast("LAC: " + err.message, 8000); }
+  finally { if(btn && btn.isConnected){ btn.disabled = false; btn.textContent = "Sincronizza"; } }
+}
+function cnLinkSalva(k, id){
+  const m = { ...(pref.consegneLink || {}), [k]: id };
+  pref.consegneLink = m;
+  if(uid) setDoc(prefRef(), { consegneLink: m }, { mergeFields: ["consegneLink"] }).catch(fail);
+  renderGiro();
+}
+let cnMapObj = null;
+function cnMappa(r){
+  if(!r || !r.pos) return;
+  const c = cnCliente(r);
+  $("#cnMapSub").textContent = "Consegna per " + (c ? c.nome : cnTitolo(r.cliente)) + (r.da ? " · " + r.da + (r.a ? "–" + r.a : "") : "");
+  $("#cnMapG").href = "https://www.google.com/maps/search/?api=1&query=" + r.pos[0] + "," + r.pos[1];
+  $("#cnMapNota").textContent = "Posizione del camion letta da LAC " + gcQuando(cons.agg) + ". Per aggiornarla premi Sincronizza.";
+  $("#dlgCnMap").showModal();
+  if(typeof L === "undefined"){ $("#cnMap").textContent = "La mappa non si carica (manca la rete): usa “Apri in Google Maps”."; return; }
+  if(!cnMapObj){
+    cnMapObj = L.map("cnMap");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(cnMapObj);
+  }
+  cnMapObj.eachLayer(l => { if(l instanceof L.Marker || l instanceof L.CircleMarker) cnMapObj.removeLayer(l); });
+  L.marker(r.pos, { icon: L.divIcon({ className: "cn-truck", html: "🚚", iconSize: [34, 34], iconAnchor: [17, 17] }), title: "Camion" }).addTo(cnMapObj);
+  const pts = [r.pos];
+  if(c && c.lat && c.lng){
+    L.circleMarker([c.lat, c.lng], { radius: 8, color: "#fff", weight: 2, fillColor: getComputedStyle(document.documentElement).getPropertyValue("--st-cliente").trim() || "#3F8F4A", fillOpacity: 1 }).bindTooltip(c.nome).addTo(cnMapObj);
+    pts.push([c.lat, c.lng]);
+  }
+  setTimeout(() => { cnMapObj.invalidateSize(); if(pts.length > 1) cnMapObj.fitBounds(pts, { padding: [36, 36], maxZoom: 14 }); else cnMapObj.setView(r.pos, 13); }, 80);
+}
+$("#giroBody").addEventListener("click", e => {
+  if(e.target.closest("[data-cnset]")){ cnApri(); return; }
+  const s = e.target.closest("[data-cnsync]"); if(s){ cnSync(s); return; }
+  const p = e.target.closest("[data-cnpos]"); if(p){ cnMappa(cnVis[+p.dataset.cnpos]); return; }
+  const l = e.target.closest("[data-cnlink]");
+  if(l){
+    const r = cnVis[+l.dataset.cnlink]; if(!r) return;
+    cnLinkK = cnChiave(r); cnLinkNome = cnTitolo(r.cliente);
+    pvOpenPicker("cn");
+    $("#pvCliQ").value = giroParole(r.cliente)[0] || ""; pvRenderCli();
+  }
+});
+let cnLinkNome = "";
+function cnRender(){
+  const on = !!cons.collegato;
+  $("#cnOff").classList.toggle("hidden", on); $("#cnOn").classList.toggle("hidden", !on);
+  if(!on) return;
+  $("#cnAcc").innerHTML = "Collegato come <b>" + esc(cons.user || "") + "</b>";
+  $("#cnSt").textContent = cons.errore ? "Problema: " + cons.errore : "Ultimo aggiornamento: " + gcQuando(cons.agg);
+  $("#cnSt").classList.toggle("err", !!cons.errore);
+}
+function cnApri(){
+  $("#cnUser").value = cons.user || ""; $("#cnPass").value = ""; $("#cnErr").classList.add("hidden");
+  cnRender(); $("#dlgCn").showModal();
+}
+$("#cnSetBtn").addEventListener("click", cnApri);
+$("#cnCambia").addEventListener("click", () => { $("#cnOn").classList.add("hidden"); $("#cnOff").classList.remove("hidden"); $("#cnPass").focus(); });
+$("#cnSyncDlg").addEventListener("click", e => cnSync(e.currentTarget));
+$("#cnCollega").addEventListener("click", async () => {
+  const user = $("#cnUser").value.trim(), pass = $("#cnPass").value, b = $("#cnCollega"), err = $("#cnErr");
+  err.classList.add("hidden");
+  if(!user || !pass){ err.textContent = "Scrivi nome utente e password di LAC."; err.classList.remove("hidden"); return; }
+  b.disabled = true; b.textContent = "Controllo l’accesso…";
+  try {
+    const j = await cnChiama("collega", { user, pass });
+    $("#cnPass").value = ""; cnAuto = Date.now();
+    cons = { ...cons, collegato: true, user, errore: j.errore || null };
+    cnRender();
+    toast(j.errore ? "Accesso LAC collegato, ma la lettura non è riuscita: " + j.errore : "Accesso LAC collegato: " + (j.consegne || 0) + (j.consegne === 1 ? " consegna oggi" : " consegne oggi"), 5000);
+  } catch(e2){ err.textContent = e2.message; err.classList.remove("hidden"); }
+  finally { b.disabled = false; b.textContent = "Collega"; }
+});
+$("#cnStacca").addEventListener("click", async () => {
+  if(!await confermaElimina("il collegamento a LAC", "Nome utente e password di LAC si tolgono dal servizio e le consegne non compaiono più nel Giro. Puoi ricollegarlo quando vuoi.", "Scollega")) return;
+  try { await cnChiama("scollega"); cons = { collegato: false }; cnRender(); toast("Accesso LAC scollegato"); if(ui.view === "giro") renderGiro(); }
+  catch(e){ toast("LAC: " + e.message, 8000); }
+});
+
 function giroSegna(id, iso){
   const c = byId(id); if(!c) return;
   const att = c.ordiniFatti || [];
@@ -6334,10 +6520,11 @@ function subscribeGcal(){
     onSnapshot(gcRef("gcal_eventi"), s => { gcalEv = s.exists() && Array.isArray(s.data().ev) ? s.data().ev : []; if(ui.view === "richiami") renderRichiami(); }, () => {}),
     onSnapshot(gcRef("icloud"), s => { ical = s.exists() ? s.data() : {}; if($("#dlgCal").open) gcRender(); }, () => {}),
     onSnapshot(gcRef("icloud_eventi"), s => { icalEv = s.exists() && Array.isArray(s.data().ev) ? s.data().ev : []; if(ui.view === "richiami") renderRichiami(); }, () => {}),
-    onSnapshot(gcRef("eventi_clienti"), s => { evClienti = s.exists() && s.data().mappa ? s.data().mappa : {}; if(ui.view === "richiami") renderRichiami(); }, () => {})
+    onSnapshot(gcRef("eventi_clienti"), s => { evClienti = s.exists() && s.data().mappa ? s.data().mappa : {}; if(ui.view === "richiami") renderRichiami(); }, () => {}),
+    onSnapshot(gcRef("consegne"), s => { cons = s.exists() ? s.data() : {}; if(ui.view === "giro") renderGiro(); if($("#dlgCn").open) cnRender(); }, () => {})
   ];
 }
-function unsubscribeGcal(){ unsubGcal.forEach(f => f()); unsubGcal = []; gcal = {}; gcalEv = []; ical = {}; icalEv = []; evClienti = {}; }
+function unsubscribeGcal(){ unsubGcal.forEach(f => f()); unsubGcal = []; gcal = {}; gcalEv = []; ical = {}; icalEv = []; evClienti = {}; cons = {}; }
 async function gcChiama(percorso, corpo = {}, servizio = "google"){
   const r = await fetch(CAL_SERVIZIO + "/" + servizio + "/" + percorso, { method: "POST",
     headers: { Authorization: "Bearer " + await auth.currentUser.getIdToken(), "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
@@ -6894,9 +7081,9 @@ function pvRenderCli(){
 }
 function pvOpenPicker(mode){
   pvCliMode = mode;
-  $("#pvCliTitle").firstChild.textContent = mode === "link" ? "Collega a un cliente" : "Per quale cliente?";
-  $("#pvCliSub").textContent = mode === "new" ? "Il preventivo verrà salvato nella sua scheda. Poi scegli il PDF dell’ordine." : mode === "art" ? "Il preventivo verrà salvato nella sua scheda; i prezzi si propongono dai suoi preventivi precedenti." : "Il preventivo comparirà nella scheda del cliente scelto.";
-  $("#pvCliNone").textContent = mode === "new" || mode === "art" ? "Continua senza cliente" : (pvCur && pvCur.clienteId ? "Scollega dal cliente" : "Annulla");
+  $("#pvCliTitle").firstChild.textContent = mode === "cn" ? "Collega la consegna a un cliente" : mode === "link" ? "Collega a un cliente" : "Per quale cliente?";
+  $("#pvCliSub").textContent = mode === "cn" ? "Consegna di LAC: " + cnLinkNome + ". Le prossime consegne di questo locale andranno da sole al cliente scelto." : mode === "new" ? "Il preventivo verrà salvato nella sua scheda. Poi scegli il PDF dell’ordine." : mode === "art" ? "Il preventivo verrà salvato nella sua scheda; i prezzi si propongono dai suoi preventivi precedenti." : "Il preventivo comparirà nella scheda del cliente scelto.";
+  $("#pvCliNone").textContent = mode === "cn" ? "Nessun cliente" : mode === "new" || mode === "art" ? "Continua senza cliente" : (pvCur && pvCur.clienteId ? "Scollega dal cliente" : "Annulla");
   $("#pvCliQ").value = ""; pvRenderCli();
   $("#dlgPvCli").showModal();
   if(matchMedia("(pointer:fine)").matches) $("#pvCliQ").focus();
@@ -6907,6 +7094,7 @@ $("#pvCliList").addEventListener("click", e => {
   const c = byId(b.dataset.cli); $("#dlgPvCli").close();
   if(pvCliMode === "new"){ pvPreset = c.id; $("#pvFile").click(); return; }
   if(pvCliMode === "art"){ pvaCrea(c.id); return; }
+  if(pvCliMode === "cn"){ cnLinkSalva(cnLinkK, c.id); toast("Consegna collegata a " + c.nome); return; }
   if(!pvCur) return;
   const vecchio = pvCur.clienteId && byId(pvCur.clienteId);
   if(!pvCur.cliente || (vecchio && norm(vecchio.nome) === norm(pvCur.cliente))) pvCur.cliente = c.nome;
@@ -6917,6 +7105,7 @@ $("#pvCliNone").addEventListener("click", () => {
   $("#dlgPvCli").close();
   if(pvCliMode === "new"){ pvPreset = null; $("#pvFile").click(); return; }
   if(pvCliMode === "art"){ pvaCrea(null); return; }
+  if(pvCliMode === "cn"){ cnLinkSalva(cnLinkK, ""); toast("Consegna lasciata senza cliente"); return; }
   if(pvCur && pvCur.clienteId){ pvCur.clienteId = ""; pvSyncSide(); pvSave(); toast("Preventivo scollegato dal cliente"); }
 });
 $("#pvLinkBtn").addEventListener("click", () => pvOpenPicker("link"));
