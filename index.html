@@ -1084,6 +1084,11 @@ main.view{padding-top:14px}
 #dlgEv .dlg-foot #evDel{margin-right:auto}
 @media (max-width:480px){ #dlgEv .ev-quando{grid-template-columns:1fr 1fr} #dlgEv .ev-quando .field:first-child{grid-column:1/-1} }
 .gc-list button.gc-row{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+/* nomi lunghi negli impegni dei calendari: restano nella colonna (v6.28) */
+.cal-day{min-width:0}
+.gc-list button.gc-row{max-width:100%;min-width:0}
+.gc-row .row-sub{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gc-row .row-side{flex:none}
 .gi-box .gc-st{margin-top:0}
 #dlgGiro .gi-row{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1.1fr);gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 #dlgGiro .gi-ico{font-size:20px;text-align:center}
@@ -4761,7 +4766,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.27 (v6.27)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.28 (v6.28)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
