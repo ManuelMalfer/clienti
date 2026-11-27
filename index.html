@@ -4775,7 +4775,7 @@ async function prefCarica(){
   temaApplica(pref.tema || ""); stileApplica(pref.stile || ""); coloriApplica(pref.colori || {});
   if(pref.articoliVista === "elenco" || pref.articoliVista === "box"){ art.vista = pref.articoliVista; renderArticoli(); }
   if(pref.calVista === "giorno" || pref.calVista === "mese"){ ui.calVista = pref.calVista; if(ui.view === "richiami") renderRichiami(); }
-  nvBadge(); }
+  prefPronto = true; nvInit(); nvBadge(); }
 function prefSalva(p){ Object.assign(pref, p); if(uid) setDoc(prefRef(), p, { merge: true }).catch(() => {}); }
 temaApplica("");
 
@@ -4785,15 +4785,22 @@ temaApplica("");
    (privato: prezzi e provvigioni) e manda una notifica push ai dispositivi in utenti/{uid}/impostazioni/push.subs.
    La notifica la riceve sw.js (service worker, solo notifiche: niente cache). */
 const VAPID_PUB = "BDc_OTuqO0ZOCMYP2bhhQAL6livBICRdV4tl5jcKPMiiREKuql3Rql77JBrI5lLxNmd2TVvegclzo0Xxv0B8fFo";
-let novita = [], unsubNov = null;
+let novita = [], unsubNov = null, novPrima = true, prefPronto = false;
 function subscribeNovita(){
   if(unsubNov || !uid) return;
+  novPrima = true;
   unsubNov = onSnapshot(collection(db, "utenti", uid, "novita"), s => {
     novita = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.ricevuto || b.creato || "").localeCompare(a.ricevuto || a.creato || "") || (+b.spId || 0) - (+a.spId || 0));
-    nvBadge(); if(ui.view === "articoli") renderArticoli();
+    if(novPrima && !s.metadata.fromCache){ novPrima = false; if(!novita.length) gcChiama("allinea", {}, "push").catch(() => {}); }
+    nvInit(); nvBadge(); if(ui.view === "articoli") renderArticoli();
   }, () => {});
 }
-function unsubscribeNovita(){ if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; nvBadge(); }
+// la prima volta (preferenza mai salvata) tutte le novità già presenti contano come viste
+function nvInit(){
+  if(!prefPronto || pref.novitaViste !== undefined || !novita.length) return;
+  prefSalva({ novitaViste: novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "") });
+}
+function unsubscribeNovita(){ if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; prefPronto = false; novImp = null; nvBadge(); }
 const nvNuove = () => novita.filter(n => (n.ricevuto || "") > (pref.novitaViste || "")).length;
 function nvBadge(){ const b = $("#nvNum"); if(!b) return; const n = nvNuove(); b.textContent = n; b.classList.toggle("hidden", !n); }
 const nvStella = n => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
@@ -4810,8 +4817,8 @@ function nvHTML(){
   $("#arLbl").textContent = novita.length ? novita.length + " novità" : "";
   const ultima = novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "");
   if(ultima > viste) setTimeout(() => { if(ui.view === "articoli" && art.top === -2){ prefSalva({ novitaViste: ultima }); nvBadge(); } }, 2000);   // viste dopo un attimo (restano "Nuovo" finché si è qui)
-  const testa = `<div class="ct-cathead" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><div><b>Novità Marchi</b><small>Nuovi inserimenti dalla lista di SharePoint (dati riservati: solo nel tuo account)</small></div></div>`;
-  if(!novita.length) return testa + `<div class="ct-empty">Ancora nessuna novità. Per riceverle collega la lista di SharePoint con Power Automate.<br><button class="btn" type="button" data-nvset>Impostazioni › Novità Marchi</button></div>`;
+  const testa = `<div class="ct-cathead" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><div><b>Novità Marchi</b><small>Nuovi inserimenti dalla lista di SharePoint (dati riservati di Marchi: solo per chi usa l’app)</small></div></div>`;
+  if(!novita.length) return testa + `<div class="ct-empty">Ancora nessuna novità: compariranno qui quando Marchi inserisce un nuovo prodotto.</div>`;
   if(!L.length) return testa + `<div class="ct-empty">Nessuna novità trovata.</div>`;
   return testa + `<div class="nv-list">${L.map(n => {
     const k = String(n.codice || "").trim(), x = k && art.perCodice ? art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")) : null, nuova = (n.ricevuto || "") > viste;
@@ -4885,13 +4892,13 @@ const novRef = () => doc(db, "utenti", uid, "impostazioni", "novita");
 let novImp = null;
 const novUrl = () => novImp && novImp.token ? CAL_SERVIZIO + "/novita/" + uid + "/" + novImp.token : "";
 async function novRender(){
-  const box = $("#setNovB"); if(!box) return;
-  try {
-    if(!novImp){ const s = await getDoc(novRef()); novImp = s.exists() ? s.data() : null; }
-    if(!novImp || !novImp.token){ novImp = { token: calToken(), creato: nowISO() }; await setDoc(novRef(), novImp); }
-  } catch(err){ box.innerHTML = `<p class="gc-st err">Non riesco a preparare il collegamento: riprova.</p>`; return; }
+  const box = $("#setNovB"), sez = $("#setNov"); if(!box) return;
+  sez.classList.add("hidden");                           // visibile solo all'account che ha il collegamento con Power Automate
+  try { if(!novImp){ const s = await getDoc(novRef()); novImp = s.exists() ? s.data() : null; } } catch(err){ return; }
+  if(!novImp || !novImp.token) return;
+  sez.classList.remove("hidden");
   const ult = novita[0];
-  box.innerHTML = `<p class="pv-hint">Power Automate (con il tuo account Marchi) manda qui ogni nuovo prodotto della lista SharePoint “Nuovi inserimenti”. Nel flusso, nell’azione <b>HTTP</b> (metodo POST), incolla questo indirizzo:</p>
+  box.innerHTML = `<p class="pv-hint">Power Automate (con il tuo account Marchi) manda qui ogni nuovo prodotto della lista SharePoint “Nuovi inserimenti”: arriva a <b>tutti gli account</b> dell’app (anche quelli futuri), con la notifica. Nel flusso, nell’azione <b>HTTP</b> (metodo POST), incolla questo indirizzo:</p>
     <div class="nov-url"><input class="input" id="novUrl" readonly value="${esc(novUrl())}" aria-label="Indirizzo per Power Automate"><button class="btn" type="button" id="novCopia">Copia</button></div>
     <p class="gc-st">${novita.length ? "Ricevuti finora: " + novita.length + " prodotti" + (ult && ult.ricevuto ? " · l’ultimo " + esc(gcQuando(ult.ricevuto)) : "") : "Ancora nessun prodotto ricevuto."}</p>
     <p class="pv-hint">L’indirizzo è personale: chi lo conosce può mandarti prodotti finti. Se l’hai dato a qualcuno per sbaglio, crea un nuovo indirizzo (poi va cambiato anche in Power Automate).</p>
@@ -4919,9 +4926,9 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.32 (v6.32)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.33 (v6.33)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
-    <section class="set-sez" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
+    <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>

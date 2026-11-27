@@ -1652,21 +1652,68 @@ async function riceviNovita(req, env, uid, token){
   const elenco = Array.isArray(corpo) ? corpo : Array.isArray(corpo.voci) ? corpo.voci : [corpo];
   const voci = elenco.map(votoNovita).filter(Boolean).slice(0, 300);
   if(!voci.length) return json({ errore: "nessun prodotto valido (servono id e codice o descrizione)" }, 400, {});
+  // le novità sono di TUTTI gli account (scelta di Manuel): elenco principale in novita_marchi (solo il servizio lo legge)
+  // e una copia in utenti/{uid}/novita di ogni account, che l'app legge con le regole di sempre
   const esistenti = new Set();
-  const trovati = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: voci.map(v => radice(env) + "/utenti/" + uid + "/novita/sp" + v.spId), mask: { fieldPaths: ["spId"] } });
-  (trovati || []).forEach(x => { if(x.found) esistenti.add(decodeURIComponent(x.found.name.split("/").pop())); });
+  const trovati = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: voci.map(v => radice(env) + "/novita_marchi/sp" + v.spId), mask: { fieldPaths: ["ricevuto"] } });
+  const ricevutoDi = {};
+  (trovati || []).forEach(x => { if(x.found){ const k = decodeURIComponent(x.found.name.split("/").pop()); esistenti.add(k); ricevutoDi[k] = campi(x.found.fields || {}).ricevuto; } });
   const ora = new Date().toISOString(), nuove = voci.filter(v => !esistenti.has("sp" + v.spId));
-  const scritture = voci.map(v => ({ percorso: "utenti/" + uid + "/novita/sp" + v.spId,
-    campi: [...Object.keys(v), "agg", ...(esistenti.has("sp" + v.spId) ? [] : ["ricevuto"])], dati: { ...v, agg: ora, ...(esistenti.has("sp" + v.spId) ? {} : { ricevuto: ora }) } }));
-  for(let i = 0; i < scritture.length; i += 100) await scrivi(env, scritture.slice(i, i + 100));
-  let push = { inviate: 0 };
+  // caricamento iniziale (notifica: false): come data di arrivo nell'app vale quella di SharePoint, così non sembrano tutti appena arrivati
+  const dati = voci.map(v => ({ ...v, agg: ora, ricevuto: ricevutoDi["sp" + v.spId] || (corpo.notifica === false && v.creato ? v.creato : ora) }));
+  const utenti = [...new Set([uid, ...await elencoUtenti(env)])];
+  const scritture = [];
+  for(const d of dati){
+    scritture.push({ percorso: "novita_marchi/sp" + d.spId, dati: d });
+    for(const u of utenti) scritture.push({ percorso: "utenti/" + u + "/novita/sp" + d.spId, dati: d });
+  }
+  for(let i = 0; i < scritture.length; i += 200) await scrivi(env, scritture.slice(i, i + 200));
+  let inviate = 0, avviso = "";
   if(nuove.length && corpo.notifica !== false){
     const v = nuove[0], eur = v.prezzo !== null ? " · " + v.prezzo.toFixed(2).replace(".", ",") + " €" : "";
-    push = await mandaPush(env, uid, nuove.length === 1
+    const msg = nuove.length === 1
       ? { titolo: "Nuovo prodotto Marchi" + (v.cat ? " · " + v.cat : ""), testo: (v.codice ? v.codice + " – " : "") + v.desc + eur + (v.arrivo ? "\nArriva il " + v.arrivo.split("-").reverse().join("/") : ""), url: "/?vista=novita", tag: "novita-" + v.spId }
-      : { titolo: nuove.length + " nuovi prodotti Marchi", testo: nuove.slice(0, 4).map(x => x.desc).join(", ") + (nuove.length > 4 ? "…" : ""), url: "/?vista=novita", tag: "novita" }).catch(e => ({ errore: e.message }));
+      : { titolo: nuove.length + " nuovi prodotti Marchi", testo: nuove.slice(0, 4).map(x => x.desc).join(", ") + (nuove.length > 4 ? "…" : ""), url: "/?vista=novita", tag: "novita" };
+    for(const u of utenti){ const p = await mandaPush(env, u, msg).catch(e => ({ errore: e.message })); inviate += p.inviate || 0; if(p.errore) avviso = p.errore; }
   }
-  return json({ ok: true, ricevuti: voci.length, nuovi: nuove.length, notifiche: push.inviate || 0, ...(push.errore ? { avviso: push.errore } : {}) }, 200, {});
+  return json({ ok: true, ricevuti: voci.length, nuovi: nuove.length, account: utenti.length, notifiche: inviate, ...(avviso ? { avviso } : {}) }, 200, {});
+}
+// tutti gli account dell'app (anche quelli che hanno solo sottoraccolte: showMissing)
+async function elencoUtenti(env){
+  const out = []; let pag = "";
+  do {
+    const d = await leggi(env, base(env) + "/utenti?showMissing=true&pageSize=300&mask.fieldPaths=x" + (pag ? "&pageToken=" + encodeURIComponent(pag) : ""));
+    (d && d.documents || []).forEach(x => out.push(decodeURIComponent(x.name.split("/").pop())));
+    pag = d && d.nextPageToken || "";
+  } while(pag);
+  return out;
+}
+async function idDi(env, percorso){
+  const out = new Set(); let pag = "";
+  do {
+    const d = await leggi(env, base(env) + "/" + percorso + "?pageSize=300&mask.fieldPaths=spId" + (pag ? "&pageToken=" + encodeURIComponent(pag) : ""));
+    (d && d.documents || []).forEach(x => out.add(decodeURIComponent(x.name.split("/").pop())));
+    pag = d && d.nextPageToken || "";
+  } while(pag);
+  return out;
+}
+// un account nuovo (o rimasto indietro) riceve le novità che gli mancano, senza notifiche
+export async function allineaNovita(env, soloUid){
+  const tutte = new Map(); let pag = "";
+  do {
+    const d = await leggi(env, base(env) + "/novita_marchi?pageSize=300" + (pag ? "&pageToken=" + encodeURIComponent(pag) : ""));
+    (d && d.documents || []).forEach(x => tutte.set(decodeURIComponent(x.name.split("/").pop()), campi(x.fields || {})));
+    pag = d && d.nextPageToken || "";
+  } while(pag);
+  if(!tutte.size) return { copiate: 0 };
+  let copiate = 0;
+  for(const u of soloUid ? [soloUid] : await elencoUtenti(env)){
+    const ha = await idDi(env, "utenti/" + u + "/novita");
+    const mancano = [...tutte].filter(([k]) => !ha.has(k)).map(([k, d]) => ({ percorso: "utenti/" + u + "/novita/" + k, dati: d }));
+    for(let i = 0; i < mancano.length; i += 200) await scrivi(env, mancano.slice(i, i + 200));
+    copiate += mancano.length;
+  }
+  return { copiate };
 }
 
 /* ---------- pagine e risposte ---------- */
@@ -1749,6 +1796,10 @@ export default {
       if(req.method !== "POST") return json({ errore: "metodo non ammesso" }, 405, cors);
       try {
         /* ----- notifiche (v6.32) ----- */
+        if(p === "/push/allinea"){                     // l'app all'avvio: copia nell'account le novità Marchi che gli mancano
+          const uid = await utente(req, env);
+          return json({ ok: true, ...await allineaNovita(env, uid) }, 200, cors);
+        }
         if(p === "/push/prova"){
           const uid = await utente(req, env);
           const r = await mandaPush(env, uid, { titolo: "Notifiche attive ✓", testo: "Da ora l'app Clienti ti avvisa dei nuovi prodotti Marchi.", url: "/?vista=novita", tag: "prova" });
@@ -2011,6 +2062,8 @@ export default {
     const t = evento && evento.scheduledTime || Date.now();
     const completo = new Date(t).getUTCMinutes() === 0;
     const consegne = cronConsegne(env, t).catch(() => {});
+    // una volta al giorno (alle 5 di mattina UTC): le novità Marchi mancanti agli account nuovi
+    if(new Date(t).getUTCHours() === 5 && new Date(t).getUTCMinutes() === 0) await allineaNovita(env).catch(() => {});
     const d = await leggi(env, base(env) + "/calendario_segreti?pageSize=50&mask.fieldPaths=creato");
     for(const x of (d && d.documents) || []){
       const uid = decodeURIComponent(x.name.split("/").pop());

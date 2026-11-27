@@ -301,6 +301,9 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.33** = v6.32 + le **novità Marchi valgono per tutti gli account** (anche il papà e quelli futuri, con le notifiche); la sezione "Novità Marchi da
+  SharePoint" delle Impostazioni la vede solo l'account con il collegamento (Manuel). Prove: 24 casi del Worker. **Il Worker `calendario` va incollato di
+  nuovo su Cloudflare.** Tag Git `v6.33`.
 - **v6.32** = v6.31 + **Novità Marchi da SharePoint con notifiche** (sezione "Novità Marchi da SharePoint e notifiche (v6.32)"): Power Automate manda ogni
   nuovo prodotto della lista "Nuovi inserimenti" al servizio, che lo salva nell'account e manda una **notifica push** (iPhone/iPad dalla Home, PC);
   riquadro **Novità Marchi** in cima agli Articoli; nelle Impostazioni "Notifiche su questo dispositivo" e l'indirizzo per Power Automate. Nuovo file
@@ -508,9 +511,14 @@ Marchi comunica i nuovi prodotti nella lista SharePoint **"Nuovi inserimenti"** 
   JSON). Se l'azione HTTP è "Premium" e la licenza non c'è, il ripiego previsto è un'email a un indirizzo @malfer.it letto da un Email Worker (non ancora fatto).
 - **Servizio** (Worker `calendario`, sezione "5) NOVITÀ DA SHAREPOINT"): `riceviNovita` controlla il token (`utenti/{uid}/impostazioni/novita.token`, creato
   dall'app; sbagliato = 404), legge un prodotto, un array o `{voci, notifica}` (`votoNovita` accetta nomi italiani o interni di SharePoint, `{Link}`; data di
-  arrivo in ora di Roma; provvigione > 1 = percentuale), salva in `utenti/{uid}/novita/sp<ID>` = {spId, codice, desc, cat, prezzo, provv, info, arrivo, sett,
-  creato, link, ricevuto, agg} e, solo per i prodotti nuovi, manda la notifica (`mandaPush`: una per un prodotto, una riassuntiva per più prodotti;
-  `notifica: false` per un caricamento iniziale). **Prezzi e provvigioni sono dati riservati di Marchi: solo in Firestore, mai nel repository pubblico.**
+  arrivo in ora di Roma; provvigione > 1 = percentuale). **Le novità sono di tutti gli account** (scelta di Manuel: arrivano dal suo flusso e valgono anche
+  per il papà e per gli account futuri): elenco principale `novita_marchi/sp<ID>` (solo il servizio lo legge) e una copia in `utenti/{uid}/novita/sp<ID>` di
+  **ogni** account (`elencoUtenti`: lista di `utenti` con `showMissing=true`) = {spId, codice, desc, cat, prezzo, provv, info, arrivo, sett, creato, link,
+  ricevuto, agg}; solo per i prodotti nuovi parte la notifica a tutti gli account (`mandaPush`: una per un prodotto, una riassuntiva per più prodotti;
+  `notifica: false` per un caricamento iniziale, e allora `ricevuto` = data di creazione su SharePoint). Account nuovi o rimasti indietro: `allineaNovita`
+  (l'app chiama `POST /push/allinea` se il suo elenco è vuoto; il cron lo fa per tutti ogni giorno alle 5:00 UTC). La sezione "Novità Marchi da SharePoint"
+  delle Impostazioni compare solo all'account che ha già il token (Manuel): l'app non crea più token per gli altri. **Prezzi e provvigioni sono dati
+  riservati di Marchi: solo in Firestore, mai nel repository pubblico.**
 - **Notifiche push** (Web Push standard, nessun servizio esterno): cifratura RFC 8291 aes128gcm (`cifraPush`) e firma VAPID ES256 (`vapidJwt`) scritte con
   WebCrypto. Secret del Worker **`VAPID_PRIVATE`** = JSON `{kty, crv, x, y, d}`; copia in `cataloghi-originali/vapid-notifiche-privata.json` (solo sul PC, in
   .gitignore); la chiave pubblica è `VAPID_PUB` in `index.html`. Se si cambia la coppia di chiavi, tutti i dispositivi vanno riattivati. Dispositivi in
