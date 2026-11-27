@@ -940,18 +940,13 @@ body.pv-open .tema-btn{display:none}
 .giro-tip{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
 .cn-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 0 8px;font-size:13px;color:var(--muted)}
 .cn-list{margin-bottom:18px}
-#v-giro .cn-list{grid-template-columns:minmax(0,1fr)}
 .cn-st{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
 .cn-st.ok{background:color-mix(in srgb,var(--st-cliente) 16%,transparent);color:var(--st-cliente)}
 .cn-st.ko{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}
-#v-giro .cn-li{flex-wrap:wrap;padding-right:0}
-#v-giro .cn-li .giro-main{flex:1 1 100%;min-width:0}
-.cn-az{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:0 12px 10px 64px;margin-top:-4px}
-.cn-or{font-size:12.5px;color:var(--muted);margin-right:auto;white-space:nowrap}
-.cn-az .chip-btn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;padding:5px 10px}
-.cn-az .chip-btn svg{width:15px;height:15px}
-.cn-nuovo{color:var(--accent)}
-@media (max-width:420px){.cn-az{padding-left:12px}}
+.cn-side{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:13px;white-space:nowrap}
+.cn-side .cn-st{font-size:11px;padding:2px 7px}
+.cn-av-ok{background:var(--st-cliente)!important;color:#fff!important}
+.cn-nuovo{color:var(--accent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--accent) 55%,transparent)}
 .cn-nolink{cursor:default}
 .cn-pos{color:var(--accent)}
 .cn-diag{display:block;margin-top:6px;font-size:11.5px;color:var(--muted);word-break:break-word;user-select:all}
@@ -2058,7 +2053,7 @@ dialog.rc-dlg{max-width:720px}
   <div class="dlg">
     <div class="dlg-head"><h2 id="cnMapT">Dov’è il camion<span class="sub" id="cnMapSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
     <div class="dlg-body"><div id="cnMap" class="cn-map"></div><p class="pv-hint" id="cnMapNota"></p></div>
-    <div class="dlg-foot"><a class="btn" id="cnMapG" target="_blank" rel="noopener">Apri in Google Maps</a><button class="btn btn-primary" type="button" data-close>Chiudi</button></div>
+    <div class="dlg-foot"><button class="btn" type="button" id="cnMapLink">Cambia cliente</button><a class="btn" id="cnMapG" target="_blank" rel="noopener">Apri in Google Maps</a><button class="btn btn-primary" type="button" data-close>Chiudi</button></div>
   </div>
 </dialog>
 <dialog id="dlgSet" aria-labelledby="setT">
@@ -4766,7 +4761,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.26 (v6.26)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.27 (v6.27)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4898,10 +4893,14 @@ function cnCliente(r){
 }
 function cnHTML(iso){
   const oggi = localISO();
-  if(!cons.collegato) return iso === oggi ? `<h2 class="sec">In consegna</h2><div class="cn-vuoto"><p>Collega il tuo accesso LAC (InTime) per vedere qui, per ogni cliente, se la merce è già stata consegnata e dov’è il camion.</p><button class="btn btn-primary" type="button" data-cnset>Collega l’accesso LAC</button></div>` : "";
+  // la sezione c'è in tutti i giorni del Giro; LAC però mostra solo le consegne del giorno stesso
+  if(!cons.collegato) return `<h2 class="sec">In consegna</h2><div class="cn-vuoto"><p>Collega il tuo accesso LAC (InTime) per vedere qui, per ogni cliente, se la merce è già stata consegnata e dov’è il camion.</p><button class="btn btn-primary" type="button" data-cnset>Collega l’accesso LAC</button></div>`;
   const righe = (cons.righe || []).filter(r => r.giorno === iso)
     .sort((a, b) => (a.da || "99:99").localeCompare(b.da || "99:99") || (a.cliente || "").localeCompare(b.cliente || "", "it"));
-  if(!righe.length && iso !== oggi) return "";
+  const gg = (CAL_GIORNI[new Date(iso + "T12:00:00").getDay()] || "").toLowerCase();
+  const vuoto = iso === oggi ? "Nessuna consegna su LAC per oggi."
+    : iso < oggi ? `LAC mostra solo le consegne del giorno: quelle di ${gg} ${esc(fmtDate(iso).slice(0, 5))} non si vedono più.`
+    : `Le consegne di ${gg} ${esc(fmtDate(iso).slice(0, 5))} compariranno qui quel giorno, quando LAC le pubblica.`;
   // dati vecchi (più di 15 minuti) aprendo il Giro di oggi: si chiede al servizio di rileggerli (al massimo ogni 5 minuti)
   if(iso === oggi && !cons.errore && Date.now() - Date.parse(cons.agg || 0) > 15 * 60000 && Date.now() - cnAuto > 5 * 60000){ cnAuto = Date.now(); cnChiama("sincronizza").catch(() => {}); }
   cnVis = righe;
@@ -4909,20 +4908,20 @@ function cnHTML(iso){
   const truck = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h12v10H2zM14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>`;
   const anello = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>`;
   const riga = (r, i) => {
+    // stessa forma delle righe di "Ordini da raccogliere": cliente, a destra orario e stato, un tasto rotondo
     const c = cnCliente(r), st = cnStato(r.stato);
-    const side = `<span class="cn-st ${st}">${esc(r.stato || "–")}</span>`;
-    const main = c ? rowHTML(c, side)
-      : `<div class="row cn-nolink"><span class="av" aria-hidden="true">${esc(inizialiDi(r.cliente))}</span><span class="row-main"><span class="row-name">${esc(cnTitolo(r.cliente))}</span><span class="row-sub">${esc(cnTitolo(r.ind))}</span></span><span class="row-side">${side}</span></div>`;
-    return `<li class="giro-li cn-li cn-${st}"><div class="giro-main">${main}</div>
-      <div class="cn-az"><span class="cn-or">${r.da ? "Ore " + esc(r.da + (r.a ? "–" + r.a : "")) : "Senza orario"}</span>
-        ${r.pos ? `<button class="chip-btn cn-pos" type="button" data-cnpos="${i}">${truck}Dov’è il camion</button>` : ""}
-        ${c ? `<button class="chip-btn cn-link" type="button" data-cnlink="${i}" title="Cambia il cliente collegato" aria-label="Cambia il cliente collegato">${anello}</button>` : `<button class="chip-btn cn-link cn-nuovo" type="button" data-cnlink="${i}">${anello}Collega a un cliente</button>`}</div>
-    </li>`;
+    const side = `<span class="cn-side">${r.da ? `<span>${esc(r.da + (r.a ? "–" + r.a : ""))}</span>` : ""}<b class="cn-st ${st}">${esc(r.stato || "–")}</b></span>`;
+    const av = st === "ok" ? `<span class="av cn-av-ok" aria-label="Consegnato">${giroCheck}</span>` : "";
+    const main = c ? rowHTML(c, side, av)
+      : `<div class="row cn-nolink">${av || `<span class="av" aria-hidden="true">${esc(inizialiDi(r.cliente))}</span>`}<span class="row-main"><span class="row-name">${esc(cnTitolo(r.cliente))}</span><span class="row-sub">${esc(cnTitolo(r.ind))}</span></span><span class="row-side">${side}</span></div>`;
+    const btn = r.pos ? `<button class="icon-btn cn-pos" type="button" data-cnpos="${i}" aria-label="Dov’è il camion" title="Dov’è il camion">${truck}</button>`
+      : `<button class="icon-btn${c ? "" : " cn-nuovo"}" type="button" data-cnlink="${i}" aria-label="${c ? "Cambia il cliente collegato" : "Collega a un cliente"}" title="${c ? "Cambia il cliente collegato" : "Collega a un cliente"}">${anello}</button>`;
+    return `<li class="giro-li cn-li cn-${st}"><div class="giro-main">${main}</div>${btn}</li>`;
   };
   return `<h2 class="sec">In consegna <small>${righe.length ? fatte + " di " + righe.length + " consegnate" : "0"}</small></h2>
     <div class="cn-bar"><span>${cons.agg ? "Da LAC, aggiornato " + esc(gcQuando(cons.agg)) : "Non ancora letto da LAC"}</span><button class="chip-btn" type="button" data-cnsync>Sincronizza</button></div>
     ${cons.errore ? `<p class="gc-st err">LAC: ${esc(cons.errore)}${/password|accesso/i.test(cons.errore) ? ` <button class="chip-btn" type="button" data-cnset>Accesso LAC</button>` : ""}</p>` : ""}
-    <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">Nessuna consegna su LAC per oggi.${cons.diag && iso === oggi ? `<small class="cn-diag">Dettagli per Claude: ${esc(cons.diag)}</small>` : ""}</li>`}</ul>`;
+    <ul class="list cn-list">${righe.map(riga).join("") || `<li class="empty">${vuoto}${cons.diag && iso === oggi ? `<small class="cn-diag">Dettagli per Claude: ${esc(cons.diag)}</small>` : ""}</li>`}</ul>`;
 }
 async function cnSync(btn){
   if(btn){ btn.disabled = true; btn.textContent = "Sincronizzo…"; }
@@ -4937,8 +4936,10 @@ function cnLinkSalva(k, id){
   renderGiro();
 }
 let cnMapObj = null;
+let cnMapRiga = null;
 function cnMappa(r){
   if(!r || !r.pos) return;
+  cnMapRiga = r;
   const c = cnCliente(r);
   $("#cnMapSub").textContent = "Consegna per " + (c ? c.nome : cnTitolo(r.cliente)) + (r.da ? " · " + r.da + (r.a ? "–" + r.a : "") : "");
   $("#cnMapG").href = "https://www.google.com/maps/search/?api=1&query=" + r.pos[0] + "," + r.pos[1];
@@ -4964,13 +4965,17 @@ $("#giroBody").addEventListener("click", e => {
   const p = e.target.closest("[data-cnpos]"); if(p){ cnMappa(cnVis[+p.dataset.cnpos]); return; }
   const l = e.target.closest("[data-cnlink]");
   if(l){
-    const r = cnVis[+l.dataset.cnlink]; if(!r) return;
-    cnLinkK = cnChiave(r); cnLinkNome = cnTitolo(r.cliente);
-    pvOpenPicker("cn");
-    $("#pvCliQ").value = giroParole(r.cliente)[0] || ""; pvRenderCli();
+    cnScegli(cnVis[+l.dataset.cnlink]);
   }
 });
 let cnLinkNome = "";
+function cnScegli(r){
+  if(!r) return;
+  cnLinkK = cnChiave(r); cnLinkNome = cnTitolo(r.cliente);
+  pvOpenPicker("cn");
+  $("#pvCliQ").value = giroParole(r.cliente)[0] || ""; pvRenderCli();
+}
+$("#cnMapLink").addEventListener("click", () => { $("#dlgCnMap").close(); cnScegli(cnMapRiga); });
 function cnRender(){
   const on = !!cons.collegato;
   $("#cnOff").classList.toggle("hidden", on); $("#cnOn").classList.toggle("hidden", !on);
