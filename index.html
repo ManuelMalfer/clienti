@@ -2449,8 +2449,9 @@ function filtered(){
   }).sort((a,b) => (a.nome||"").localeCompare(b.nome||"", "it"));
 }
 
+const appAttivo = c => !!c.ricontattare && c.ricontattare >= localISO();     // appuntamento di oggi o futuro (v6.30)
 function richiamoTag(c){
-  if(!c.ricontattare) return "";
+  if(!appAttivo(c)) return "";
   const late = false;                                    // dalla v6.29 un appuntamento passato non è più "scaduto"
   return `<span class="flag riga-richiamo ${late ? "late" : ""}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Appuntamento ${fmtDate(c.ricontattare).slice(0,5)}${c.ricontattareOra ? " " + c.ricontattareOra : ""}</span>`;
 }
@@ -4766,7 +4767,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.29 (v6.29)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.30 (v6.30)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -5238,7 +5239,7 @@ function appRender(){
   $("#appScelto").classList.toggle("hidden", !c);
   $("#appQ").classList.toggle("hidden", !!c); $("#appList").classList.toggle("hidden", !!c);
   $("#appOk").disabled = !c || !$("#appData").value;
-  const avv = [c && riposoIl(c, $("#appData").value) ? `Attenzione: ${c.nome} è chiuso il ${RIPOSO_JS[new Date($("#appData").value + "T12:00:00").getDay()].toLowerCase()}.` : "", c && c.ricontattare ? `${c.nome} ha già un appuntamento il ${fmtDate(c.ricontattare)}${c.ricontattareOra ? " alle " + c.ricontattareOra : ""}: salvando viene spostato a questo.` : ""].filter(Boolean).join(" ");
+  const avv = [c && riposoIl(c, $("#appData").value) ? `Attenzione: ${c.nome} è chiuso il ${RIPOSO_JS[new Date($("#appData").value + "T12:00:00").getDay()].toLowerCase()}.` : "", c && appAttivo(c) ? `${c.nome} ha già un appuntamento il ${fmtDate(c.ricontattare)}${c.ricontattareOra ? " alle " + c.ricontattareOra : ""}: salvando viene spostato a questo.` : ""].filter(Boolean).join(" ");
   $("#appAvv").textContent = avv; $("#appAvv").classList.toggle("hidden", !avv);
   if(c){ $("#appScelto").innerHTML = `<div><b>${esc(c.nome)}</b><small>${esc([c.luogo, c.codice ? "cod. " + c.codice : "", statoLabel(c.stato)].filter(Boolean).join(" · "))}</small></div><button class="link" type="button" id="appCambia">Cambia</button>`; return; }
   const parole = app.q.split(/\s+/).map(norm).filter(Boolean);
@@ -5685,11 +5686,11 @@ function renderDetail(){
     </div>
     <div class="richiamo">
       <label for="dRich">Appuntamento il</label>
-      <input class="input" type="date" id="dRich" value="${c.ricontattare || ""}">
-      <input class="input" type="time" id="dRichOra" value="${c.ricontattareOra || ""}" aria-label="Ora dell'appuntamento">
+      <input class="input" type="date" id="dRich" value="${appAttivo(c) ? c.ricontattare : ""}">
+      <input class="input" type="time" id="dRichOra" value="${appAttivo(c) ? c.ricontattareOra || "" : ""}" aria-label="Ora dell'appuntamento">
       <button class="chip-btn" type="button" data-rich="7">+1 settimana</button>
       <button class="chip-btn" type="button" data-rich="30">+1 mese</button>
-      ${c.ricontattare ? `<button class="chip-btn" type="button" data-rich="cal">Aggiungi al calendario</button><button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
+      ${appAttivo(c) ? `<button class="chip-btn" type="button" data-rich="cal">Aggiungi al calendario</button><button class="chip-btn" type="button" data-rich="done">Fatto</button>` : ""}
     </div>
     <div class="richiamo">
       <label for="dChDal">Chiusura</label>
@@ -5722,7 +5723,7 @@ function renderDetail(){
   const ct = $("#dChTogli"); if(ct) ct.onclick = () => { update(c.id, { chiusoDal: "", chiusoAl: "" }); toast("Chiusura rimossa"); };
   $("#dRich").onchange = e => update(c.id, e.target.value ? { ricontattare: e.target.value } : { ricontattare: "", ricontattareOra: "" });
   $("#dRichOra").onchange = e => {
-    if(!c.ricontattare && e.target.value){ update(c.id, { ricontattare: localISO(), ricontattareOra: e.target.value }); return; }
+    if(!appAttivo(c) && e.target.value){ update(c.id, { ricontattare: localISO(), ricontattareOra: e.target.value, ricontattareFine: "" }); return; }
     update(c.id, { ricontattareOra: e.target.value || "" });
   };
 }
@@ -5736,7 +5737,7 @@ $("#dBody").addEventListener("click", e => {
     downloadICS([c], "richiamo-" + (c.nome || "cliente").replace(/[^\w]+/g, "-").toLowerCase());
   } else {
     const d = addDays(+b.dataset.rich);
-    update(c.id, { ricontattare: d }); toast("Appuntamento il " + fmtDate(d));
+    update(c.id, appAttivo(c) ? { ricontattare: d } : { ricontattare: d, ricontattareOra: "", ricontattareFine: "" }); toast("Appuntamento il " + fmtDate(d));
   }
 });
 $("#dStorico").addEventListener("click", async e => {
