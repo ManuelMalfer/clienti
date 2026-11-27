@@ -20,7 +20,7 @@ semplice e concreto, un passo alla volta.
 
 - **Un solo file**: `index.html` (HTML + CSS + JavaScript in un unico file, nessun build, nessun npm).
   Mantieni questa struttura: Manuel finora aggiornava il sito caricando `index.html` su GitHub.
-- Altri file del sito: `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`,
+- Altri file del sito: `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`, `sw.js` (service worker solo per le notifiche, dalla v6.32),
   `robots.txt` (Disallow: /), `CNAME` (clienti.malfer.it).
 - **Hosting**: GitHub Pages, repository pubblico `ManuelMalfer/clienti`, branch `main`, cartella root.
 - **Dominio**: `clienti.malfer.it`. I DNS di malfer.it sono su **Cloudflare** (dominio comprato su Aruba).
@@ -301,6 +301,11 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.32** = v6.31 + **Novità Marchi da SharePoint con notifiche** (sezione "Novità Marchi da SharePoint e notifiche (v6.32)"): Power Automate manda ogni
+  nuovo prodotto della lista "Nuovi inserimenti" al servizio, che lo salva nell'account e manda una **notifica push** (iPhone/iPad dalla Home, PC);
+  riquadro **Novità Marchi** in cima agli Articoli; nelle Impostazioni "Notifiche su questo dispositivo" e l'indirizzo per Power Automate. Nuovo file
+  **`sw.js`**. Prove: 18 casi nuovi del Worker (notifiche decifrate con node:crypto e firma VAPID verificata). **Il Worker `calendario` va incollato di
+  nuovo su Cloudflare e serve il nuovo Secret `VAPID_PRIVATE`.** Tag Git `v6.32`.
 - **v6.31** = v6.30 + nel **Giro** l'ordine delle sezioni è Ordini da raccogliere → **In consegna** → Appuntamenti, e "In consegna" **si apre e si chiude**
   toccando il titolo (freccia, "Mostra"/"Nascondi"; chiusa resta solo il titolo con "N di M consegnate"); la scelta vale su tutti i dispositivi
   (`preferenze.cnChiusa`, salvata con `mergeFields`; `cnTesta`, `data-cntog`). Solo `index.html`. Tag Git `v6.31`.
@@ -490,6 +495,36 @@ La sezione **Richiami** si chiama ora **Calendario** (voce del menu/barra, stess
   Google aggiorna i calendari sottoscritti ogni qualche ora (non si può forzare); Apple più spesso.
 - Prove fatte: Worker con finto Firestore (18 casi: token giusto/sbagliato/mancante, altro utente, più pagine di clienti, giro spento, cliente chiuso, domeniche,
   righe ≤ 75 byte, Firestore irraggiungibile = 503); app con finto Firebase (griglia, giorno, mesi, finestra, nuovo link, link Google).
+
+## Novità Marchi da SharePoint e notifiche (v6.32)
+
+Marchi comunica i nuovi prodotti nella lista SharePoint **"Nuovi inserimenti"** (sito `marchispa.sharepoint.com/sites/MARCHI-SPA`, lista
+`Lists/Nuovi inserimenti1`; campi interni: `ID`, `Codicearticolo`, `Descrizionearticolo`, `Categoriamerceologica` (scelta, `{Value}`), `Prezzo`, `Provvigione`
+(0,1 = 10%), `Motivazioneinserimento` ("Informazione"), `Dataarrivo`, `Datacomunicazione` ("Settimana"), `Foto`, allegati). Nello stesso sito ci sono anche
+"Variazioni di listino", "Prodotti in esaurimento", "Prodotti in scadenza", "Promozioni", "Listini", "Cataloghi" (possibili sviluppi). Scelta di Manuel:
+**Power Automate** con il suo account Marchi (nessuna app esterna da far approvare all'informatica di Marchi).
+- **Flusso Power Automate** (lo crea Manuel): trigger SharePoint "Quando viene creato un elemento" (sito MARCHI-SPA, lista Nuovi inserimenti) → azione
+  **HTTP** POST all'indirizzo personale `https://calendario.webmalfer.workers.dev/novita/<uid>/<token>` con Corpo = **Body** del trigger (l'elemento intero,
+  JSON). Se l'azione HTTP è "Premium" e la licenza non c'è, il ripiego previsto è un'email a un indirizzo @malfer.it letto da un Email Worker (non ancora fatto).
+- **Servizio** (Worker `calendario`, sezione "5) NOVITÀ DA SHAREPOINT"): `riceviNovita` controlla il token (`utenti/{uid}/impostazioni/novita.token`, creato
+  dall'app; sbagliato = 404), legge un prodotto, un array o `{voci, notifica}` (`votoNovita` accetta nomi italiani o interni di SharePoint, `{Link}`; data di
+  arrivo in ora di Roma; provvigione > 1 = percentuale), salva in `utenti/{uid}/novita/sp<ID>` = {spId, codice, desc, cat, prezzo, provv, info, arrivo, sett,
+  creato, link, ricevuto, agg} e, solo per i prodotti nuovi, manda la notifica (`mandaPush`: una per un prodotto, una riassuntiva per più prodotti;
+  `notifica: false` per un caricamento iniziale). **Prezzi e provvigioni sono dati riservati di Marchi: solo in Firestore, mai nel repository pubblico.**
+- **Notifiche push** (Web Push standard, nessun servizio esterno): cifratura RFC 8291 aes128gcm (`cifraPush`) e firma VAPID ES256 (`vapidJwt`) scritte con
+  WebCrypto. Secret del Worker **`VAPID_PRIVATE`** = JSON `{kty, crv, x, y, d}`; copia in `cataloghi-originali/vapid-notifiche-privata.json` (solo sul PC, in
+  .gitignore); la chiave pubblica è `VAPID_PUB` in `index.html`. Se si cambia la coppia di chiavi, tutti i dispositivi vanno riattivati. Dispositivi in
+  `utenti/{uid}/impostazioni/push.subs` = [{endpoint, keys{p256dh, auth}, disp, creato}] (al massimo 10; quelli che rispondono 404/410 si tolgono da soli).
+  `POST /push/prova` (login app) manda una notifica di prova.
+- **`sw.js`** (radice del sito): service worker **solo per le notifiche, niente cache** (l'app si aggiorna come prima). `push` → `showNotification`;
+  tocco sulla notifica → porta davanti l'app aperta (messaggio `{tipo: "novita"}` → `nvApri`) o apre `/?vista=novita` (`nvDaLink`). L'app lo registra
+  all'avvio. iPhone/iPad: le notifiche arrivano solo all'app aperta dall'icona della schermata Home, con iOS 16.4 o successivo.
+- **Nell'app**: Impostazioni › "Notifiche su questo dispositivo" (`pushRender`: Attiva le notifiche / Manda una notifica di prova / Disattiva; spiega cosa fare
+  su iPhone fuori dalla Home o con le notifiche bloccate) e "Novità Marchi da SharePoint" (`novRender`: indirizzo per Power Automate con Copia, conteggio dei
+  prodotti ricevuti, "Crea un nuovo indirizzo"). Articoli: riquadro **Novità Marchi** in cima alle categorie (`nvTile`, `art.top = -2`, `nvHTML`): schede con
+  foto del catalogo se il codice esiste (`art.perCodice`), codice, categoria, settimana, "Arriva il", prezzo, provvigione, informazione, Copia codice, Scheda
+  articolo, Apri in SharePoint; etichetta **Nuovo** e numero sulla voce Articoli del menu (`#nvNum`) per i prodotti ricevuti dopo `preferenze.novitaViste`
+  (si aggiorna 2 secondi dopo aver aperto le Novità). Dati in diretta con `onSnapshot` (`subscribeNovita`).
 
 ## Consegne LAC InTime (v6.25)
 

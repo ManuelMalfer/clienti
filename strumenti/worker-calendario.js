@@ -9,6 +9,8 @@
 //     - se in Google l'evento viene spostato o cancellato, il richiamo del cliente si sposta o si toglie (riga nello storico);
 //     - gli appuntamenti dei calendari Google scelti si copiano (sola lettura) in utenti/{uid}/impostazioni/gcal_eventi
 //       e l'app li mostra nel Calendario.
+//  5) NOVITÀ DA SHAREPOINT MARCHI + NOTIFICHE (v6.32): Power Automate manda ogni nuovo prodotto della lista "Nuovi inserimenti"
+//     a /novita/<uid>/<token>; il servizio lo salva in utenti/{uid}/novita e manda una notifica push ai dispositivi dell'utente (sezione 5).
 //  4) CONSEGNE DA LAC InTime (v6.25): ogni utente collega il suo accesso al Track & Trace di LAC (sezione 4 qui sotto);
 //     il servizio legge le consegne del giorno ogni 10 minuti (5–21) o quando l'app chiede "Sincronizza".
 //  3) iCLOUD NEI DUE SENSI (v6.8): come Google, ma con CalDAV ed email Apple + password per app (sezione 3 qui sotto).
@@ -41,6 +43,9 @@
 //   POST /icloud/collega               (login app) { user, pass } oppure { rosario: true } (usa l'iCloud già dato a Rosario)
 //   POST /icloud/scegli | /icloud/scollega | /icloud/sincronizza   come per Google
 //   POST /intime/collega { user, pass } | /intime/sincronizza | /intime/scollega   (login app) consegne LAC InTime
+//   POST /novita/<uid>/<token>         (Power Automate) un prodotto { id, codice, descrizione, … } oppure { voci: [ … ], notifica }
+//   POST /push/prova                   (login app) notifica di prova a tutti i dispositivi dell'utente
+//   Segreto in più (v6.32): VAPID_PRIVATE = chiave privata delle notifiche (JSON { kty, crv, x, y, d })
 //   utenti/{uid}/impostazioni/icloud e icloud_eventi: stato e appuntamenti iCloud per l'app (come gcal e gcal_eventi)
 
 const GIORNI = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
@@ -1565,6 +1570,105 @@ async function cronConsegne(env, t){
   }
 }
 
+/* =====================================================================================
+   5) NOVITÀ DA SHAREPOINT MARCHI + NOTIFICHE PUSH (v6.32)
+   Power Automate (account Marchi dell'utente) a ogni nuovo elemento della lista SharePoint "Nuovi inserimenti" fa una
+   richiesta HTTP POST a /novita/<uid>/<token> (token casuale creato dall'app in utenti/{uid}/impostazioni/novita.token).
+   Ogni prodotto va in utenti/{uid}/novita/sp<ID> (privato: prezzi e provvigioni NON vanno nel repository pubblico) e, se è
+   nuovo, parte una notifica push (Web Push, RFC 8291 aes128gcm + VAPID ES256) a ogni dispositivo in
+   utenti/{uid}/impostazioni/push.subs = [ { endpoint, keys: { p256dh, auth }, disp, creato } ] (li salva l'app).
+   ===================================================================================== */
+const te = s => new TextEncoder().encode(s);
+const unisci = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let i = 0; for(const x of a){ o.set(x, i); i += x.length; } return o; };
+async function hkdf(sale, ikm, info, n){
+  const k = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: sale, info }, k, n * 8));
+}
+const vapidJwk = env => { try { const j = JSON.parse(env.VAPID_PRIVATE || ""); return j && j.d && j.x && j.y ? j : null; } catch(e){ return null; } };
+export const vapidPubblica = env => { const j = vapidJwk(env); return j ? b64u(unisci(new Uint8Array([4]), da64u(j.x), da64u(j.y))) : ""; };
+async function vapidJwt(env, aud){
+  const j = vapidJwk(env);
+  const k = await crypto.subtle.importKey("jwk", { kty: "EC", crv: "P-256", x: j.x, y: j.y, d: j.d, ext: true }, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const t = b64u(JSON.stringify({ typ: "JWT", alg: "ES256" })) + "." + b64u(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: env.VAPID_SUBJECT || "https://clienti.malfer.it" }));
+  return t + "." + b64u(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, k, te(t)));
+}
+// cifra il messaggio per un dispositivo (RFC 8291)
+export async function cifraPush(sub, testo){
+  const ua = da64u(sub.keys.p256dh), auth = da64u(sub.keys.auth);
+  const loc = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const locPub = new Uint8Array(await crypto.subtle.exportKey("raw", loc.publicKey));
+  const uaKey = await crypto.subtle.importKey("raw", ua, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const comune = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaKey }, loc.privateKey, 256));
+  const ikm = await hkdf(auth, comune, unisci(te("WebPush: info\0"), ua, locPub), 32);
+  const sale = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(sale, ikm, te("Content-Encoding: aes128gcm\0"), 16), nonce = await hkdf(sale, ikm, te("Content-Encoding: nonce\0"), 12);
+  const k = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const cif = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, k, unisci(te(testo), new Uint8Array([2]))));
+  return unisci(sale, new Uint8Array([0, 0, 16, 0]), new Uint8Array([locPub.length]), locPub, cif);
+}
+// manda { titolo, testo, url, tag } a tutti i dispositivi dell'utente; toglie quelli che non esistono più
+export async function mandaPush(env, uid, msg){
+  if(!vapidJwk(env)) return { inviate: 0, errore: "notifiche non configurate nel servizio (manca VAPID_PRIVATE)" };
+  const P = await leggiDoc(env, "utenti/" + uid + "/impostazioni/push");
+  const subs = (P && Array.isArray(P.subs) ? P.subs : []).filter(s => s && s.endpoint && s.keys && s.keys.p256dh && s.keys.auth);
+  let inviate = 0; const morte = new Set();
+  for(const s of subs){
+    try {
+      const corpo = await cifraPush(s, JSON.stringify(msg));
+      const r = await fetch(s.endpoint, { method: "POST", headers: { TTL: "172800", Urgency: "normal", "Content-Encoding": "aes128gcm", "Content-Type": "application/octet-stream",
+        Authorization: "vapid t=" + await vapidJwt(env, new URL(s.endpoint).origin) + ", k=" + vapidPubblica(env) }, body: corpo });
+      if(r.status === 404 || r.status === 410) morte.add(s.endpoint); else if(r.ok) inviate++;
+      await r.arrayBuffer().catch(() => {});
+    } catch(e){}
+  }
+  if(morte.size) await scrivi(env, [{ percorso: "utenti/" + uid + "/impostazioni/push", campi: ["subs"], dati: { subs: (P.subs || []).filter(s => !morte.has(s.endpoint)) } }]).catch(() => {});
+  return { inviate, dispositivi: subs.length, tolti: morte.size };
+}
+
+// un prodotto come arriva da Power Automate (nomi dei campi in italiano o quelli interni di SharePoint)
+const dataRoma = s => { if(!s) return ""; const m = /^(\d{4}-\d{2}-\d{2})$/.exec(s); if(m) return m[1]; const d = new Date(s);
+  return isNaN(d) ? "" : new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" }).format(d); };
+const testoNov = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, n);
+const numNov = v => { if(v === "" || v == null) return null; const x = typeof v === "number" ? v : parseFloat(String(v).replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")); return isFinite(x) ? x : null; };
+export function votoNovita(x){
+  if(!x || typeof x !== "object") return null;
+  const g = (...k) => { for(const n of k) if(x[n] !== undefined && x[n] !== null && x[n] !== "") return x[n]; return ""; };
+  const id = testoNov(g("id", "ID", "Id"), 20).replace(/[^\w-]/g, "");
+  const codice = testoNov(g("codice", "Codicearticolo"), 30), descrizione = testoNov(g("descrizione", "Descrizionearticolo", "Title"), 200);
+  if(!id || (!codice && !descrizione)) return null;
+  let cat = g("categoria", "Categoriamerceologica"); if(cat && typeof cat === "object") cat = cat.Value || "";
+  let provv = numNov(g("provvigione", "Provvigione")); if(provv !== null && provv > 1) provv = provv / 100;      // 10 → 0,10
+  return { spId: id, codice, desc: descrizione, cat: testoNov(cat, 60), prezzo: numNov(g("prezzo", "Prezzo")), provv,
+    info: testoNov(g("informazione", "info", "Motivazioneinserimento"), 1000), arrivo: dataRoma(testoNov(g("arrivo", "Dataarrivo"), 40)),
+    sett: testoNov(g("settimana", "Datacomunicazione"), 10), creato: testoNov(g("creato", "Created"), 40), link: /^https:\/\/[\w.-]+\.sharepoint\.com\//.test(String(g("link", "{Link}"))) ? testoNov(g("link", "{Link}"), 400) : "" };
+}
+const PERC_NOV = /^\/novita\/([A-Za-z0-9_-]{6,128})\/([a-f0-9]{32,128})$/;
+async function riceviNovita(req, env, uid, token){
+  const imp = await leggiDoc(env, "utenti/" + uid + "/impostazioni/novita");
+  if(!imp || !uguali(String(imp.token || ""), token)) return json({ errore: "collegamento non valido" }, 404, {});
+  const testo = await req.text();
+  if(testo.length > 600000) return json({ errore: "troppo grande" }, 413, {});
+  let corpo; try { corpo = JSON.parse(testo); } catch(e){ return json({ errore: "il corpo deve essere JSON" }, 400, {}); }
+  const elenco = Array.isArray(corpo) ? corpo : Array.isArray(corpo.voci) ? corpo.voci : [corpo];
+  const voci = elenco.map(votoNovita).filter(Boolean).slice(0, 300);
+  if(!voci.length) return json({ errore: "nessun prodotto valido (servono id e codice o descrizione)" }, 400, {});
+  const esistenti = new Set();
+  const trovati = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: voci.map(v => radice(env) + "/utenti/" + uid + "/novita/sp" + v.spId), mask: { fieldPaths: ["spId"] } });
+  (trovati || []).forEach(x => { if(x.found) esistenti.add(decodeURIComponent(x.found.name.split("/").pop())); });
+  const ora = new Date().toISOString(), nuove = voci.filter(v => !esistenti.has("sp" + v.spId));
+  const scritture = voci.map(v => ({ percorso: "utenti/" + uid + "/novita/sp" + v.spId,
+    campi: [...Object.keys(v), "agg", ...(esistenti.has("sp" + v.spId) ? [] : ["ricevuto"])], dati: { ...v, agg: ora, ...(esistenti.has("sp" + v.spId) ? {} : { ricevuto: ora }) } }));
+  for(let i = 0; i < scritture.length; i += 100) await scrivi(env, scritture.slice(i, i + 100));
+  let push = { inviate: 0 };
+  if(nuove.length && corpo.notifica !== false){
+    const v = nuove[0], eur = v.prezzo !== null ? " · " + v.prezzo.toFixed(2).replace(".", ",") + " €" : "";
+    push = await mandaPush(env, uid, nuove.length === 1
+      ? { titolo: "Nuovo prodotto Marchi" + (v.cat ? " · " + v.cat : ""), testo: (v.codice ? v.codice + " – " : "") + v.desc + eur + (v.arrivo ? "\nArriva il " + v.arrivo.split("-").reverse().join("/") : ""), url: "/?vista=novita", tag: "novita-" + v.spId }
+      : { titolo: nuove.length + " nuovi prodotti Marchi", testo: nuove.slice(0, 4).map(x => x.desc).join(", ") + (nuove.length > 4 ? "…" : ""), url: "/?vista=novita", tag: "novita" }).catch(e => ({ errore: e.message }));
+  }
+  return json({ ok: true, ricevuti: voci.length, nuovi: nuove.length, notifiche: push.inviate || 0, ...(push.errore ? { avviso: push.errore } : {}) }, 200, {});
+}
+
 /* ---------- pagine e risposte ---------- */
 const pagina = (titolo, testo, app) => new Response(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titolo}</title>
 <style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#F3F5F4;color:#1C2B2E;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
@@ -1594,6 +1698,12 @@ export default {
     const app = env.APP_URL || "https://clienti.malfer.it";
     if(p === "/ping") return new Response("ok", { headers: { "access-control-allow-origin": "*", "cache-control": "no-store" } });
     if(p.startsWith("/cal/") && req.method !== "GET" && req.method !== "HEAD") return new Response("metodo non ammesso", { status: 405 });
+    const mn = PERC_NOV.exec(p);
+    if(mn){
+      if(req.method !== "POST") return new Response("usa POST", { status: 405 });
+      try { return await riceviNovita(req, env, mn[1], mn[2]); }
+      catch(e){ return json({ errore: "errore del servizio" }, 500, {}); }
+    }
     const mf = PERCORSO.exec(p);
     if(mf){
       return feed(req, env, mf[1], mf[2]);
@@ -1630,7 +1740,7 @@ export default {
     }
 
     // chiamate dell'app (con il login)
-    if(p.startsWith("/google/") || p.startsWith("/icloud/") || p.startsWith("/intime/")){
+    if(p.startsWith("/google/") || p.startsWith("/icloud/") || p.startsWith("/intime/") || p.startsWith("/push/")){
       const origine = req.headers.get("Origin") || "";
       const consentite = String(env.ALLOWED_ORIGINS || app).split(",").map(s => s.trim()).filter(Boolean);
       if(!consentite.includes(origine)) return json({ errore: "origine non consentita" }, 403, {});
@@ -1638,6 +1748,13 @@ export default {
       if(req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
       if(req.method !== "POST") return json({ errore: "metodo non ammesso" }, 405, cors);
       try {
+        /* ----- notifiche (v6.32) ----- */
+        if(p === "/push/prova"){
+          const uid = await utente(req, env);
+          const r = await mandaPush(env, uid, { titolo: "Notifiche attive ✓", testo: "Da ora l'app Clienti ti avvisa dei nuovi prodotti Marchi.", url: "/?vista=novita", tag: "prova" });
+          if(r.errore) throw new Errore(503, r.errore);
+          return json({ ok: true, ...r }, 200, cors);
+        }
         /* ----- consegne LAC InTime (v6.25) ----- */
         if(p.startsWith("/intime/")){
           const uid = await utente(req, env);

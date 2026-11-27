@@ -940,6 +940,25 @@ body.pv-open .tema-btn{display:none}
 .giro-tip{margin:2px 0 8px;font-size:13.5px;color:var(--muted)}
 .cn-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-2px 0 8px;font-size:13px;color:var(--muted)}
 .cn-list{margin-bottom:18px}
+/* Novità Marchi (v6.32) */
+.nv-tile small .nv-n{color:var(--coral,#E86A40)}
+.nv-list{display:grid;gap:10px;margin-top:12px}
+@media (min-width:1100px){.nv-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.nv-card{display:flex;gap:12px;background:var(--surface);border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md,14px);box-shadow:var(--sh1);padding:12px;min-width:0}
+.nv-card.nuova{border-color:color-mix(in srgb,#E86A40 55%,var(--line))}
+.nv-foto{flex:none;width:76px;height:76px;border-radius:10px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+.nv-nofoto{display:grid;place-items:center;color:var(--muted);background:var(--bg)}
+.nv-txt{min-width:0;flex:1}
+.nv-txt b{display:block;font-size:15.5px;line-height:1.3}
+.nv-txt small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.nv-nuovo{display:inline-block;font-size:11px;font-weight:700;background:#E86A40;color:#fff;border-radius:99px;padding:1px 7px;vertical-align:2px}
+.nv-pill{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.nv-pill span{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.nv-info{margin:7px 0 0;font-size:13px;color:var(--muted);white-space:pre-line}
+.nv-az{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.nv-az .chip-btn{text-decoration:none}
+.nov-url{display:flex;gap:8px;margin:6px 0 4px}
+.nov-url .input{flex:1;min-width:0;font-size:12.5px}
 .cn-testa{margin-top:22px}
 .cn-tog{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .cn-tog small{margin-left:4px}
@@ -1599,7 +1618,7 @@ dialog.rc-dlg{max-width:720px}
     <button data-view="clienti" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Clienti</button>
     <button data-view="richiami"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendario<span class="num hidden" id="richNum"></span></button>
     <button data-view="cataloghi"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2Z"/><path d="M4 19.5A2 2 0 0 0 6 21h13v-3M8 7h7M8 11h5"/></svg>Cataloghi</button>
-    <button data-view="articoli" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Articoli</button>
+    <button data-view="articoli" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Articoli<span class="num hidden" id="nvNum"></span></button>
     <button data-view="riepilogo"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Riepilogo</button>
     <button data-view="altro"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></svg>Altro<span class="num hidden" id="altroNum"></span></button>
     <button data-view="mappa" class="only-desk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg>Mappa</button>
@@ -2300,8 +2319,8 @@ if(!configured){
   showLogin();
 } else {
   onAuthStateChanged(auth, user => {
-    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); rcStart(); gLoad(); subscribeGcal(); }
-    else { pvStop(); rcStop(); unsubscribeGcal(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
+    if(user){ uid = user.uid; showApp(); prefCarica(); subscribe(); subscribeRosario(); subscribeRosCfg(); subscribeRosProm(); pvStart(); rcStart(); gLoad(); subscribeGcal(); subscribeNovita(); nvDaLink(); }
+    else { pvStop(); rcStop(); unsubscribeGcal(); unsubscribeNovita(); if(unsub){ unsub(); unsub = null; } if(unsubRos){ unsubRos(); unsubRos = null; } if(unsubCfg){ unsubCfg(); unsubCfg = null; } if(unsubProm){ unsubProm(); unsubProm = null; } promemoria = []; rosario = []; rosCfg = {}; rosTg = {}; rosStato = {}; uid = null; clienti = []; ui.q = ui.stato = ui.luogo = ui.tipo = ""; showLogin(); }
   });
 }
 $("#loginForm").addEventListener("submit", async e => {
@@ -4486,7 +4505,7 @@ function renderArticoli(){
   if(ui.view !== "articoli") return;
   const body = $("#arBody"), D = art.dati;
   $("#arVistaBox").setAttribute("aria-pressed", art.vista === "box"); $("#arVistaElenco").setAttribute("aria-pressed", art.vista === "elenco");
-  const dentro = !!(D && art.top >= 0);
+  const dentro = !!(D && (art.top >= 0 || art.top === -2));
   $("#arChips").classList.toggle("hidden", !dentro);
   $("#arChips").innerHTML = dentro ? `<button type="button" class="ct-back" data-artop="-1">${catIndietro}Indietro</button>` : "";
   if(!D){
@@ -4495,12 +4514,13 @@ function renderArticoli(){
     return;
   }
   const cerca = !!art.q.trim();
+  if(art.top === -2){ body.innerHTML = nvHTML(); return; }
   // schermata iniziale: categorie come riquadri
   if(!cerca && art.top < 0){
     $("#arLbl").textContent = `${bdgEuro(D.a.length)} articoli`;
     const conta = D.top.map((_, t) => D.a.filter(x => x.t === t).length);
     body.innerHTML = `<p class="hint" style="margin:6px 0 10px">Catalogo di Marchi S.p.A. aggiornato al ${fmtDate(D.agg)}. Cerca per nome, codice o marca, oppure scegli una categoria.</p>
-      <div class="ct-grid">${D.top.map((n, t) => conta[t] ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${bdgEuro(conta[t])} articoli</small></button>`; })() : "").join("")}</div>`;
+      <div class="ct-grid">${nvTile()}${D.top.map((n, t) => conta[t] ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${bdgEuro(conta[t])} articoli</small></button>`; })() : "").join("")}</div>`;
     return;
   }
   const lista = artFiltrati();
@@ -4546,6 +4566,8 @@ $("#arVistaElenco").addEventListener("click", () => artVista("elenco"));
 $("#arQ").addEventListener("input", e => { art.q = e.target.value; art.mostra = 60; renderArticoli(); });
 $("#arBody").addEventListener("keydown", e => { const s = e.target.closest && e.target.closest("[data-arsel]"); if(s && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); e.stopPropagation(); artSel(+s.dataset.arsel); } });
 $("#arBody").addEventListener("click", e => {
+  const cp = e.target.closest("[data-nvcopia]"); if(cp){ navigator.clipboard.writeText(cp.dataset.nvcopia).then(() => toast("Codice " + cp.dataset.nvcopia + " copiato")).catch(() => toast("Non riesco a copiare")); return; }
+  if(e.target.closest("[data-nvset]")){ setRender(); $("#dlgSet").showModal(); setTimeout(() => { const s = $("#setNov"); if(s) s.scrollIntoView({ block: "center" }); }, 60); return; }
   const sel = e.target.closest("[data-arsel]"); if(sel){ e.preventDefault(); artSel(+sel.dataset.arsel); return; }
   const t = e.target.closest("[data-artop]");
   if(t){ art.top = +t.dataset.artop; art.sub = -1; art.mostra = 60; if(!t.hasAttribute("data-artieni") && art.top < 0){ art.q = ""; $("#arQ").value = ""; } renderArticoli(); window.scrollTo(0, 0); return; }
@@ -4752,9 +4774,133 @@ async function prefCarica(){
   try{ const s = await getDoc(prefRef()); pref = s.exists() ? s.data() : {}; }catch(err){ pref = {}; }
   temaApplica(pref.tema || ""); stileApplica(pref.stile || ""); coloriApplica(pref.colori || {});
   if(pref.articoliVista === "elenco" || pref.articoliVista === "box"){ art.vista = pref.articoliVista; renderArticoli(); }
-  if(pref.calVista === "giorno" || pref.calVista === "mese"){ ui.calVista = pref.calVista; if(ui.view === "richiami") renderRichiami(); }}
+  if(pref.calVista === "giorno" || pref.calVista === "mese"){ ui.calVista = pref.calVista; if(ui.view === "richiami") renderRichiami(); }
+  nvBadge(); }
 function prefSalva(p){ Object.assign(pref, p); if(uid) setDoc(prefRef(), p, { merge: true }).catch(() => {}); }
 temaApplica("");
+
+/* ---------- Novità Marchi da SharePoint e notifiche (v6.32) ----------
+   Power Automate (account Marchi) manda ogni nuovo prodotto della lista SharePoint "Nuovi inserimenti" al servizio calendario
+   (CAL_SERVIZIO + /novita/<uid>/<token>, token in utenti/{uid}/impostazioni/novita); il servizio lo salva in utenti/{uid}/novita
+   (privato: prezzi e provvigioni) e manda una notifica push ai dispositivi in utenti/{uid}/impostazioni/push.subs.
+   La notifica la riceve sw.js (service worker, solo notifiche: niente cache). */
+const VAPID_PUB = "BDc_OTuqO0ZOCMYP2bhhQAL6livBICRdV4tl5jcKPMiiREKuql3Rql77JBrI5lLxNmd2TVvegclzo0Xxv0B8fFo";
+let novita = [], unsubNov = null;
+function subscribeNovita(){
+  if(unsubNov || !uid) return;
+  unsubNov = onSnapshot(collection(db, "utenti", uid, "novita"), s => {
+    novita = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.ricevuto || b.creato || "").localeCompare(a.ricevuto || a.creato || "") || (+b.spId || 0) - (+a.spId || 0));
+    nvBadge(); if(ui.view === "articoli") renderArticoli();
+  }, () => {});
+}
+function unsubscribeNovita(){ if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; nvBadge(); }
+const nvNuove = () => novita.filter(n => (n.ricevuto || "") > (pref.novitaViste || "")).length;
+function nvBadge(){ const b = $("#nvNum"); if(!b) return; const n = nvNuove(); b.textContent = n; b.classList.toggle("hidden", !n); }
+const nvStella = n => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const nvEuro = x => Number(x).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
+function nvTile(){
+  const n = nvNuove();
+  return `<button type="button" class="ct-tile nv-tile" data-artop="-2" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><b>Novità Marchi</b><small>${novita.length ? novita.length + " prodotti" + (n ? " · <b class=\"nv-n\">" + n + (n === 1 ? " nuovo" : " nuovi") + "</b>" : "") : "Nuovi inserimenti da SharePoint"}</small></button>`;
+}
+function nvApri(){ if(ui.view !== "articoli") go("articoli"); art.top = -2; art.sub = -1; art.q = ""; $("#arQ").value = ""; renderArticoli(); window.scrollTo(0, 0); }
+function nvDaLink(){ if(new URLSearchParams(location.search).get("vista") === "novita"){ history.replaceState(null, "", location.pathname); setTimeout(nvApri, 300); } }
+function nvHTML(){
+  const q = norm(art.q), viste = pref.novitaViste || "";
+  const L = novita.filter(n => !q || norm([n.codice, n.desc, n.cat, n.info, n.sett].join(" ")).includes(q));
+  $("#arLbl").textContent = novita.length ? novita.length + " novità" : "";
+  const ultima = novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "");
+  if(ultima > viste) setTimeout(() => { if(ui.view === "articoli" && art.top === -2){ prefSalva({ novitaViste: ultima }); nvBadge(); } }, 2000);   // viste dopo un attimo (restano "Nuovo" finché si è qui)
+  const testa = `<div class="ct-cathead" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><div><b>Novità Marchi</b><small>Nuovi inserimenti dalla lista di SharePoint (dati riservati: solo nel tuo account)</small></div></div>`;
+  if(!novita.length) return testa + `<div class="ct-empty">Ancora nessuna novità. Per riceverle collega la lista di SharePoint con Power Automate.<br><button class="btn" type="button" data-nvset>Impostazioni › Novità Marchi</button></div>`;
+  if(!L.length) return testa + `<div class="ct-empty">Nessuna novità trovata.</div>`;
+  return testa + `<div class="nv-list">${L.map(n => {
+    const k = String(n.codice || "").trim(), x = k && art.perCodice ? art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")) : null, nuova = (n.ricevuto || "") > viste;
+    return `<article class="nv-card${nuova ? " nuova" : ""}">${x && x.f !== 0 ? `<img class="nv-foto" src="${artFoto(x)}" alt="" loading="lazy">` : `<span class="nv-foto nv-nofoto">${catIcona}</span>`}
+      <div class="nv-txt"><b>${nuova ? '<span class="nv-nuovo">Nuovo</span> ' : ""}${esc(n.desc || "")}</b>
+        <small>${[k && "Cod. " + esc(k), n.cat && esc(n.cat), n.sett && "Settimana " + esc(n.sett)].filter(Boolean).join(" · ")}</small>
+        <div class="nv-pill">${n.arrivo ? `<span>Arriva il ${fmtDate(n.arrivo)}</span>` : ""}${n.prezzo != null ? `<span>${nvEuro(n.prezzo)}</span>` : ""}${n.provv != null ? `<span>Provv. ${String(Math.round(n.provv * 1000) / 10).replace(".", ",")}%</span>` : ""}</div>
+        ${n.info ? `<p class="nv-info">${esc(n.info)}</p>` : ""}
+        <div class="nv-az">${k ? `<button class="chip-btn" type="button" data-nvcopia="${esc(k)}">Copia codice</button>` : ""}${x ? `<button class="chip-btn" type="button" data-art="${x.i}">Scheda articolo</button>` : ""}${n.link ? `<a class="chip-btn" href="${esc(n.link)}" target="_blank" rel="noopener">Apri in SharePoint</a>` : ""}</div></div></article>`; }).join("")}</div>`;
+}
+
+// notifiche su questo dispositivo
+const pushRef = () => doc(db, "utenti", uid, "impostazioni", "push");
+const pushDisp = () => { const u = navigator.userAgent; return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? "iPad" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "PC Windows" : /Mac/.test(u) ? "Mac" : "Dispositivo"; };
+const pushPossibile = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const pushChiave = () => { const s = VAPID_PUB.replace(/-/g, "+").replace(/_/g, "/"); const b = atob(s + "=".repeat((4 - s.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushIscrizione(){ try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch(e){ return null; } }
+async function pushRender(){
+  const box = $("#setPush"); if(!box) return;
+  const ios = /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const casa = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if(!pushPossibile()){
+    box.innerHTML = ios && !casa ? `<p class="pv-hint">Su iPhone e iPad le notifiche arrivano solo all’app aperta dalla <b>schermata Home</b>: in Safari tocca Condividi › <b>Aggiungi alla schermata Home</b>, apri l’app da lì e torna qui. Serve iOS 16.4 o successivo.</p>`
+      : `<p class="pv-hint">Questo browser non può ricevere notifiche dall’app.${ios ? " Serve iOS 16.4 o successivo." : " Su PC usa Chrome o Edge."}</p>`;
+    return;
+  }
+  if(Notification.permission === "denied"){ box.innerHTML = `<p class="gc-st err">Le notifiche sono bloccate per questa app. Riattivale dalle impostazioni ${ios ? "dell’iPhone (Impostazioni › Notifiche › Clienti)" : "del browser (il lucchetto accanto all’indirizzo › Notifiche)"}, poi torna qui.</p>`; return; }
+  const sub = await pushIscrizione();
+  let salvata = false;
+  if(sub){ try { const d = await getDoc(pushRef()); salvata = d.exists() && (d.data().subs || []).some(s => s.endpoint === sub.endpoint); } catch(e){} }
+  box.innerHTML = sub && salvata && Notification.permission === "granted"
+    ? `<p class="gc-st">✓ Notifiche attive su questo dispositivo (${esc(pushDisp())}): ti avviso quando Marchi inserisce un nuovo prodotto.</p><div class="gc-az"><button class="btn" type="button" id="pushProva">Manda una notifica di prova</button><button class="btn btn-danger" type="button" id="pushOff">Disattiva su questo dispositivo</button></div>`
+    : `<p class="pv-hint">Attiva le notifiche per sapere subito quando Marchi inserisce un nuovo prodotto. Va fatto su ogni dispositivo (PC, iPhone, iPad).</p><div class="gc-az"><button class="btn btn-primary" type="button" id="pushOn">Attiva le notifiche</button></div>`;
+}
+async function pushAttiva(b){
+  if(!pushPossibile()) return;
+  b.disabled = true; b.textContent = "Attivo…";
+  try {
+    const perm = await Notification.requestPermission();
+    if(perm !== "granted"){ toast("Senza il permesso le notifiche non possono arrivare", 5000); pushRender(); return; }
+    const reg = await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: pushChiave() });
+    const j = sub.toJSON(), d = await getDoc(pushRef());
+    const subs = (d.exists() && Array.isArray(d.data().subs) ? d.data().subs : []).filter(s => s.endpoint !== j.endpoint);
+    subs.push({ endpoint: j.endpoint, keys: { p256dh: j.keys.p256dh, auth: j.keys.auth }, disp: pushDisp(), creato: nowISO() });
+    await setDoc(pushRef(), { subs: subs.slice(-10) }, { merge: true });
+    toast("Notifiche attive su questo dispositivo"); pushRender();
+  } catch(err){ toast("Non riesco ad attivare le notifiche: " + (err.message || err), 8000); pushRender(); }
+}
+async function pushProva(b){
+  b.disabled = true; b.textContent = "Invio…";
+  try { const j = await gcChiama("prova", {}, "push"); toast(j.inviate ? "Notifica di prova inviata" + (j.inviate > 1 ? " a " + j.inviate + " dispositivi" : "") : "Nessun dispositivo ha ricevuto la notifica: riattivala", 6000); }
+  catch(err){ toast("Notifica di prova: " + err.message, 8000); }
+  finally { if(b.isConnected){ b.disabled = false; b.textContent = "Manda una notifica di prova"; } }
+}
+async function pushDisattiva(){
+  try {
+    const sub = await pushIscrizione(), ep = sub && sub.endpoint;
+    if(sub) await sub.unsubscribe();
+    const d = await getDoc(pushRef());
+    if(d.exists() && ep) await setDoc(pushRef(), { subs: (d.data().subs || []).filter(s => s.endpoint !== ep) }, { merge: true });
+    toast("Notifiche disattivate su questo dispositivo"); pushRender();
+  } catch(err){ fail(err); }
+}
+navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", e => { if(e.data && e.data.tipo === "novita") nvApri(); });
+if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+// indirizzo per Power Automate
+const novRef = () => doc(db, "utenti", uid, "impostazioni", "novita");
+let novImp = null;
+const novUrl = () => novImp && novImp.token ? CAL_SERVIZIO + "/novita/" + uid + "/" + novImp.token : "";
+async function novRender(){
+  const box = $("#setNovB"); if(!box) return;
+  try {
+    if(!novImp){ const s = await getDoc(novRef()); novImp = s.exists() ? s.data() : null; }
+    if(!novImp || !novImp.token){ novImp = { token: calToken(), creato: nowISO() }; await setDoc(novRef(), novImp); }
+  } catch(err){ box.innerHTML = `<p class="gc-st err">Non riesco a preparare il collegamento: riprova.</p>`; return; }
+  const ult = novita[0];
+  box.innerHTML = `<p class="pv-hint">Power Automate (con il tuo account Marchi) manda qui ogni nuovo prodotto della lista SharePoint “Nuovi inserimenti”. Nel flusso, nell’azione <b>HTTP</b> (metodo POST), incolla questo indirizzo:</p>
+    <div class="nov-url"><input class="input" id="novUrl" readonly value="${esc(novUrl())}" aria-label="Indirizzo per Power Automate"><button class="btn" type="button" id="novCopia">Copia</button></div>
+    <p class="gc-st">${novita.length ? "Ricevuti finora: " + novita.length + " prodotti" + (ult && ult.ricevuto ? " · l’ultimo " + esc(gcQuando(ult.ricevuto)) : "") : "Ancora nessun prodotto ricevuto."}</p>
+    <p class="pv-hint">L’indirizzo è personale: chi lo conosce può mandarti prodotti finti. Se l’hai dato a qualcuno per sbaglio, crea un nuovo indirizzo (poi va cambiato anche in Power Automate).</p>
+    <div class="gc-az"><button class="btn" type="button" id="novNuovo">Crea un nuovo indirizzo</button></div>`;
+}
+async function novNuovoLink(){
+  if(!confirm("Creare un nuovo indirizzo? Quello vecchio smette subito di funzionare: dovrai incollare quello nuovo in Power Automate.")) return;
+  try { novImp = { token: calToken(), creato: nowISO() }; await setDoc(novRef(), novImp); novRender(); toast("Nuovo indirizzo creato: copialo in Power Automate"); } catch(err){ fail(err); }
+}
 
 /* ---------- Impostazioni (v6.6): tasto con l'ingranaggio in basso a sinistra ---------- */
 // account collegato, tema (stile Classico / Livrea Marchi + modalità come il telefono / chiara / scura), colori degli stati.
@@ -4773,7 +4919,9 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.31 (v6.31)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.32 (v6.32)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+    <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
+    <section class="set-sez" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
       <div class="set-dati"><button class="btn" type="button" id="setImp">Importa da Excel</button><button class="btn" type="button" id="setExp">Esporta in Excel</button><button class="btn" type="button" id="setUni">Collega fatturazioni e destinazioni</button></div>
       <p class="pv-hint" style="margin:8px 0 0">L'importazione salta i locali già presenti (stesso nome, indirizzo e località, o stesso codice). "Collega fatturazioni e destinazioni" trova le destinazioni (120…) e le collega alla loro fatturazione (100…): restano schede separate.</p></section>
@@ -4785,6 +4933,7 @@ function setRender(){
       ${STATI.map(([k, n]) => `<label class="set-col"><i style="--c:var(${stVar(k)})"></i><span>${esc(n)}</span><input type="color" data-col="${k}" value="${col[k] || setColoreOra(k)}" aria-label="Colore di ${esc(n)}"></label>`).join("")}
       <button class="btn" type="button" id="setColReset" style="margin-top:12px"${Object.keys(col).length ? "" : " disabled"}>Ripristina i colori originali</button>
       <p class="pv-hint" style="margin:8px 0 0">I colori valgono nell’elenco, nelle schede, nel Giro e sulla mappa, sia in modalità chiara sia scura.</p></section>`;
+  pushRender(); novRender();
 }
 $("#setBtn").addEventListener("click", () => { setRender(); $("#dlgSet").showModal(); });
 $("#setBody").addEventListener("click", e => {
@@ -4796,7 +4945,12 @@ $("#setBody").addEventListener("click", e => {
   if(e.target.closest("#setEsci")){ $("#dlgSet").close(); signOut(auth); return; }
   if(e.target.closest("#setImp")){ $("#fileImport").click(); return; }
   if(e.target.closest("#setExp")){ exportExcel(); return; }
-  if(e.target.closest("#setUni")){ $("#dlgSet").close(); uniApri("coppie"); }
+  if(e.target.closest("#setUni")){ $("#dlgSet").close(); uniApri("coppie"); return; }
+  if(e.target.closest("#pushOn")){ pushAttiva(e.target.closest("#pushOn")); return; }
+  if(e.target.closest("#pushProva")){ pushProva(e.target.closest("#pushProva")); return; }
+  if(e.target.closest("#pushOff")){ pushDisattiva(); return; }
+  if(e.target.closest("#novCopia")){ navigator.clipboard.writeText($("#novUrl").value).then(() => toast("Indirizzo copiato: incollalo in Power Automate")).catch(() => { $("#novUrl").select(); toast("Seleziona e copia l'indirizzo a mano"); }); return; }
+  if(e.target.closest("#novNuovo")){ novNuovoLink(); return; }
 });
 $("#setBody").addEventListener("input", e => {
   const k = e.target.dataset.col; if(!k) return;
