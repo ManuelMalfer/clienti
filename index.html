@@ -877,6 +877,9 @@ div.ar-big.ar-nofoto{height:180px}
 .ar-vista button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 #v-articoli .ct-head{align-items:center}
 .ar-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.ar-ultimi{margin:4px 0 14px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md,14px);background:var(--surface)}
+.ar-ultimi .cn-tog b{font-size:15.5px}
+.ar-ultimi-l{margin-top:10px}
 .ar-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px 12px 8px 8px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--sh1);color:inherit;cursor:pointer}
 .ar-row .ar-txt{flex:1;min-width:0;padding:0}
 .ar-row .ar-txt b{-webkit-line-clamp:2;font-size:14.5px}
@@ -4535,6 +4538,18 @@ const artImg = (x, cls) => x.ex && x.f ? `<img class="${cls}" data-nvfoto="sp${e
   : x.f === 0 && x.exFoto ? `<img class="${cls}" data-nvfoto="sp${esc(x.exFoto)}" src="${NV_PIX}" alt="">` : x.f === 0
   ? `<span class="${cls} ar-nofoto" aria-hidden="true">${catIcona}</span>`
   : `<img class="${cls}" src="${artFoto(x)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} ar-nofoto'}))">`;
+// v6.38: ultimi articoli inseriti (approvati dalle Novità Marchi da questo account), sezione che si apre e si chiude (preferenze.artUltimiAperta)
+function artUltimiHTML(){
+  const D = art.dati; if(!D) return "";
+  const quando = {}; (art.extra || []).forEach(e => { if(!e.ignorato) quando[String(e.spId)] = e.approvato || e.agg || ""; });
+  const L = D.a.filter(x => x.ex).sort((a, b) => (quando[b.ex] || "").localeCompare(quando[a.ex] || "")).slice(0, 12);
+  if(!L.length) return "";
+  const aperta = !!pref.artUltimiAperta;
+  return `<section class="ar-ultimi">
+    <button type="button" class="cn-tog" data-arultimi aria-expanded="${aperta}"><svg class="cn-frecc" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><b>Ultimi articoli inseriti</b> <small>${L.length}</small><span class="cn-tog-t">${aperta ? "Nascondi" : "Mostra"}</span></button>
+    ${aperta ? `<div class="ar-list ar-ultimi-l">${L.map(x => `<button type="button" class="ar-row" data-art="${x.i}">${artImg(x, "ar-mini")}<span class="ar-txt"><b>${esc(x.n)}</b><small>${[x.c ? "Cod. " + esc(x.c) : "", esc(tgtTit(D.top[x.t])), quando[x.ex] ? "inserito il " + fmtDate(quando[x.ex].slice(0, 10)) : ""].filter(Boolean).join(" · ")}</small></span><svg class="ar-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>`).join("")}</div>` : ""}
+  </section>`;
+}
 function artFiltrati(){ return artTrova(art.q, art.top, art.sub); }
 function artTrova(q, top, sub){
   const D = art.dati, parole = artNorm(q).split(" ").filter(Boolean);
@@ -4573,6 +4588,7 @@ function renderArticoliBase(){
     $("#arLbl").textContent = `${bdgEuro(D.a.length)} articoli`;
     const conta = D.top.map((_, t) => D.a.filter(x => x.t === t).length);
     body.innerHTML = `<p class="hint" style="margin:6px 0 10px">Catalogo di Marchi S.p.A. aggiornato al ${fmtDate(D.agg)}. Cerca per nome, codice o marca, oppure scegli una categoria.</p>
+      ${artUltimiHTML()}
       <div class="ct-grid">${nvTile()}${D.top.map((n, t) => conta[t] || ART_CAT_EXTRA.includes(n) ? (() => { const s = catStile(n); return `<button type="button" class="ct-tile" data-artop="${t}" style="--c:${s.colore}"><span class="ct-ti">${s.svg(26)}</span><b>${esc(tgtTit(n))}</b><small>${conta[t] === 1 ? "1 articolo" : bdgEuro(conta[t]) + " articoli"}</small></button>`; })() : "").join("")}</div>`;
     return;
   }
@@ -4628,6 +4644,7 @@ $("#arBody").addEventListener("click", e => {
   if(t){ art.top = +t.dataset.artop; art.sub = -1; art.mostra = 60; if(!t.hasAttribute("data-artieni") && art.top < 0){ art.q = ""; $("#arQ").value = ""; } renderArticoli(); window.scrollTo(0, 0); return; }
   const s = e.target.closest("[data-arsub]"); if(s){ art.sub = +s.dataset.arsub; art.mostra = 60; renderArticoli(); return; }
   if(e.target.closest("[data-armore]")){ art.mostra += 60; renderArticoli(); return; }
+  if(e.target.closest("[data-arultimi]")){ prefSalva({ artUltimiAperta: !pref.artUltimiAperta }); renderArticoli(); return; }
   if(e.target.closest("#arRetry")){ art.stato = "idle"; artCarica(); return; }
   const c = e.target.closest("[data-art]"); if(c) artApri(+c.dataset.art);
 });
@@ -5098,7 +5115,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.37 (v6.37)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.38 (v6.38)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
