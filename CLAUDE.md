@@ -301,6 +301,10 @@ condivisione e "Apri originale". Il tasto Indietro del telefono chiude il lettor
 - **v5.8** = v5.7 + **Invia per email** nell'editor del preventivo: crea il PDF e apre la finestra `#dlgPvMail` dove si controllano e modificano destinatari (le email della scheda cliente collegata, `emSplit`), oggetto ("Offerta <cliente> del <data>") e testo (`pvMailTesto`, con validità e firma da "I tuoi dati"); "Vedi" apre il PDF. L'email parte dall'**app di posta di Manuel (Outlook)**, non da un servizio: sul PC "Apri in Outlook" scarica il PDF e apre `mailto:` già compilato (il PDF va trascinato nell'email), "Outlook sul web" apre `outlook.office.com/mail/deeplink/compose`; su iPhone/iPad (se `navigator.canShare` con file) "Invia con il PDF" apre il menu Condividi con PDF e testo già dentro e copia i destinatari negli appunti, "Senza allegato" usa `mailto:`. `pvMakePdf` ora usa `pvCreaPdf()` (crea il file senza mostrare nulla). Tag Git `v5.8`; la scritta in Riepilogo dice 5.8.
 - **v5.9** = v5.8 + **Appuntamenti nel Giro**: sotto "Ordini da raccogliere" la sezione "Appuntamenti" (`giroRichiamiHTML`) mostra i richiami (`ricontattare`) del giorno scelto di clienti con **qualsiasi stato**, ordinati per ora; nel giorno corrente della barra (`giroData(todayIdx)`, la domenica è lunedì) anche quelli scaduti (data in rosso). Nessun filtro: Manuel li vuole sempre tutti (una prima versione con pillole per stato è stata tolta su sua richiesta). Tag Git `v5.9`; la scritta in Riepilogo dice 5.9.
 - **v6.0** = v5.9 + nuovo stato **Cliente perso** (`CLIENTE PERSO`, viola) in `STATI` dopo Cliente: compare nelle pillole dei Clienti, nella scheda, nel modulo, nel Riepilogo e in Mappa (gruppo "Clienti persi", visibile di base, `ui.mapOn.persi`). Nel servizio Rosario (`Rosario/src/gemini.ts`, descrizione del campo `stato`) l'elenco degli stati va tenuto uguale. Tag Git `v6.0`; la scritta in Riepilogo dice 6.0.
+- **v6.34** = v6.33 + **foto e scheda tecnica PDF dei prodotti nelle Novità Marchi** (allegati dell'elemento SharePoint, letti dal flusso con "Invia una
+  richiesta HTTP a SharePoint"; il servizio li salva per tutti gli account) e tasto **✓ Approva** (solo per l'account collegato a SharePoint): il prodotto
+  diventa un **articolo del catalogo** nella categoria scelta (proposta dall'app), con solo nome, codice, foto e scheda tecnica, per tutti gli account, ed
+  esce dalle Novità. Tolti "Copia codice" e "Apri in SharePoint". Prove: 41 casi del Worker. **Il Worker `calendario` va incollato di nuovo su Cloudflare** e il flusso Power Automate va aggiornato. Tag Git `v6.34`.
 - **v6.33** = v6.32 + le **novità Marchi valgono per tutti gli account** (anche il papà e quelli futuri, con le notifiche); la sezione "Novità Marchi da
   SharePoint" delle Impostazioni la vede solo l'account con il collegamento (Manuel). Prove: 24 casi del Worker. **Il Worker `calendario` va incollato di
   nuovo su Cloudflare.** Tag Git `v6.33`.
@@ -533,6 +537,33 @@ Marchi comunica i nuovi prodotti nella lista SharePoint **"Nuovi inserimenti"** 
   foto del catalogo se il codice esiste (`art.perCodice`), codice, categoria, settimana, "Arriva il", prezzo, provvigione, informazione, Copia codice, Scheda
   articolo, Apri in SharePoint; etichetta **Nuovo** e numero sulla voce Articoli del menu (`#nvNum`) per i prodotti ricevuti dopo `preferenze.novitaViste`
   (si aggiorna 2 secondi dopo aver aperto le Novità). Dati in diretta con `onSnapshot` (`subscribeNovita`).
+
+- **Foto (v6.34)**: su SharePoint la foto del campo `Foto` (JSON `{fileName: "Reserved_ImageAttachment_[…].jpg", originalImageName}`) è un **allegato**
+  dell'elemento (`/sites/MARCHI-SPA/Lists/Nuovi inserimenti1/Attachments/<ID>/<fileName>`, JPEG 130–260 KB; tra gli allegati ci sono anche PDF, probabilmente
+  schede tecniche: non usati). Nel flusso: azione **"Invia una richiesta HTTP a SharePoint"** (sito MARCHI-SPA, GET, URI con espressione
+  `concat('_api/web/GetFileByServerRelativeUrl(''/sites/MARCHI-SPA/Lists/Nuovi inserimenti1/Attachments/', triggerBody()?['ID'], '/', json(string(triggerBody()?['Foto']))?['fileName'], ''')/$value')`),
+  poi nell'azione HTTP il Corpo diventa l'espressione `setProperty(triggerBody(), 'foto', body('Invia_una_richiesta_HTTP_a_SharePoint'))`
+  (oggetto `{"$content-type", "$content"}`) e nelle Impostazioni dell'azione HTTP "Esegui dopo" anche "Non riuscito" (elemento senza foto). Il servizio
+  (`fotoDi`: JPEG/PNG/WEBP, base64 ≤ 900.000 caratteri) salva `novita_foto/sp<ID>` = {b64, tipo, agg} e una copia in `utenti/{uid}/novita_foto/sp<ID>` per
+  ogni account; nella novità `foto: true` (resta anche se il prodotto si aggiorna senza foto). `{id, foto}` senza altri campi = solo la foto di un prodotto già
+  presente. Per caricare foto senza il token vero: `{codiceFoto: <hex>}` al percorso normale attiva per 30 minuti `POST /novita-foto/<uid>/<codice>` (solo foto,
+  usato una volta per i 103 prodotti già presenti). L'app (`nvFotoCarica`/`nvFotoUna`) legge le foto solo quando le schede stanno per comparire
+  (IntersectionObserver) e le tiene in memoria; senza foto SharePoint usa quella del catalogo, se il codice c'è.
+- **Scheda tecnica PDF (v6.34)**: allegato `<codice>.pdf` dell'elemento (74 su 103, 200 KB–1,4 MB; il nome è quasi sempre il codice articolo). Nel flusso una
+  seconda azione "Invia una richiesta HTTP a SharePoint" (rinominata **Scheda**, la prima **Foto**) con URI
+  `concat('_api/web/GetFileByServerRelativeUrl(''/sites/MARCHI-SPA/Lists/Nuovi inserimenti1/Attachments/', triggerBody()?['ID'], '/', trim(triggerBody()?['Codicearticolo']), '.pdf'')/$value')`
+  e Corpo HTTP `setProperty(setProperty(triggerBody(), 'foto', body('Foto')), 'scheda', body('Scheda'))`. Il servizio (`pdfDi`: deve iniziare con `%PDF`,
+  base64 ≤ 4.200.000 caratteri) salva `novita_pdf/sp<ID>` = {parti, tipo, agg} + `sp<ID>_0`, `_1`… = {b64} (pezzi da 900.000 caratteri) e le copie in
+  `utenti/{uid}/novita_pdf`; nella novità `scheda: true`. L'app (`nvPdf`, `nvApriScheda`) rimette insieme i pezzi e apre il PDF nel lettore dei cataloghi
+  (`lpOpen` accetta `x.carica()` che restituisce il Blob).
+- **Approvazione (v6.34)**: tasto **✓ Approva** sulle Novità solo se l'account ha `impostazioni/novita.token` (`nvPuoApprovare`). Finestra `#dlgNvApp`: nome
+  (modificabile), categoria e sottocategoria del catalogo Articoli proposte da `nvIndovina` (voti degli articoli con parole del nome in comune; se non trova,
+  la categoria di SharePoint se esiste uguale). `POST /push/approva {spId, top, sub, nome}` (solo l'account con il token; altrimenti 403): scrive
+  `articoli_approvati/sp<ID>` = {spId, c, n, top, sub, foto, scheda, agg, approvato} e la copia `utenti/{uid}/articoli_extra/sp<ID>` per tutti gli account,
+  e la novità con `approvato: true` (resta tale anche se SharePoint la aggiorna; le approvate non compaiono più nelle Novità né nei conteggi, `nvAttive`).
+  L'app unisce gli articoli approvati al catalogo (`artUnisci`, id negativo, `x.ex` = ID SharePoint, `x.sch` = scheda): stessa scheda degli altri (foto da
+  `novita_foto` con `data-nvfoto`, "Scheda tecnica" dal PDF salvato, niente "Apri su marchispa.it"), ricerca e preventivi (senza foto nel PDF del preventivo).
+  `allineaNovita` copia agli account nuovi anche `novita_pdf` e `articoli_approvati` → `articoli_extra`. Non c'è ancora un "togli dagli articoli".
 
 ## Consegne LAC InTime (v6.25)
 

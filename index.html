@@ -957,6 +957,7 @@ body.pv-open .tema-btn{display:none}
 .nv-info{margin:7px 0 0;font-size:13px;color:var(--muted);white-space:pre-line}
 .nv-az{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .nv-az .chip-btn{text-decoration:none}
+.nv-az .nv-ok{color:var(--st-cliente);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--st-cliente) 55%,transparent);font-weight:700}
 .nov-url{display:flex;gap:8px;margin:6px 0 4px}
 .nov-url .input{flex:1;min-width:0;font-size:12.5px}
 .cn-testa{margin-top:22px}
@@ -2086,6 +2087,19 @@ dialog.rc-dlg{max-width:720px}
     <div class="dlg-foot"><button class="btn" type="button" id="cnMapLink">Cambia cliente</button><a class="btn" id="cnMapG" target="_blank" rel="noopener">Apri in Google Maps</a><button class="btn btn-primary" type="button" data-close>Chiudi</button></div>
   </div>
 </dialog>
+<dialog id="dlgNvApp" aria-labelledby="nvAppT">
+  <div class="dlg">
+    <div class="dlg-head"><h2 id="nvAppT">Approva il prodotto<span class="sub" id="nvAppSub"></span></h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
+    <div class="dlg-body">
+      <p class="pv-hint">Il prodotto passa negli <b>Articoli</b> per tutti gli account, come gli altri: nome, codice, foto e scheda tecnica (senza prezzo, provvigione e descrizione), ed esce dalle Novità.</p>
+      <label class="field"><span>Nome</span><input class="input" id="nvAppNome" autocomplete="off"></label>
+      <label class="field"><span>Categoria</span><select class="input" id="nvAppTop"></select></label>
+      <label class="field"><span>Sottocategoria</span><select class="input" id="nvAppSubcat"></select></label>
+      <p class="pv-hint" id="nvAppPerche"></p>
+    </div>
+    <div class="dlg-foot"><button class="btn" type="button" data-close>Annulla</button><button class="btn btn-primary" type="button" id="nvAppOk">Approva</button></div>
+  </div>
+</dialog>
 <dialog id="dlgSet" aria-labelledby="setT">
   <div class="dlg">
     <div class="dlg-head"><h2 id="setT">Impostazioni</h2><button class="close" type="button" data-close aria-label="Chiudi">×</button></div>
@@ -3194,7 +3208,7 @@ async function lpOpen(x){
   $("#pdfv").classList.remove("hidden");
   document.documentElement.style.overflow = "hidden";
   $("#pdfvTitle").textContent = x.titolo; $("#pdfvSub").textContent = x.fornitore || "";
-  const cifrato = catCifrato(x);
+  const cifrato = catCifrato(x) || !!x.carica;              // x.carica(): PDF già in memoria (schede tecniche delle Novità Marchi)
   const url = cifrato ? "" : new URL(catUrl(x), location.href).href;
   $("#pdfvOpen").href = cifrato ? "#" : url;
   lpMsg("Carico il catalogo…");
@@ -3205,7 +3219,7 @@ async function lpOpen(x){
     let sorgente;
     if(cifrato){
       // scarica il file cifrato, lo decifra nel telefono e lo passa a pdf.js (resta tutto in memoria)
-      const blob = await catBlob(x, p => { if(tok === LP.tok) lpMsg(`Carico il catalogo… ${p}%`); });
+      const blob = x.carica ? await x.carica() : await catBlob(x, p => { if(tok === LP.tok) lpMsg(`Carico il catalogo… ${p}%`); });
       if(tok !== LP.tok) return;
       LP.blobUrl = URL.createObjectURL(blob);
       $("#pdfvOpen").href = LP.blobUrl;
@@ -4470,17 +4484,33 @@ async function artCarica(){
     art.perCodice = new Map();
     D.a.forEach(x => { const k = String(x.c || "").trim(); if(!k) return; if(!art.perCodice.has(k)) art.perCodice.set(k, x); const k2 = "~" + k.replace(/^0+/, ""); if(!art.perCodice.has(k2)) art.perCodice.set(k2, x); });
     art.stato = "ok";
+    artUnisci();
   }catch(err){ art.stato = "errore"; }
   renderArticoli();
 }
-const artHaScheda = x => !!(art.schede && x.c && art.schede.has(String(x.c).trim()));
+// articoli approvati dalle Novità Marchi (v6.34): utenti/{uid}/articoli_extra, uniti al catalogo con id negativo (x.ex = id SharePoint)
+function artUnisci(){
+  const D = art.dati; if(!D || !Array.isArray(D.a)) return;
+  D.a = D.a.filter(x => !x.ex);
+  (art.extra || []).forEach(e => {
+    let t = D.top.findIndex(n => norm(n) === norm(e.top)); if(t < 0) return;
+    const s = D.sub.findIndex(o => o.t === t && norm(o.n) === norm(e.sub));
+    D.a.push({ i: -(+e.spId || 0), c: e.c || "", n: e.n || "", t, s, b: "", d: "", m: "", f: e.foto ? 1 : 0, ex: String(e.spId), sch: !!e.scheda });
+  });
+  art.idx = D.a.map(x => " " + artNorm([x.c, String(x.c || "").replace(/^0+/, ""), x.n, x.b, x.d, x.m, D.top[x.t], x.s >= 0 ? D.sub[x.s].n : ""].join(" ")) + " ");
+  art.perCodice = new Map();
+  D.a.forEach(x => { const k = String(x.c || "").trim(); if(!k) return; if(!art.perCodice.has(k)) art.perCodice.set(k, x); const k2 = "~" + k.replace(/^0+/, ""); if(!art.perCodice.has(k2)) art.perCodice.set(k2, x); });
+}
+const artHaScheda = x => x.ex ? !!x.sch : !!(art.schede && x.c && art.schede.has(String(x.c).trim()));
 function artScheda(x){
   if(!artHaScheda(x)) return;
+  if(x.ex){ if($("#dlgArt").open) $("#dlgArt").close(); nvApriScheda(x.ex, x.n, x.c ? "Cod. " + x.c : ""); return; }
   if($("#dlgArt").open) $("#dlgArt").close();
   catApri({ file: art.schedeBase + "/" + encodeURIComponent(String(x.c).trim()) + ".pdf.enc", titolo: "Scheda tecnica · " + x.n, fornitore: "Cod. " + x.c });
 }
 const artFoto = x => x.f === 0 ? "" : `articoli/img/${x.i}.jpg`;
-const artImg = (x, cls) => x.f === 0
+const NV_PIX = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const artImg = (x, cls) => x.ex && x.f ? `<img class="${cls}" data-nvfoto="sp${esc(x.ex)}" src="${NV_PIX}" alt="">` : x.f === 0
   ? `<span class="${cls} ar-nofoto" aria-hidden="true">${catIcona}</span>`
   : `<img class="${cls}" src="${artFoto(x)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'${cls} ar-nofoto'}))">`;
 function artFiltrati(){ return artTrova(art.q, art.top, art.sub); }
@@ -4501,7 +4531,8 @@ function artTrova(q, top, sub){
   }
   return out;
 }
-function renderArticoli(){
+function renderArticoli(){ renderArticoliBase(); if(ui.view === "articoli") nvFotoCarica(); }
+function renderArticoliBase(){
   if(ui.view !== "articoli") return;
   const body = $("#arBody"), D = art.dati;
   $("#arVistaBox").setAttribute("aria-pressed", art.vista === "box"); $("#arVistaElenco").setAttribute("aria-pressed", art.vista === "elenco");
@@ -4514,7 +4545,7 @@ function renderArticoli(){
     return;
   }
   const cerca = !!art.q.trim();
-  if(art.top === -2){ body.innerHTML = nvHTML(); return; }
+  if(art.top === -2){ body.innerHTML = nvHTML(); nvFotoCarica(); return; }
   // schermata iniziale: categorie come riquadri
   if(!cerca && art.top < 0){
     $("#arLbl").textContent = `${bdgEuro(D.a.length)} articoli`;
@@ -4545,7 +4576,7 @@ function artApri(id){
   const D = art.dati, x = D && D.a.find(y => y.i === id); if(!x) return;
   const percorso = [artCat(D.top[x.t]), x.s >= 0 ? artCat(D.sub[x.s].n) : ""].filter(Boolean).join(" › ");
   $("#artT").textContent = x.n;
-  $("#artBody").innerHTML = `${x.f === 0 ? `<div class="ar-big ar-nofoto">${catIcona}</div>` : `<img class="ar-big" src="${artFoto(x)}" alt="${esc(x.n)}">`}
+  $("#artBody").innerHTML = `${x.f === 0 ? `<div class="ar-big ar-nofoto">${catIcona}</div>` : x.ex ? `<img class="ar-big" data-nvfoto="sp${esc(x.ex)}" src="${NV_PIX}" alt="${esc(x.n)}">` : `<img class="ar-big" src="${artFoto(x)}" alt="${esc(x.n)}">`}
     <dl class="info">
       ${x.c ? `<dt>Codice</dt><dd><b style="font-size:17px">${esc(x.c)}</b> <button type="button" class="chip-btn" data-arcopia="${esc(x.c)}">Copia</button></dd>` : ""}
       <dt>Categoria</dt><dd>${esc(percorso)}</dd>
@@ -4553,8 +4584,9 @@ function artApri(id){
       ${x.b ? `<dt>Descrizione</dt><dd>${esc(x.b)}</dd>` : ""}
       ${x.d ? `<dt>Dettagli</dt><dd>${esc(x.d)}</dd>` : ""}
     </dl>
-    <p style="margin:12px 0 0;display:flex;flex-wrap:wrap;gap:8px">${artHaScheda(x) ? `<button type="button" class="btn" data-arscheda="${x.i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;vertical-align:-3px"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Scheda tecnica</button>` : ""}<button type="button" class="btn ${art.sel.includes(x.i) ? "" : "btn-primary"}" data-ardet="${x.i}">${art.sel.includes(x.i) ? "✓ Nel preventivo (togli)" : "+ Aggiungi al preventivo"}</button><a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a></p>`;
+    <p style="margin:12px 0 0;display:flex;flex-wrap:wrap;gap:8px">${artHaScheda(x) ? `<button type="button" class="btn" data-arscheda="${x.i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:6px;vertical-align:-3px"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg>Scheda tecnica</button>` : ""}<button type="button" class="btn ${art.sel.includes(x.i) ? "" : "btn-primary"}" data-ardet="${x.i}">${art.sel.includes(x.i) ? "✓ Nel preventivo (togli)" : "+ Aggiungi al preventivo"}</button>${x.ex ? "" : `<a class="btn" href="${esc((D.fonte || "https://www.marchispa.it") + "/index.php?id_product=" + x.i + "&controller=product")}" target="_blank" rel="noopener">Apri su marchispa.it</a>`}</p>`;
   if(!$("#dlgArt").open) $("#dlgArt").showModal();
+  nvFotoCarica();
 }
 $("#arChips").addEventListener("click", e => {
   if(!e.target.closest("[data-artop]")) return;
@@ -4566,7 +4598,8 @@ $("#arVistaElenco").addEventListener("click", () => artVista("elenco"));
 $("#arQ").addEventListener("input", e => { art.q = e.target.value; art.mostra = 60; renderArticoli(); });
 $("#arBody").addEventListener("keydown", e => { const s = e.target.closest && e.target.closest("[data-arsel]"); if(s && (e.key === "Enter" || e.key === " ")){ e.preventDefault(); e.stopPropagation(); artSel(+s.dataset.arsel); } });
 $("#arBody").addEventListener("click", e => {
-  const cp = e.target.closest("[data-nvcopia]"); if(cp){ navigator.clipboard.writeText(cp.dataset.nvcopia).then(() => toast("Codice " + cp.dataset.nvcopia + " copiato")).catch(() => toast("Non riesco a copiare")); return; }
+  const sch = e.target.closest("[data-nvscheda]"); if(sch){ const n = novita.find(x => x.spId === sch.dataset.nvscheda); nvApriScheda(sch.dataset.nvscheda, n ? n.desc : "", n && n.codice ? "Cod. " + n.codice : ""); return; }
+  const ap = e.target.closest("[data-nvapprova]"); if(ap){ nvApprovaApri(ap.dataset.nvapprova); return; }
   if(e.target.closest("[data-nvset]")){ setRender(); $("#dlgSet").showModal(); setTimeout(() => { const s = $("#setNov"); if(s) s.scrollIntoView({ block: "center" }); }, 60); return; }
   const sel = e.target.closest("[data-arsel]"); if(sel){ e.preventDefault(); artSel(+sel.dataset.arsel); return; }
   const t = e.target.closest("[data-artop]");
@@ -4786,9 +4819,12 @@ temaApplica("");
    La notifica la riceve sw.js (service worker, solo notifiche: niente cache). */
 const VAPID_PUB = "BDc_OTuqO0ZOCMYP2bhhQAL6livBICRdV4tl5jcKPMiiREKuql3Rql77JBrI5lLxNmd2TVvegclzo0Xxv0B8fFo";
 let novita = [], unsubNov = null, novPrima = true, prefPronto = false;
+let unsubExtra = null, nvPuoApprovare = false;
 function subscribeNovita(){
   if(unsubNov || !uid) return;
   novPrima = true;
+  getDoc(doc(db, "utenti", uid, "impostazioni", "novita")).then(s => { nvPuoApprovare = s.exists() && !!s.data().token; if(ui.view === "articoli") renderArticoli(); }).catch(() => {});
+  unsubExtra = onSnapshot(collection(db, "utenti", uid, "articoli_extra"), s => { art.extra = s.docs.map(d => d.data()); artUnisci(); if(ui.view === "articoli") renderArticoli(); }, () => {});
   unsubNov = onSnapshot(collection(db, "utenti", uid, "novita"), s => {
     novita = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.ricevuto || b.creato || "").localeCompare(a.ricevuto || a.creato || "") || (+b.spId || 0) - (+a.spId || 0));
     if(novPrima && !s.metadata.fromCache){ novPrima = false; if(!novita.length) gcChiama("allinea", {}, "push").catch(() => {}); }
@@ -4800,34 +4836,106 @@ function nvInit(){
   if(!prefPronto || pref.novitaViste !== undefined || !novita.length) return;
   prefSalva({ novitaViste: novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "") });
 }
-function unsubscribeNovita(){ if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; prefPronto = false; novImp = null; nvBadge(); }
-const nvNuove = () => novita.filter(n => (n.ricevuto || "") > (pref.novitaViste || "")).length;
+function unsubscribeNovita(){ if(unsubExtra){ unsubExtra(); unsubExtra = null; } art.extra = []; nvPuoApprovare = false; if(unsubNov){ unsubNov(); unsubNov = null; } novita = []; nvFotoCache.clear(); prefPronto = false; novImp = null; nvBadge(); }
+const nvAttive = () => novita.filter(n => !n.approvato);                       // quelle approvate sono già negli Articoli
+const nvNuove = () => nvAttive().filter(n => (n.ricevuto || "") > (pref.novitaViste || "")).length;
 function nvBadge(){ const b = $("#nvNum"); if(!b) return; const n = nvNuove(); b.textContent = n; b.classList.toggle("hidden", !n); }
 const nvStella = n => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+// foto dei prodotti (v6.34): in utenti/{uid}/novita_foto/sp<ID> = { b64, tipo }, lette solo quando la scheda sta per comparire
+const nvFotoCache = new Map();
+let nvOss = null;
+function nvFotoCarica(){
+  if(!uid) return;
+  if(!nvOss && "IntersectionObserver" in window) nvOss = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ nvOss.unobserve(e.target); nvFotoUna(e.target); } }), { rootMargin: "400px" });
+  $$("#arBody img[data-nvfoto], #artBody img[data-nvfoto]").forEach(i => { const k = i.dataset.nvfoto; if(nvFotoCache.has(k)) i.src = nvFotoCache.get(k); else if(nvOss) nvOss.observe(i); else nvFotoUna(i); });
+}
+async function nvFotoUna(img){
+  const k = img.dataset.nvfoto;
+  try {
+    const s = await getDoc(doc(db, "utenti", uid, "novita_foto", k)); if(!s.exists()) return;
+    const d = s.data(), u = "data:" + (d.tipo || "image/jpeg") + ";base64," + d.b64;
+    nvFotoCache.set(k, u); if(img.isConnected) img.src = u;
+  } catch(e){}
+}
+// scheda tecnica PDF: utenti/{uid}/novita_pdf/sp<ID> = { parti } + sp<ID>_0, _1… = { b64 }
+async function nvPdf(spId){
+  const m = await getDoc(doc(db, "utenti", uid, "novita_pdf", "sp" + spId));
+  if(!m.exists()) throw new Error("scheda tecnica non trovata");
+  const n = +m.data().parti || 1, pezzi = [];
+  for(let k = 0; k < n; k++){ const p = await getDoc(doc(db, "utenti", uid, "novita_pdf", "sp" + spId + "_" + k)); if(!p.exists()) throw new Error("scheda tecnica incompleta"); pezzi.push(p.data().b64); }
+  const bin = atob(pezzi.join("")), u8 = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type: "application/pdf" });
+}
+function nvApriScheda(spId, titolo, sotto){
+  lpOpen({ file: "scheda-" + spId + ".pdf", titolo: "Scheda tecnica · " + (titolo || ""), fornitore: sotto || "", carica: () => nvPdf(spId) });
+}
+// approvazione: categoria proposta guardando gli articoli del catalogo con le parole più simili
+let nvAppId = null;
+function nvIndovina(desc, catSp){
+  const D = art.dati; if(!D) return { t: -1, s: -1, perche: "" };
+  const parole = artNorm(desc).split(" ").filter(w => w.length > 3 && !/\d/.test(w));
+  const voti = new Map(), votiS = new Map();
+  D.a.forEach((x, i) => { if(x.ex) return; const ok = parole.filter(w => art.idx[i].includes(" " + w)).length; if(ok < 1) return;
+    voti.set(x.t, (voti.get(x.t) || 0) + ok * ok); if(x.s >= 0) votiS.set(x.s, (votiS.get(x.s) || 0) + ok * ok); });
+  let t = [...voti].sort((a, b) => b[1] - a[1])[0];
+  const daSp = D.top.findIndex(n => norm(n) === norm(catSp));
+  if(!t && daSp >= 0) return { t: daSp, s: -1, perche: "Categoria proposta da SharePoint (" + catSp + ")." };
+  if(!t) return { t: -1, s: -1, perche: "" };
+  const s = [...votiS].filter(([k]) => D.sub[k].t === t[0]).sort((a, b) => b[1] - a[1])[0];
+  return { t: t[0], s: s ? s[0] : -1, perche: "Proposta in base agli articoli del catalogo con il nome più simile. Controlla e cambia se serve." };
+}
+function nvAppSubs(t, s){
+  const D = art.dati;
+  $("#nvAppSubcat").innerHTML = `<option value="">(nessuna)</option>` + D.sub.map((o, k) => o.t === t ? `<option value="${k}"${k === s ? " selected" : ""}>${esc(artCat(o.n))}</option>` : "").join("");
+}
+async function nvApprovaApri(spId){
+  if(!art.dati){ await artCarica(); if(!art.dati){ toast("Catalogo non disponibile: riprova"); return; } }
+  const n = novita.find(x => x.spId === spId); if(!n) return;
+  nvAppId = spId;
+  const D = art.dati, g = nvIndovina(n.desc, n.cat);
+  $("#nvAppSub").textContent = [n.codice && "Cod. " + n.codice, n.cat].filter(Boolean).join(" · ");
+  $("#nvAppNome").value = n.desc || "";
+  $("#nvAppTop").innerHTML = (g.t < 0 ? `<option value="">Scegli la categoria…</option>` : "") + D.top.map((x, t) => `<option value="${t}"${t === g.t ? " selected" : ""}>${esc(tgtTit(x))}</option>`).join("");
+  nvAppSubs(g.t, g.s);
+  $("#nvAppPerche").textContent = g.perche;
+  $("#dlgNvApp").showModal();
+}
+$("#nvAppTop").addEventListener("change", e => nvAppSubs(+e.target.value, -1));
+$("#nvAppOk").addEventListener("click", async () => {
+  const D = art.dati, t = $("#nvAppTop").value, s = $("#nvAppSubcat").value, b = $("#nvAppOk");
+  if(t === ""){ toast("Scegli la categoria"); return; }
+  b.disabled = true; b.textContent = "Approvo…";
+  try {
+    await gcChiama("approva", { spId: nvAppId, top: D.top[+t], sub: s === "" ? "" : D.sub[+s].n, nome: $("#nvAppNome").value.trim() }, "push");
+    $("#dlgNvApp").close(); toast("Approvato: ora è negli Articoli, in " + tgtTit(D.top[+t]), 4000);
+  } catch(err){ toast("Approvazione non riuscita: " + err.message, 8000); }
+  finally { b.disabled = false; b.textContent = "Approva"; }
+});
 const nvEuro = x => Number(x).toLocaleString("it-IT", { style: "currency", currency: "EUR" });
 function nvTile(){
   const n = nvNuove();
-  return `<button type="button" class="ct-tile nv-tile" data-artop="-2" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><b>Novità Marchi</b><small>${novita.length ? novita.length + " prodotti" + (n ? " · <b class=\"nv-n\">" + n + (n === 1 ? " nuovo" : " nuovi") + "</b>" : "") : "Nuovi inserimenti da SharePoint"}</small></button>`;
+  return `<button type="button" class="ct-tile nv-tile" data-artop="-2" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><b>Novità Marchi</b><small>${nvAttive().length ? nvAttive().length + " prodotti" + (n ? " · <b class=\"nv-n\">" + n + (n === 1 ? " nuovo" : " nuovi") + "</b>" : "") : "Nuovi inserimenti da SharePoint"}</small></button>`;
 }
 function nvApri(){ if(ui.view !== "articoli") go("articoli"); art.top = -2; art.sub = -1; art.q = ""; $("#arQ").value = ""; renderArticoli(); window.scrollTo(0, 0); }
 function nvDaLink(){ if(new URLSearchParams(location.search).get("vista") === "novita"){ history.replaceState(null, "", location.pathname); setTimeout(nvApri, 300); } }
 function nvHTML(){
   const q = norm(art.q), viste = pref.novitaViste || "";
-  const L = novita.filter(n => !q || norm([n.codice, n.desc, n.cat, n.info, n.sett].join(" ")).includes(q));
-  $("#arLbl").textContent = novita.length ? novita.length + " novità" : "";
+  const L = nvAttive().filter(n => !q || norm([n.codice, n.desc, n.cat, n.info, n.sett].join(" ")).includes(q));
+  $("#arLbl").textContent = nvAttive().length ? nvAttive().length + " novità" : "";
   const ultima = novita.reduce((m, n) => (n.ricevuto || "") > m ? n.ricevuto : m, "");
   if(ultima > viste) setTimeout(() => { if(ui.view === "articoli" && art.top === -2){ prefSalva({ novitaViste: ultima }); nvBadge(); } }, 2000);   // viste dopo un attimo (restano "Nuovo" finché si è qui)
   const testa = `<div class="ct-cathead" style="--c:#E86A40"><span class="ct-ti">${nvStella(26)}</span><div><b>Novità Marchi</b><small>Nuovi inserimenti dalla lista di SharePoint (dati riservati di Marchi: solo per chi usa l’app)</small></div></div>`;
-  if(!novita.length) return testa + `<div class="ct-empty">Ancora nessuna novità: compariranno qui quando Marchi inserisce un nuovo prodotto.</div>`;
+  if(!nvAttive().length) return testa + `<div class="ct-empty">Ancora nessuna novità: compariranno qui quando Marchi inserisce un nuovo prodotto.</div>`;
   if(!L.length) return testa + `<div class="ct-empty">Nessuna novità trovata.</div>`;
   return testa + `<div class="nv-list">${L.map(n => {
     const k = String(n.codice || "").trim(), x = k && art.perCodice ? art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")) : null, nuova = (n.ricevuto || "") > viste;
-    return `<article class="nv-card${nuova ? " nuova" : ""}">${x && x.f !== 0 ? `<img class="nv-foto" src="${artFoto(x)}" alt="" loading="lazy">` : `<span class="nv-foto nv-nofoto">${catIcona}</span>`}
+    return `<article class="nv-card${nuova ? " nuova" : ""}">${n.foto ? `<img class="nv-foto" data-nvfoto="${esc(n.id)}" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEAAAAALAAAAAABAAEAAAIBRAA7">` : x && x.f !== 0 ? `<img class="nv-foto" src="${artFoto(x)}" alt="" loading="lazy">` : `<span class="nv-foto nv-nofoto">${catIcona}</span>`}
       <div class="nv-txt"><b>${nuova ? '<span class="nv-nuovo">Nuovo</span> ' : ""}${esc(n.desc || "")}</b>
         <small>${[k && "Cod. " + esc(k), n.cat && esc(n.cat), n.sett && "Settimana " + esc(n.sett)].filter(Boolean).join(" · ")}</small>
         <div class="nv-pill">${n.arrivo ? `<span>Arriva il ${fmtDate(n.arrivo)}</span>` : ""}${n.prezzo != null ? `<span>${nvEuro(n.prezzo)}</span>` : ""}${n.provv != null ? `<span>Provv. ${String(Math.round(n.provv * 1000) / 10).replace(".", ",")}%</span>` : ""}</div>
         ${n.info ? `<p class="nv-info">${esc(n.info)}</p>` : ""}
-        <div class="nv-az">${k ? `<button class="chip-btn" type="button" data-nvcopia="${esc(k)}">Copia codice</button>` : ""}${x ? `<button class="chip-btn" type="button" data-art="${x.i}">Scheda articolo</button>` : ""}${n.link ? `<a class="chip-btn" href="${esc(n.link)}" target="_blank" rel="noopener">Apri in SharePoint</a>` : ""}</div></div></article>`; }).join("")}</div>`;
+        <div class="nv-az">${n.scheda ? `<button class="chip-btn" type="button" data-nvscheda="${esc(n.spId)}">Scheda tecnica</button>` : ""}${x ? `<button class="chip-btn" type="button" data-art="${x.i}">Scheda articolo</button>` : ""}${nvPuoApprovare ? `<button class="chip-btn nv-ok" type="button" data-nvapprova="${esc(n.spId)}">✓ Approva</button>` : ""}</div></div></article>`; }).join("")}</div>`;
 }
 
 // notifiche su questo dispositivo
@@ -4926,7 +5034,7 @@ function setRender(){
   const t = pref.tema || "", col = pref.colori || {};
   $("#setBody").innerHTML = `
     <section class="set-sez"><h3>Account</h3>
-      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.33 (v6.33)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
+      <div class="set-acc"><div><small>Accesso effettuato come</small><b>${esc(email || "–")}</b><small>App versione 6.34 (v6.34)</small></div><button class="btn" type="button" id="setEsci">Esci</button></div></section>
     <section class="set-sez"><h3>Notifiche su questo dispositivo</h3><div id="setPush"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez hidden" id="setNov"><h3>Novità Marchi da SharePoint</h3><div id="setNovB"><p class="pv-hint">Controllo…</p></div></section>
     <section class="set-sez"><h3>Dati</h3>
@@ -7567,7 +7675,7 @@ $("#pvAddCat").innerHTML = PV_CATS.map(c => `<option>${esc(c)}</option>`).join("
 
 const pvPriceOf = it => it.mode === "kg" ? it.priceKg : it.pricePz;
 // foto piccola della riga: dall'articolo del catalogo con lo stesso codice (quello scritto nel preventivo)
-const pvFoto = it => { const k = String(it.codice || "").trim(); if(!k || !art.perCodice) return ""; const x = art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")); return x && x.f !== 0 ? "articoli/img/" + x.i + ".jpg" : ""; };
+const pvFoto = it => { const k = String(it.codice || "").trim(); if(!k || !art.perCodice) return ""; const x = art.perCodice.get(k) || art.perCodice.get("~" + k.replace(/^0+/, "")); return x && x.f !== 0 && !x.ex ? "articoli/img/" + x.i + ".jpg" : ""; };
 // Prezzo della singola confezione/cartone accanto al formato: disattivato su richiesta (si mostra solo il prezzo principale)
 const pvPack = it => "";
 function pvRowHTML(it){

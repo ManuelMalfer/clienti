@@ -1643,31 +1643,85 @@ export function votoNovita(x){
     sett: testoNov(g("settimana", "Datacomunicazione"), 10), creato: testoNov(g("creato", "Created"), 40), link: /^https:\/\/[\w.-]+\.sharepoint\.com\//.test(String(g("link", "{Link}"))) ? testoNov(g("link", "{Link}"), 400) : "" };
 }
 const PERC_NOV = /^\/novita\/([A-Za-z0-9_-]{6,128})\/([a-f0-9]{32,128})$/;
-async function riceviNovita(req, env, uid, token){
+// /novita-foto/<uid>/<codice>: solo foto, con un codice temporaneo (30 minuti) chiesto con il token vero ({ codiceFoto })
+const PERC_FOTO = /^\/novita-foto\/([A-Za-z0-9_-]{6,128})\/([a-f0-9]{32,128})$/;
+async function riceviNovita(req, env, uid, token, soloFotoCodice){
   const imp = await leggiDoc(env, "utenti/" + uid + "/impostazioni/novita");
-  if(!imp || !uguali(String(imp.token || ""), token)) return json({ errore: "collegamento non valido" }, 404, {});
+  if(soloFotoCodice){
+    if(!imp || !imp.fotoCodice || !uguali(String(imp.fotoCodice), token) || !(Date.parse(imp.fotoScade || 0) > Date.now())) return json({ errore: "codice non valido o scaduto" }, 404, { "access-control-allow-origin": "*" });
+  } else if(!imp || !uguali(String(imp.token || ""), token)) return json({ errore: "collegamento non valido" }, 404, {});
   const testo = await req.text();
-  if(testo.length > 600000) return json({ errore: "troppo grande" }, 413, {});
+  if(testo.length > 8000000) return json({ errore: "troppo grande" }, 413, {});
   let corpo; try { corpo = JSON.parse(testo); } catch(e){ return json({ errore: "il corpo deve essere JSON" }, 400, {}); }
-  const elenco = Array.isArray(corpo) ? corpo : Array.isArray(corpo.voci) ? corpo.voci : [corpo];
-  const voci = elenco.map(votoNovita).filter(Boolean).slice(0, 300);
-  if(!voci.length) return json({ errore: "nessun prodotto valido (servono id e codice o descrizione)" }, 400, {});
+  if(!soloFotoCodice && corpo && /^[a-f0-9]{32,128}$/.test(String(corpo.codiceFoto || ""))){
+    await scrivi(env, [{ percorso: "utenti/" + uid + "/impostazioni/novita", campi: ["fotoCodice", "fotoScade"], dati: { fotoCodice: corpo.codiceFoto, fotoScade: new Date(Date.now() + 30 * 60000).toISOString() } }]);
+    return json({ ok: true, codiceFoto: "attivo per 30 minuti" }, 200, {});
+  }
+  const elenco = (Array.isArray(corpo) ? corpo : Array.isArray(corpo.voci) ? corpo.voci : [corpo]).slice(0, 300);
+  const voci = soloFotoCodice ? [] : elenco.map(votoNovita).filter(Boolean);
+  if(soloFotoCodice) corpo.notifica = false;
+  // foto e scheda tecnica (v6.34): dal flusso { …, foto: { "$content-type", "$content" }, scheda: { … } } oppure base64;
+  // anche solo { id, foto, scheda } per aggiungerle a un prodotto già presente
+  const fotoPer = {}, pdfPer = {};
+  elenco.forEach(x => {
+    if(!x || typeof x !== "object") return;
+    const id = testoNov(x.id || x.ID || x.Id, 20).replace(/[^\w-]/g, ""); if(!id) return;
+    const f = fotoDi(x.foto !== undefined ? x.foto : x.fotoB64); if(f) fotoPer[id] = f;
+    const p = pdfDi(x.scheda !== undefined ? x.scheda : x.pdf); if(p) pdfPer[id] = p;
+  });
+  const conAllegati = [...new Set([...Object.keys(fotoPer), ...Object.keys(pdfPer)])];
+  const soloFoto = conAllegati.filter(id => !voci.some(v => v.spId === id));
+  if(!voci.length && !soloFoto.length) return json({ errore: "nessun prodotto valido (servono id e codice o descrizione)" }, 400, {});
   // le novità sono di TUTTI gli account (scelta di Manuel): elenco principale in novita_marchi (solo il servizio lo legge)
   // e una copia in utenti/{uid}/novita di ogni account, che l'app legge con le regole di sempre
   const esistenti = new Set();
-  const trovati = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: voci.map(v => radice(env) + "/novita_marchi/sp" + v.spId), mask: { fieldPaths: ["ricevuto"] } });
-  const ricevutoDi = {};
-  (trovati || []).forEach(x => { if(x.found){ const k = decodeURIComponent(x.found.name.split("/").pop()); esistenti.add(k); ricevutoDi[k] = campi(x.found.fields || {}).ricevuto; } });
+  const ids = [...new Set([...voci.map(v => v.spId), ...soloFoto])];
+  const trovati = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: ids.map(id => radice(env) + "/novita_marchi/sp" + id) });
+  const prima = {};
+  (trovati || []).forEach(x => { if(x.found){ const k = decodeURIComponent(x.found.name.split("/").pop()); esistenti.add(k); prima[k] = campi(x.found.fields || {}); } });
   const ora = new Date().toISOString(), nuove = voci.filter(v => !esistenti.has("sp" + v.spId));
   // caricamento iniziale (notifica: false): come data di arrivo nell'app vale quella di SharePoint, così non sembrano tutti appena arrivati
-  const dati = voci.map(v => ({ ...v, agg: ora, ricevuto: ricevutoDi["sp" + v.spId] || (corpo.notifica === false && v.creato ? v.creato : ora) }));
+  const dati = voci.map(v => { const p = prima["sp" + v.spId] || {};
+    return { ...v, agg: ora, ricevuto: p.ricevuto || (corpo.notifica === false && v.creato ? v.creato : ora), foto: !!(fotoPer[v.spId] || p.foto), scheda: !!(pdfPer[v.spId] || p.scheda), approvato: !!p.approvato }; });
   const utenti = [...new Set([uid, ...await elencoUtenti(env)])];
   const scritture = [];
   for(const d of dati){
     scritture.push({ percorso: "novita_marchi/sp" + d.spId, dati: d });
     for(const u of utenti) scritture.push({ percorso: "utenti/" + u + "/novita/sp" + d.spId, dati: d });
   }
-  for(let i = 0; i < scritture.length; i += 200) await scrivi(env, scritture.slice(i, i + 200));
+  let foto = 0, schede = 0;
+  for(const id of conAllegati){
+    if(!voci.some(v => v.spId === id) && !esistenti.has("sp" + id)) continue;          // allegati di un prodotto che non c'è: si scartano
+    const cartelle = ["", ...utenti.map(u => "utenti/" + u + "/")];
+    if(fotoPer[id]){
+      const f = { ...fotoPer[id], agg: ora };
+      cartelle.forEach(c => scritture.push({ percorso: c + "novita_foto/sp" + id, dati: f }));
+      foto++;
+    }
+    if(pdfPer[id]){
+      // il PDF in pezzi da 900.000 caratteri (un documento Firestore tiene al massimo 1 MB): sp<ID> = indice, sp<ID>_0, sp<ID>_1…
+      const b = pdfPer[id].b64, parti = [];
+      for(let i = 0; i < b.length; i += 900000) parti.push(b.slice(i, i + 900000));
+      cartelle.forEach(c => {
+        scritture.push({ percorso: c + "novita_pdf/sp" + id, dati: { parti: parti.length, tipo: "application/pdf", agg: ora } });
+        parti.forEach((p, k) => scritture.push({ percorso: c + "novita_pdf/sp" + id + "_" + k, dati: { b64: p } }));
+      });
+      schede++;
+    }
+    if(!voci.some(v => v.spId === id)){                                                   // solo gli allegati: il prodotto resta com'era
+      const p = prima["sp" + id], d = { ...p, foto: !!(fotoPer[id] || p.foto), scheda: !!(pdfPer[id] || p.scheda) };
+      scritture.push({ percorso: "novita_marchi/sp" + id, dati: d });
+      for(const u of utenti) scritture.push({ percorso: "utenti/" + u + "/novita/sp" + id, dati: d });
+    }
+  }
+  // a gruppi: foto e PDF pesano (Firestore accetta richieste fino a ~10 MB)
+  let gruppo = [], peso = 0;
+  for(const s of scritture){
+    const p = s.dati && s.dati.b64 ? s.dati.b64.length : 2000;
+    if(gruppo.length && (gruppo.length >= 200 || peso + p > 6000000)){ await scrivi(env, gruppo); gruppo = []; peso = 0; }
+    gruppo.push(s); peso += p;
+  }
+  if(gruppo.length) await scrivi(env, gruppo);
   let inviate = 0, avviso = "";
   if(nuove.length && corpo.notifica !== false){
     const v = nuove[0], eur = v.prezzo !== null ? " · " + v.prezzo.toFixed(2).replace(".", ",") + " €" : "";
@@ -1676,7 +1730,24 @@ async function riceviNovita(req, env, uid, token){
       : { titolo: nuove.length + " nuovi prodotti Marchi", testo: nuove.slice(0, 4).map(x => x.desc).join(", ") + (nuove.length > 4 ? "…" : ""), url: "/?vista=novita", tag: "novita" };
     for(const u of utenti){ const p = await mandaPush(env, u, msg).catch(e => ({ errore: e.message })); inviate += p.inviate || 0; if(p.errore) avviso = p.errore; }
   }
-  return json({ ok: true, ricevuti: voci.length, nuovi: nuove.length, account: utenti.length, notifiche: inviate, ...(avviso ? { avviso } : {}) }, 200, {});
+  return json({ ok: true, ricevuti: voci.length, nuovi: nuove.length, foto, schede, account: utenti.length, notifiche: inviate, ...(avviso ? { avviso } : {}) }, 200, {});
+}
+// scheda tecnica PDF in base64 (anche { "$content": … }), al massimo ~3 MB
+export function pdfDi(v){
+  if(v && typeof v === "object") v = v.$content || v.content || v.b64 || "";
+  if(typeof v !== "string" || !v) return null;
+  const b64 = v.replace(/^data:[^,]*,/, "").replace(/\s+/g, "");
+  if(b64.length < 200 || b64.length > 4200000 || !/^[A-Za-z0-9+/]+=*$/.test(b64) || !b64.startsWith("JVBER")) return null;
+  return { b64 };
+}
+// foto in base64 (anche come { "$content": … } di Power Automate): solo JPEG, PNG o WEBP, al massimo ~650 KB
+export function fotoDi(v){
+  if(v && typeof v === "object") v = v.$content || v.content || v.b64 || "";
+  if(typeof v !== "string" || !v) return null;
+  const b64 = v.replace(/^data:[^,]*,/, "").replace(/\s+/g, "");
+  if(b64.length < 200 || b64.length > 900000 || !/^[A-Za-z0-9+/]+=*$/.test(b64)) return null;
+  const tipo = b64.startsWith("/9j/") ? "image/jpeg" : b64.startsWith("iVBOR") ? "image/png" : b64.startsWith("UklGR") ? "image/webp" : "";
+  return tipo ? { b64, tipo } : null;
 }
 // tutti gli account dell'app (anche quelli che hanno solo sottoraccolte: showMissing)
 async function elencoUtenti(env){
@@ -1706,14 +1777,26 @@ export async function allineaNovita(env, soloUid){
     pag = d && d.nextPageToken || "";
   } while(pag);
   if(!tutte.size) return { copiate: 0 };
-  let copiate = 0;
+  let copiate = 0, foto = 0; const elenchi = {};
   for(const u of soloUid ? [soloUid] : await elencoUtenti(env)){
     const ha = await idDi(env, "utenti/" + u + "/novita");
     const mancano = [...tutte].filter(([k]) => !ha.has(k)).map(([k, d]) => ({ percorso: "utenti/" + u + "/novita/" + k, dati: d }));
     for(let i = 0; i < mancano.length; i += 200) await scrivi(env, mancano.slice(i, i + 200));
     copiate += mancano.length;
+    // anche foto, schede tecniche e articoli approvati che mancano (letti a gruppi: pesano)
+    for(const [da, a2] of [["novita_foto", "novita_foto"], ["novita_pdf", "novita_pdf"], ["articoli_approvati", "articoli_extra"]]){
+      if(!elenchi[da]) elenchi[da] = await idDi(env, da);
+      const haF = await idDi(env, "utenti/" + u + "/" + a2);
+      const mancanoF = [...elenchi[da]].filter(k => !haF.has(k));
+      for(let i = 0; i < mancanoF.length; i += 8){
+        const r = await fsChiama(env, "POST", base(env) + ":batchGet", { documents: mancanoF.slice(i, i + 8).map(k => radice(env) + "/" + da + "/" + k) });
+        const w = (r || []).filter(q => q.found).map(q => ({ percorso: "utenti/" + u + "/" + a2 + "/" + decodeURIComponent(q.found.name.split("/").pop()), dati: campi(q.found.fields || {}) }));
+        if(w.length) await scrivi(env, w);
+        if(da === "novita_foto") foto += w.length;
+      }
+    }
   }
-  return { copiate };
+  return { copiate, foto };
 }
 
 /* ---------- pagine e risposte ---------- */
@@ -1745,6 +1828,12 @@ export default {
     const app = env.APP_URL || "https://clienti.malfer.it";
     if(p === "/ping") return new Response("ok", { headers: { "access-control-allow-origin": "*", "cache-control": "no-store" } });
     if(p.startsWith("/cal/") && req.method !== "GET" && req.method !== "HEAD") return new Response("metodo non ammesso", { status: 405 });
+    const mfo = PERC_FOTO.exec(p);
+    if(mfo){
+      if(req.method !== "POST") return new Response("usa POST", { status: 405 });
+      try { return await riceviNovita(req, env, mfo[1], mfo[2], true); }
+      catch(e){ return json({ errore: "errore del servizio" }, 500, {}); }
+    }
     const mn = PERC_NOV.exec(p);
     if(mn){
       if(req.method !== "POST") return new Response("usa POST", { status: 405 });
@@ -1799,6 +1888,25 @@ export default {
         if(p === "/push/allinea"){                     // l'app all'avvio: copia nell'account le novità Marchi che gli mancano
           const uid = await utente(req, env);
           return json({ ok: true, ...await allineaNovita(env, uid) }, 200, cors);
+        }
+        // approvazione di una novità (v6.34): diventa un articolo del catalogo per tutti gli account, con solo nome, codice, foto e scheda tecnica
+        if(p === "/push/approva"){
+          const uid = await utente(req, env);
+          const imp = await leggiDoc(env, "utenti/" + uid + "/impostazioni/novita");
+          if(!imp || !imp.token) throw new Errore(403, "Solo l'account collegato a SharePoint può approvare i prodotti");
+          const c = await req.json().catch(() => ({}));
+          const id = String(c.spId || "").replace(/[^\w-]/g, "").slice(0, 20), top = testoNov(c.top, 80), sub = testoNov(c.sub, 120);
+          if(!id || !top) throw new Errore(400, "Manca il prodotto o la categoria");
+          const n = await leggiDoc(env, "novita_marchi/sp" + id);
+          if(!n) throw new Errore(404, "Prodotto non trovato");
+          const ora = new Date().toISOString();
+          const a = { spId: id, c: n.codice || "", n: testoNov(c.nome, 200) || n.desc || "", top, sub, foto: !!n.foto, scheda: !!n.scheda, agg: ora, approvato: ora };
+          const d = { ...n, approvato: true };
+          const utenti = [...new Set([uid, ...await elencoUtenti(env)])];
+          const w = [{ percorso: "articoli_approvati/sp" + id, dati: a }, { percorso: "novita_marchi/sp" + id, dati: d }];
+          utenti.forEach(u => w.push({ percorso: "utenti/" + u + "/articoli_extra/sp" + id, dati: a }, { percorso: "utenti/" + u + "/novita/sp" + id, dati: d }));
+          await scrivi(env, w);
+          return json({ ok: true, account: utenti.length }, 200, cors);
         }
         if(p === "/push/prova"){
           const uid = await utente(req, env);
